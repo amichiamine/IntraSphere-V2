@@ -82,11 +82,19 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || '5000', 10);
-  server.listen({
+  const httpServer = server.listen({
     port,
     host: "0.0.0.0",
     reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
   });
+
+  // Initialize WebSocket after server creation
+  try {
+    const { initializeWebSocket } = await import("./services/websocket");
+    initializeWebSocket(httpServer);
+  } catch (error: any) {
+    log(`WebSocket initialization skipped: ${error?.message || 'Unknown error'}`);
+  }
 })();

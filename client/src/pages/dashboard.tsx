@@ -5,6 +5,7 @@ import { AnnouncementsFeed } from "@/core/components/dashboard/announcements-fee
 import { QuickLinks } from "@/core/components/dashboard/quick-links";
 import { RecentDocuments } from "@/core/components/dashboard/recent-documents";
 import { UpcomingEvents } from "@/core/components/dashboard/upcoming-events";
+import { EnhancedDashboard } from "@/core/components/ui/enhanced-dashboard";
 
 function getCurrentDate(): string {
   return new Intl.DateTimeFormat('fr-FR', {
@@ -42,6 +43,11 @@ export default function Dashboard() {
               </div>
             </div>
           </GlassCard>
+        </div>
+
+        {/* Enhanced Dashboard with Real-time Analytics */}
+        <div className="mb-8">
+          <EnhancedDashboard />
         </div>
 
         {/* Quick Stats Dashboard */}

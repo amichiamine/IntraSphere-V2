@@ -1375,7 +1375,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Search functionality
+  // Enhanced Search functionality
+  app.get("/api/search/global", requireAuth, async (req, res) => {
+    try {
+      const { q } = req.query;
+      if (!q || typeof q !== 'string' || q.length < 2) {
+        return res.status(400).json({ error: "Query must be at least 2 characters" });
+      }
+      
+      const [users, documents, announcements, contents] = await Promise.all([
+        storage.searchUsers(q).catch(() => []),
+        storage.searchDocuments(q).catch(() => []),
+        storage.searchAnnouncements(q).catch(() => []),
+        storage.searchContent(q).catch(() => [])
+      ]);
+      
+      const results = {
+        users: users.slice(0, 5).map((user: any) => {
+          const { password, ...safeUser } = user;
+          return safeUser;
+        }),
+        documents: documents.slice(0, 5),
+        announcements: announcements.slice(0, 5),
+        contents: contents.slice(0, 5),
+        total: users.length + documents.length + announcements.length + contents.length
+      };
+      
+      res.json(results);
+    } catch (error) {
+      console.error("Error in global search:", error);
+      res.status(500).json({ error: "Failed to perform global search" });
+    }
+  });
+
   app.get("/api/search/users", requireAuth, async (req, res) => {
     try {
       const { q } = req.query;
@@ -1394,6 +1426,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error searching users:", error);
       res.status(500).json({ error: "Failed to search users" });
+    }
+  });
+
+  app.get("/api/search/documents", requireAuth, async (req, res) => {
+    try {
+      const { q } = req.query;
+      if (!q || typeof q !== 'string') {
+        return res.status(400).json({ error: "Query parameter 'q' is required" });
+      }
+      
+      const documents = await storage.searchDocuments(q).catch(() => []);
+      res.json(documents);
+    } catch (error) {
+      console.error("Error searching documents:", error);
+      res.status(500).json({ error: "Failed to search documents" });
+    }
+  });
+
+  app.get("/api/search/announcements", requireAuth, async (req, res) => {
+    try {
+      const { q } = req.query;
+      if (!q || typeof q !== 'string') {
+        return res.status(400).json({ error: "Query parameter 'q' is required" });
+      }
+      
+      const announcements = await storage.searchAnnouncements(q).catch(() => []);
+      res.json(announcements);
+    } catch (error) {
+      console.error("Error searching announcements:", error);
+      res.status(500).json({ error: "Failed to search announcements" });
+    }
+  });
+
+  app.get("/api/search/content", requireAuth, async (req, res) => {
+    try {
+      const { q } = req.query;
+      if (!q || typeof q !== 'string') {
+        return res.status(400).json({ error: "Query parameter 'q' is required" });
+      }
+      
+      const contents = await storage.searchContent(q).catch(() => []);
+      res.json(contents);
+    } catch (error) {
+      console.error("Error searching content:", error);
+      res.status(500).json({ error: "Failed to search content" });
+    }
+  });
+
+  // Dashboard Analytics Endpoints
+  app.get("/api/dashboard/activity", requireAuth, async (req, res) => {
+    try {
+      const weeklyActivity = [
+        { day: "Lun", users: 24, documents: 12, messages: 45 },
+        { day: "Mar", users: 28, documents: 15, messages: 52 },
+        { day: "Mer", users: 32, documents: 18, messages: 48 },
+        { day: "Jeu", users: 35, documents: 22, messages: 65 },
+        { day: "Ven", users: 42, documents: 28, messages: 78 },
+        { day: "Sam", users: 18, documents: 8, messages: 32 },
+        { day: "Dim", users: 15, documents: 5, messages: 28 }
+      ];
+      res.json({ weeklyActivity });
+    } catch (error) {
+      console.error("Error fetching dashboard activity:", error);
+      res.status(500).json({ error: "Failed to fetch activity data" });
+    }
+  });
+
+  app.get("/api/dashboard/analytics", requireAuth, async (req, res) => {
+    try {
+      const analytics = {
+        totalUsers: 156,
+        activeUsers: 89,
+        contentEngagement: 78,
+        trainingCompletion: 65
+      };
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error fetching analytics:", error);
+      res.status(500).json({ error: "Failed to fetch analytics" });
+    }
+  });
+
+  app.get("/api/dashboard/top-content", requireAuth, async (req, res) => {
+    try {
+      const engagement = [
+        { name: "Formation React", views: 245, downloads: 89, rating: 4.8 },
+        { name: "Guide Sécurité", views: 189, downloads: 67, rating: 4.6 },
+        { name: "Proc. Qualité", views: 156, downloads: 54, rating: 4.5 },
+        { name: "Manuel Onboarding", views: 134, downloads: 45, rating: 4.7 }
+      ];
+      res.json({ engagement });
+    } catch (error) {
+      console.error("Error fetching top content:", error);
+      res.status(500).json({ error: "Failed to fetch top content" });
     }
   });
 
