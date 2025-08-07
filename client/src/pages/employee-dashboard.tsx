@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { MainLayout } from "@/components/layout/main-layout";
-import { GlassCard } from "@/components/ui/glass-card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { useAuth } from "@/hooks/useAuth";
+import { MainLayout } from "@/core/components/layout/main-layout";
+import { GlassCard } from "@/core/components/ui/glass-card";
+import { Badge } from "@/core/components/ui/badge";
+import { Button } from "@/core/components/ui/button";
+import { useAuth } from "@/core/hooks/useAuth";
 import { 
   Bell, 
   MessageSquare, 

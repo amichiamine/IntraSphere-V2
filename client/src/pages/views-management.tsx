@@ -1,14 +1,14 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { MainLayout } from "@/components/layout/main-layout";
-import { GlassCard } from "@/components/ui/glass-card";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useToast } from "@/hooks/use-toast";
+import { MainLayout } from "@/core/components/layout/main-layout";
+import { GlassCard } from "@/core/components/ui/glass-card";
+import { Button } from "@/core/components/ui/button";
+import { Switch } from "@/core/components/ui/switch";
+import { Input } from "@/core/components/ui/input";
+import { Label } from "@/core/components/ui/label";
+import { Badge } from "@/core/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/core/components/ui/tabs";
+import { useToast } from "@/core/hooks/use-toast";
 import { 
   Eye, 
   EyeOff, 

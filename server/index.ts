@@ -1,8 +1,8 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
-import { registerRoutes } from "./routes";
+import { registerRoutes } from "./routes/api";
 import { setupVite, serveStatic, log } from "./vite";
-import { configureSecurity, sanitizeInput, getSessionConfig } from "./security";
+import { configureSecurity, sanitizeInput, getSessionConfig } from "./middleware/security";
 import { runMigrations } from "./migrations";
 
 const app = express();

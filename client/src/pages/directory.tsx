@@ -1,7 +1,7 @@
-import { MainLayout } from "@/components/layout/main-layout";
-import { GlassCard } from "@/components/ui/glass-card";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+import { MainLayout } from "@/core/components/layout/main-layout";
+import { GlassCard } from "@/core/components/ui/glass-card";
+import { Input } from "@/core/components/ui/input";
+import { Badge } from "@/core/components/ui/badge";
 import { Search, Mail, Phone, MapPin } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";

@@ -1,5 +1,5 @@
-import { AuthService } from './auth';
-import { storage } from './storage';
+import { AuthService } from './services/auth';
+import { storage } from './data/storage';
 import type { InsertUser } from '@shared/schema';
 
 /**

@@ -1,10 +1,10 @@
-import { MainLayout } from "@/components/layout/main-layout";
-import { GlassCard } from "@/components/ui/glass-card";
-import { StatsCards } from "@/components/dashboard/stats-cards";
-import { AnnouncementsFeed } from "@/components/dashboard/announcements-feed";
-import { QuickLinks } from "@/components/dashboard/quick-links";
-import { RecentDocuments } from "@/components/dashboard/recent-documents";
-import { UpcomingEvents } from "@/components/dashboard/upcoming-events";
+import { MainLayout } from "@/core/components/layout/main-layout";
+import { GlassCard } from "@/core/components/ui/glass-card";
+import { StatsCards } from "@/core/components/dashboard/stats-cards";
+import { AnnouncementsFeed } from "@/core/components/dashboard/announcements-feed";
+import { QuickLinks } from "@/core/components/dashboard/quick-links";
+import { RecentDocuments } from "@/core/components/dashboard/recent-documents";
+import { UpcomingEvents } from "@/core/components/dashboard/upcoming-events";
 
 function getCurrentDate(): string {
   return new Intl.DateTimeFormat('fr-FR', {
