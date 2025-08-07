@@ -152,8 +152,15 @@ export interface IStorage {
   updateResource(id: string, resource: Partial<Resource>): Promise<Resource>;
   deleteResource(id: string): Promise<void>;
   
+  // Training Analytics
+  getAllTrainingParticipants(): Promise<TrainingParticipant[]>;
+  markLessonComplete(userId: string, courseId: string, lessonId: string): Promise<void>;
+  
   // Search functionality
   searchUsers(query: string): Promise<User[]>;
+  searchContent(query: string): Promise<Content[]>;
+  searchDocuments(query: string): Promise<Document[]>;
+  searchAnnouncements(query: string): Promise<Announcement[]>;
   
   // Forum System Methods
   
@@ -2021,16 +2028,53 @@ export class MemStorage implements IStorage {
     this.resources.delete(id);
   }
 
+  // Training Analytics Implementation
+  async getAllTrainingParticipants(): Promise<TrainingParticipant[]> {
+    return Array.from(this.trainingParticipants.values());
+  }
+
+  async markLessonComplete(userId: string, courseId: string, lessonId: string): Promise<void> {
+    await this.updateLessonProgress(userId, lessonId, courseId, true);
+  }
+
   // Search functionality
   async searchUsers(query: string): Promise<User[]> {
     const searchTerm = query.toLowerCase();
     return Array.from(this.users.values()).filter(user => 
       user.isActive && (
-        user.name.toLowerCase().includes(searchTerm) ||
-        user.position?.toLowerCase().includes(searchTerm) ||
-        user.department?.toLowerCase().includes(searchTerm) ||
-        user.email?.toLowerCase().includes(searchTerm)
+        user.firstName.toLowerCase().includes(searchTerm) ||
+        user.lastName.toLowerCase().includes(searchTerm) ||
+        user.username.toLowerCase().includes(searchTerm) ||
+        user.email.toLowerCase().includes(searchTerm) ||
+        (user.employeeId && user.employeeId.toLowerCase().includes(searchTerm))
       )
+    );
+  }
+
+  async searchContent(query: string): Promise<Content[]> {
+    const lowerQuery = query.toLowerCase();
+    return Array.from(this.contents.values()).filter(content =>
+      content.title.toLowerCase().includes(lowerQuery) ||
+      content.description?.toLowerCase().includes(lowerQuery) ||
+      content.tags?.some(tag => tag.toLowerCase().includes(lowerQuery))
+    );
+  }
+
+  async searchDocuments(query: string): Promise<Document[]> {
+    const lowerQuery = query.toLowerCase();
+    return Array.from(this.documents.values()).filter(doc =>
+      doc.title.toLowerCase().includes(lowerQuery) ||
+      doc.description?.toLowerCase().includes(lowerQuery) ||
+      doc.tags?.some(tag => tag.toLowerCase().includes(lowerQuery))
+    );
+  }
+
+  async searchAnnouncements(query: string): Promise<Announcement[]> {
+    const lowerQuery = query.toLowerCase();
+    return Array.from(this.announcements.values()).filter(ann =>
+      ann.title.toLowerCase().includes(lowerQuery) ||
+      ann.content.toLowerCase().includes(lowerQuery) ||
+      ann.tags?.some(tag => tag.toLowerCase().includes(lowerQuery))
     );
   }
 

@@ -9,7 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/core/components/ui/t
 import { Input } from "@/core/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/core/components/ui/select";
 import { BookOpen, Clock, Award, Star, Users, Filter, Search, PlayCircle, FileText, Download } from "lucide-react";
-import type { Course, Enrollment, Resource } from "@shared/schema";
+import { TrainingAnalytics } from "@/core/components/dashboard/training-analytics";
+import type { Course, Enrollment, Resource, TrainingParticipant, Training } from "@shared/schema";
 
 const DIFFICULTY_COLORS = {
   beginner: "bg-green-100 text-green-800",
@@ -35,7 +36,7 @@ export default function Training() {
     queryKey: ["/api/courses"]
   });
 
-  // Fetch user enrollments
+  // Fetch user enrollments  
   const { data: enrollments = [] } = useQuery<Enrollment[]>({
     queryKey: ["/api/my-enrollments"]
   });
@@ -75,6 +76,17 @@ export default function Training() {
     enrollMutation.mutate(courseId);
   };
 
+  // Mark lesson as complete
+  const completeLessonMutation = useMutation({
+    mutationFn: async ({ courseId, lessonId }: { courseId: string, lessonId: string }) => {
+      return apiRequest(`/api/courses/${courseId}/lessons/${lessonId}/complete`, "POST");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/my-enrollments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/training-progress"] });
+    }
+  });
+
   if (coursesLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -96,13 +108,18 @@ export default function Training() {
           </p>
         </div>
 
-        <Tabs defaultValue="courses" className="space-y-6">
+        <Tabs defaultValue="my-learning" className="space-y-6">
           <TabsList className="grid w-full grid-cols-4 lg:w-[400px]">
-            <TabsTrigger value="courses">Cours</TabsTrigger>
             <TabsTrigger value="my-learning">Mon Apprentissage</TabsTrigger>
+            <TabsTrigger value="courses">Cours</TabsTrigger>
             <TabsTrigger value="resources">Ressources</TabsTrigger>
             <TabsTrigger value="certificates">Certificats</TabsTrigger>
           </TabsList>
+
+          {/* My Learning Tab - Enhanced Analytics Dashboard */}
+          <TabsContent value="my-learning" className="space-y-6">
+            <TrainingAnalytics />
+          </TabsContent>
 
           {/* Courses Tab */}
           <TabsContent value="courses" className="space-y-6">
