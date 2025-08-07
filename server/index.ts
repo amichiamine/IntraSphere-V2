@@ -4,6 +4,7 @@ import { registerRoutes } from "./routes/api";
 import { setupVite, serveStatic, log } from "./vite";
 import { configureSecurity, sanitizeInput, getSessionConfig } from "./middleware/security";
 import { runMigrations } from "./migrations";
+import { ensurePortAvailable, ServerMonitor } from "./utils/process-monitor";
 
 const app = express();
 
@@ -55,6 +56,17 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Ensure port is available before starting
+  const port = parseInt(process.env.PORT || '5000', 10);
+  
+  try {
+    await ensurePortAvailable(port);
+    log(`Port ${port} is available for use`);
+  } catch (error: any) {
+    log(`Port cleanup failed: ${error.message}`);
+    process.exit(1);
+  }
+
   // Run security migrations on startup
   await runMigrations();
   
@@ -74,6 +86,17 @@ app.use((req, res, next) => {
   const nodeEnv = process.env.NODE_ENV || "development";
   log(`Environment detected: ${nodeEnv}`);
   
+  // Add health check endpoint before Vite setup
+  app.get('/health', (_req, res) => {
+    res.status(200).json({ 
+      status: 'ok', 
+      timestamp: new Date().toISOString(),
+      port,
+      environment: nodeEnv,
+      version: '1.0.0'
+    });
+  });
+
   if (nodeEnv === "development") {
     log("Setting up Vite development server...");
     await setupVite(app, server);
@@ -86,13 +109,20 @@ app.use((req, res, next) => {
   // Other ports are firewalled. Default to 5000 if not specified.
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || '5000', 10);
+  // Port is already validated and cleaned above
+
   const httpServer = server.listen({
     port,
     host: "0.0.0.0",
     reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
+    log(`Health check available at http://0.0.0.0:${port}/health`);
+    
+    // Start server monitoring
+    const monitor = new ServerMonitor(port);
+    monitor.start();
+    log('Server monitoring started');
   });
 
   // Initialize WebSocket after server creation
@@ -102,4 +132,35 @@ app.use((req, res, next) => {
   } catch (error: any) {
     log(`WebSocket initialization skipped: ${error?.message || 'Unknown error'}`);
   }
-})();
+
+  // Graceful shutdown handling
+  const gracefulShutdown = (signal: string) => {
+    log(`Received ${signal}. Graceful shutdown...`);
+    httpServer.close((err) => {
+      if (err) {
+        log(`Error during server shutdown: ${err.message}`);
+        process.exit(1);
+      }
+      log('Server closed successfully.');
+      process.exit(0);
+    });
+  };
+
+  // Handle process termination signals
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+  // Handle uncaught exceptions
+  process.on('uncaughtException', (error) => {
+    log(`Uncaught Exception: ${error.message}`);
+    gracefulShutdown('uncaughtException');
+  });
+
+  process.on('unhandledRejection', (reason) => {
+    log(`Unhandled Rejection: ${reason}`);
+    gracefulShutdown('unhandledRejection');
+  });
+})().catch((error) => {
+  console.error('Failed to start server:', error);
+  process.exit(1);
+});

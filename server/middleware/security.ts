@@ -6,7 +6,7 @@ import type { Express } from 'express';
  * Configure security middleware for the application
  */
 export function configureSecurity(app: Express): void {
-  // Security headers
+  // Security headers with Vite development optimizations
   app.use(helmet({
     contentSecurityPolicy: {
       directives: {
@@ -15,6 +15,8 @@ export function configureSecurity(app: Express): void {
         fontSrc: ["'self'", "https://fonts.gstatic.com"],
         imgSrc: ["'self'", "data:", "https:"],
         scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // Required for Vite dev
+        connectSrc: ["'self'", "ws:", "wss:", "https://replit.com"], // Allow WebSocket connections
+        workerSrc: ["'self'", "blob:"], // Allow workers for Vite
       },
     },
     crossOriginEmbedderPolicy: false,
