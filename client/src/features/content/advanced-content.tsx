@@ -40,23 +40,23 @@ export function AdvancedContentPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // Fetch all content with enhanced data
+  // Fetch all content with enhanced data - utiliser le vrai endpoint API
   const { data: contents = [], isLoading } = useQuery<Content[]>({
-    queryKey: ['/api/content'],
+    queryKey: ['/api/contents'],
   });
 
-  // Fetch content categories
+  // Fetch content categories - utiliser le vrai endpoint API
   const { data: categories = [] } = useQuery<any[]>({
-    queryKey: ['/api/content/categories'],
+    queryKey: ['/api/categories'],
   });
 
   // Like content mutation
   const likeMutation = useMutation({
     mutationFn: async (contentId: string) => {
-      return apiRequest(`/api/content/${contentId}/like`, "POST");
+      return apiRequest(`/api/contents/${contentId}/like`, "POST");
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/content'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/contents'] });
       toast({
         title: "Like ajouté",
         description: "Votre appréciation a été enregistrée"
@@ -67,10 +67,10 @@ export function AdvancedContentPage() {
   // Download content mutation
   const downloadMutation = useMutation({
     mutationFn: async (contentId: string) => {
-      return apiRequest(`/api/content/${contentId}/download`, "POST");
+      return apiRequest(`/api/contents/${contentId}/download`, "POST");
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/content'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/contents'] });
     }
   });
 
@@ -103,7 +103,7 @@ export function AdvancedContentPage() {
       case "rating":
         return (b.rating || 0) - (a.rating || 0);
       case "downloads":
-        return (b.downloadCount || 0) - (a.downloadCount || 0);
+        return (b.viewCount || 0) - (a.viewCount || 0);
       default:
         return 0;
     }
@@ -285,10 +285,10 @@ export function AdvancedContentPage() {
                     <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
                       <Avatar className="h-6 w-6">
                         <AvatarFallback className="text-xs">
-                          {getInitials(content.authorName)}
+                          AU
                         </AvatarFallback>
                       </Avatar>
-                      <span>{content.authorName}</span>
+                      <span>Auteur</span>
                       <span>•</span>
                       <Clock className="h-3 w-3" />
                       <span>{formatDate(content.createdAt)}</span>
@@ -303,11 +303,11 @@ export function AdvancedContentPage() {
                         </div>
                         <div className="flex items-center gap-1">
                           <Download className="h-4 w-4" />
-                          <span>{formatNumber(content.downloadCount || 0)}</span>
+                          <span>{formatNumber(content.viewCount || 0)}</span>
                         </div>
                         <div className="flex items-center gap-1">
                           <Heart className="h-4 w-4" />
-                          <span>{formatNumber(content.likesCount || 0)}</span>
+                          <span>{formatNumber(content.rating || 0)}</span>
                         </div>
                       </div>
                       

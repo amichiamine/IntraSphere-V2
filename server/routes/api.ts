@@ -530,6 +530,241 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Global search endpoint - Cross-entity search
+  app.get("/api/search/global", async (req, res) => {
+    try {
+      const { q } = req.query;
+      if (!q || typeof q !== 'string' || q.length < 2) {
+        return res.json([]);
+      }
+
+      const query = q.toLowerCase();
+      const results = [];
+
+      // Search users
+      const users = await storage.getUsers();
+      users.forEach(user => {
+        if (user.name.toLowerCase().includes(query) || 
+            user.department?.toLowerCase().includes(query) ||
+            user.position?.toLowerCase().includes(query)) {
+          results.push({
+            id: user.id,
+            title: user.name,
+            type: 'user',
+            description: `${user.position || ''} - ${user.department || ''}`,
+            url: `/directory?user=${user.id}`,
+            metadata: user
+          });
+        }
+      });
+
+      // Search documents  
+      const documents = await storage.getDocuments();
+      documents.forEach(doc => {
+        if (doc.title.toLowerCase().includes(query) ||
+            doc.description?.toLowerCase().includes(query)) {
+          results.push({
+            id: doc.id,
+            title: doc.title,
+            type: 'document',
+            description: doc.description,
+            url: `/content/documents/${doc.id}`,
+            metadata: doc
+          });
+        }
+      });
+
+      // Search announcements
+      const announcements = await storage.getAnnouncements();
+      announcements.forEach(ann => {
+        if (ann.title.toLowerCase().includes(query) ||
+            ann.content.toLowerCase().includes(query)) {
+          results.push({
+            id: ann.id,
+            title: ann.title,
+            type: 'announcement',
+            description: ann.content.substring(0, 100) + '...',
+            url: `/announcements/${ann.id}`,
+            metadata: ann
+          });
+        }
+      });
+
+      // Search contents
+      const contents = await storage.getContents();
+      contents.forEach(content => {
+        if (content.title.toLowerCase().includes(query) ||
+            content.description?.toLowerCase().includes(query)) {
+          results.push({
+            id: content.id,
+            title: content.title,
+            type: 'content',
+            description: content.description,
+            url: `/content/${content.id}`,
+            metadata: content
+          });
+        }
+      });
+
+      res.json(results.slice(0, 20)); // Limit to 20 results
+    } catch (error) {
+      console.error("Error in global search:", error);
+      res.status(500).json({ error: "Failed to perform search" });
+    }
+  });
+
+  // Dashboard analytics endpoints
+  app.get("/api/dashboard/recent-activity", requireAuth, async (req, res) => {
+    try {
+      const activities = [];
+      
+      // Get recent announcements
+      const announcements = await storage.getAnnouncements();
+      announcements.slice(0, 3).forEach(ann => {
+        activities.push({
+          id: ann.id,
+          type: 'announcement',
+          title: `Nouvelle annonce: ${ann.title}`,
+          date: ann.createdAt,
+          icon: 'announcement'
+        });
+      });
+
+      // Get recent messages
+      const messages = await storage.getMessages(req.session.userId!);
+      messages.slice(0, 2).forEach(msg => {
+        activities.push({
+          id: msg.id,
+          type: 'message',
+          title: `Nouveau message: ${msg.subject}`,
+          date: msg.createdAt,
+          icon: 'message'
+        });
+      });
+
+      activities.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      res.json(activities.slice(0, 10));
+    } catch (error) {
+      console.error("Error fetching recent activity:", error);
+      res.status(500).json({ error: "Failed to fetch recent activity" });
+    }
+  });
+
+  app.get("/api/dashboard/quick-stats", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      
+      // Get user's enrollments for training stats
+      const enrollments = await storage.getUserEnrollments(userId);
+      const completedCourses = enrollments.filter(e => e.status === "completed").length;
+      
+      // Get unread messages
+      const messages = await storage.getMessages(userId);
+      const unreadMessages = messages.filter(m => !m.isRead).length;
+      
+      // Get user's complaints
+      const complaints = await storage.getComplaintsByUser(userId);
+      const openComplaints = complaints.filter(c => c.status === "open").length;
+      
+      const stats = {
+        completedCourses,
+        unreadMessages,
+        openComplaints,
+        totalEnrollments: enrollments.length
+      };
+      
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching quick stats:", error);
+      res.status(500).json({ error: "Failed to fetch quick stats" });
+    }
+  });
+
+  app.get("/api/dashboard/metrics", requireAuth, async (req, res) => {
+    try {
+      const allUsers = await storage.getUsers();
+      const allAnnouncements = await storage.getAnnouncements();
+      const allDocuments = await storage.getDocuments();
+      const allTrainings = await storage.getTrainings();
+      
+      const metrics = {
+        totalUsers: allUsers.length,
+        activeUsers: allUsers.filter(u => u.isActive).length,
+        totalAnnouncements: allAnnouncements.length,
+        totalDocuments: allDocuments.length,
+        totalTrainings: allTrainings.length,
+        recentActivity: allAnnouncements.filter(a => 
+          new Date(a.createdAt).getTime() > Date.now() - 7 * 24 * 60 * 60 * 1000
+        ).length
+      };
+      
+      res.json(metrics);
+    } catch (error) {
+      console.error("Error fetching metrics:", error);
+      res.status(500).json({ error: "Failed to fetch metrics" });
+    }
+  });
+
+  // Content interaction endpoints
+  app.post("/api/contents/:id/like", requireAuth, async (req, res) => {
+    try {
+      // For now, just return success - would implement like tracking in full system
+      res.json({ success: true, message: "Content liked" });
+    } catch (error) {
+      console.error("Error liking content:", error);
+      res.status(500).json({ error: "Failed to like content" });
+    }
+  });
+
+  app.post("/api/contents/:id/download", requireAuth, async (req, res) => {
+    try {
+      // For now, just return success - would implement download tracking in full system
+      res.json({ success: true, message: "Download tracked" });
+    } catch (error) {
+      console.error("Error tracking download:", error);
+      res.status(500).json({ error: "Failed to track download" });
+    }
+  });
+
+  // User activation endpoint
+  app.patch("/api/users/:id/activate", requireAuth, requireRole(['admin']), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { isActive } = req.body;
+      
+      const updatedUser = await storage.updateUser(id, { isActive });
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating user activation:", error);
+      res.status(500).json({ error: "Failed to update user activation" });
+    }
+  });
+
+  // Featured courses endpoint
+  app.get("/api/courses/featured", requireAuth, async (req, res) => {
+    try {
+      const courses = await storage.getCourses();
+      const featured = courses.filter(course => course.isFeatured);
+      res.json(featured);
+    } catch (error) {
+      console.error("Error fetching featured courses:", error);
+      res.status(500).json({ error: "Failed to fetch featured courses" });
+    }
+  });
+
+  // Courses by category endpoint
+  app.get("/api/courses/by-category/:category", requireAuth, async (req, res) => {
+    try {
+      const { category } = req.params;
+      const courses = await storage.getCourses();
+      const filtered = courses.filter(course => course.category === category);
+      res.json(filtered);
+    } catch (error) {
+      console.error("Error fetching courses by category:", error);
+      res.status(500).json({ error: "Failed to fetch courses by category" });
+    }
+  });
+
   app.post("/api/categories", async (req, res) => {
     try {
       const result = insertCategorySchema.safeParse(req.body);

@@ -32,7 +32,8 @@ export function GlobalSearch() {
 
   // Global search endpoint
   const { data: searchResults = [], isLoading } = useQuery({
-    queryKey: ["/api/search/global", query],
+    queryKey: ["/api/search/global"],
+    queryFn: () => fetch(`/api/search/global?q=${encodeURIComponent(query)}`).then(res => res.json()),
     enabled: query.length >= 2
   });
 
