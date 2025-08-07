@@ -1,492 +1,601 @@
-# INVENTAIRE EXHAUSTIF BACKEND - IntraSphere (August 7, 2025)
+# INVENTAIRE BACKEND - INTRASPHERE LEARNING PLATFORM
 
-## ARCHITECTURE GLOBALE
+## ARCHITECTURE GÉNÉRALE
+### Technologies Principales
+- **Runtime**: Node.js avec TypeScript
+- **Framework Web**: Express.js
+- **Base de Données**: PostgreSQL avec Drizzle ORM
+- **Communication Temps Réel**: WebSocket (ws)
+- **Authentification**: Sessions Express avec bcrypt
+- **Sécurité**: Helmet, express-rate-limit, sanitization
+- **Email**: Nodemailer
+- **Stockage Cloud**: Google Cloud Storage
 
 ### Structure des Dossiers
 ```
 server/
+├── config.ts               # Configuration générale
+├── index.ts                # Point d'entrée principal
+├── db.ts                   # Configuration base de données
+├── vite.ts                 # Configuration Vite pour développement
+├── migrations.ts           # Migrations et sécurité
+├── testData.ts            # Données de test
 ├── data/
-│   └── storage.ts              # Interface IStorage et implémentation MemStorage
+│   └── storage.ts         # Interface et implémentation storage
 ├── middleware/
-│   └── security.ts             # Middlewares de sécurité
+│   └── security.ts        # Middleware de sécurité
 ├── routes/
-│   └── api.ts                  # 99 endpoints API REST complets
-├── services/
-│   ├── auth.ts                 # Service d'authentification bcrypt
-│   ├── email.ts                # Service d'envoi d'emails
-│   └── websocket.ts            # Service WebSocket temps réel
-├── config.ts                   # Configuration serveur
-├── db.ts                       # Configuration base de données Neon
-├── index.ts                    # Point d'entrée serveur Express
-├── migrations.ts               # Migrations base de données
-├── testData.ts                 # Données de test et échantillons
-└── vite.ts                     # Configuration Vite middleware
+│   └── api.ts             # Routes API principales
+└── services/
+    ├── auth.ts            # Service d'authentification
+    ├── email.ts           # Service email
+    └── websocket.ts       # Service WebSocket
 ```
 
-### Technologies Backend
-- **Runtime**: Node.js avec Express.js
-- **Language**: TypeScript strict avec ES modules
-- **Base de données**: PostgreSQL Neon serverless
-- **ORM**: Drizzle ORM pour type-safety
-- **Validation**: Zod schemas partagés
-- **Authentification**: Sessions + bcrypt
-- **WebSocket**: ws pour temps réel
-- **Email**: Nodemailer service
+## CONFIGURATION ET ENVIRONNEMENT
 
-## ENDPOINTS API COMPLETS (99 endpoints)
+### Variables d'Environnement
+- **NODE_ENV** - Environnement (development/production)
+- **DATABASE_URL** - URL connexion PostgreSQL
+- **SESSION_SECRET** - Secret pour sessions
+- **PORT** - Port serveur (défaut: 5000)
+- **REPL_ID** - Identifiant Replit
 
-### 1. AUTHENTIFICATION (4 endpoints)
-1. **POST /api/auth/login** - Connexion utilisateur
-2. **POST /api/auth/register** - Inscription utilisateur 
-3. **POST /api/auth/logout** - Déconnexion
-4. **GET /api/auth/me** - Profil utilisateur actuel
+### Configuration de Sécurité
+- **Trust Proxy** - Configuration pour production
+- **Helmet** - Protection headers HTTP
+- **Rate Limiting** - Protection contre spamming
+- **CORS** - Configuration cross-origin
+- **Session Security** - Cookies sécurisés
 
-### 2. GESTION UTILISATEURS (8 endpoints)
-5. **GET /api/users** - Liste tous les utilisateurs
-6. **GET /api/users/:id** - Détails utilisateur spécifique
-7. **POST /api/users** - Création utilisateur (admin)
-8. **PATCH /api/users/:id** - Mise à jour utilisateur
-9. **DELETE /api/users/:id** - Suppression utilisateur (admin)
-10. **GET /api/users/directory** - Annuaire employés public
-11. **GET /api/users/by-employee-id/:employeeId** - Recherche par ID employé
-12. **PATCH /api/users/:id/activate** - Activation/désactivation compte
+## BASE DE DONNÉES (DRIZZLE ORM)
 
-### 3. DASHBOARD & STATISTIQUES (6 endpoints)
-13. **GET /api/dashboard/stats** - Statistiques générales dashboard
-14. **GET /api/dashboard/recent-activity** - Activité récente
-15. **GET /api/dashboard/notifications** - Notifications utilisateur
-16. **GET /api/dashboard/quick-stats** - Stats rapides
-17. **GET /api/dashboard/metrics** - Métriques avancées
-18. **GET /api/analytics/overview** - Vue d'ensemble analytics
+### Tables Principales (17 tables)
 
-### 4. ANNONCES (5 endpoints)
-19. **GET /api/announcements** - Liste toutes les annonces
-20. **GET /api/announcements/:id** - Détails annonce spécifique
-21. **POST /api/announcements** - Création annonce
-22. **PATCH /api/announcements/:id** - Mise à jour annonce
-23. **DELETE /api/announcements/:id** - Suppression annonce
+#### 1. **users** - Gestion des utilisateurs
+```typescript
+id, username, password, name, role, avatar
+employeeId, department, position, isActive
+phone, email, createdAt, updatedAt
+```
+- **Rôles**: employee, admin, moderator
+- **Index**: username unique, employeeId unique
 
-### 5. DOCUMENTS (5 endpoints)
-24. **GET /api/documents** - Liste tous les documents
-25. **GET /api/documents/:id** - Détails document spécifique
-26. **POST /api/documents** - Upload nouveau document
-27. **PATCH /api/documents/:id** - Mise à jour document
-28. **DELETE /api/documents/:id** - Suppression document
+#### 2. **announcements** - Annonces système
+```typescript
+id, title, content, type, authorId, authorName
+imageUrl, icon, createdAt, isImportant
+```
+- **Types**: info, important, event, formation
 
-### 6. ÉVÉNEMENTS (7 endpoints)
-29. **GET /api/events** - Liste tous les événements
-30. **GET /api/events/:id** - Détails événement spécifique
-31. **POST /api/events** - Création événement
-32. **PATCH /api/events/:id** - Mise à jour événement
-33. **DELETE /api/events/:id** - Suppression événement
-34. **POST /api/events/:id/rsvp** - Inscription événement
-35. **GET /api/events/:id/participants** - Liste participants
+#### 3. **documents** - Gestion documentaire
+```typescript
+id, title, description, category, fileName
+fileUrl, updatedAt, version
+```
+- **Catégories**: regulation, policy, guide, procedure
 
-### 7. MESSAGERIE INTERNE (4 endpoints)
-36. **GET /api/messages** - Messages utilisateur connecté
-37. **GET /api/messages/:id** - Détails message spécifique
-38. **POST /api/messages** - Envoi nouveau message
-39. **PATCH /api/messages/:id/read** - Marquer message comme lu
+#### 4. **events** - Événements
+```typescript
+id, title, description, date, location
+type, organizerId, createdAt
+```
+- **Types**: meeting, training, social, other
 
-### 8. RÉCLAMATIONS (3 endpoints)
-40. **GET /api/complaints** - Liste toutes les réclamations
-41. **POST /api/complaints** - Création réclamation
-42. **PATCH /api/complaints/:id** - Mise à jour statut réclamation
+#### 5. **messages** - Messagerie interne
+```typescript
+id, senderId, recipientId, subject
+content, isRead, createdAt
+```
 
-### 9. PERMISSIONS & DÉLÉGATIONS (4 endpoints)
-43. **GET /api/permissions** - Toutes les permissions système
-44. **GET /api/permissions/:userId** - Permissions utilisateur spécifique
-45. **POST /api/permissions** - Création permission/délégation
-46. **DELETE /api/permissions/:id** - Révocation permission
+#### 6. **complaints** - Système de réclamations
+```typescript
+id, submitterId, assignedToId, title, description
+category, priority, status, createdAt, updatedAt
+```
+- **Catégories**: hr, it, facilities, other
+- **Priorités**: low, medium, high, urgent
+- **Statuts**: open, in_progress, resolved, closed
 
-### 10. GESTION DE CONTENU (4 endpoints)
-47. **GET /api/contents** - Liste tout le contenu
-48. **POST /api/contents** - Création contenu multimédia
-49. **PATCH /api/contents/:id** - Mise à jour contenu
-50. **DELETE /api/contents/:id** - Suppression contenu
+#### 7. **permissions** - Délégation de permissions
+```typescript
+id, userId, grantedBy, permission, createdAt
+```
+- **Permissions**: manage_announcements, manage_documents, manage_events, manage_users, validate_topics, validate_posts, manage_employee_categories, manage_trainings
 
-### 11. CATÉGORIES (4 endpoints)
-51. **GET /api/categories** - Liste toutes les catégories
-52. **POST /api/categories** - Création catégorie
-53. **PATCH /api/categories/:id** - Mise à jour catégorie
-54. **DELETE /api/categories/:id** - Suppression catégorie
+#### 8. **contents** - Bibliothèque de contenu
+```typescript
+id, title, type, category, description
+fileUrl, thumbnailUrl, duration, viewCount
+rating, tags, isPopular, isFeatured
+createdAt, updatedAt
+```
+- **Types**: video, image, document, audio
 
-### 12. CATÉGORIES EMPLOYÉS (4 endpoints)
-55. **GET /api/employee-categories** - Catégories employés (admin/mod)
-56. **POST /api/employee-categories** - Création catégorie (admin)
-57. **PATCH /api/employee-categories/:id** - Mise à jour (admin)
-58. **DELETE /api/employee-categories/:id** - Suppression (admin)
+#### 9. **categories** - Catégories de contenu
+```typescript
+id, name, description, icon, color
+isVisible, sortOrder, createdAt
+```
 
-### 13. PARAMÈTRES SYSTÈME (2 endpoints)
-59. **GET /api/system-settings** - Paramètres système (admin/mod)
-60. **PATCH /api/system-settings** - Mise à jour paramètres (admin)
+#### 10. **employeeCategories** - Catégories d'employés
+```typescript
+id, name, description, color
+permissions[], isActive, createdAt
+```
 
-### 14. FORMATIONS/TRAININGS (4 endpoints)
-61. **GET /api/trainings** - Liste toutes les formations
-62. **POST /api/trainings** - Création formation (admin/mod)
-63. **PATCH /api/trainings/:id** - Mise à jour formation
-64. **DELETE /api/trainings/:id** - Suppression formation (admin)
+#### 11. **systemSettings** - Paramètres système
+```typescript
+id, showAnnouncements, showContent, showDocuments
+showForum, showMessages, showComplaints
+showTraining, updatedAt
+```
 
-### 15. PARTICIPANTS FORMATIONS (4 endpoints)
-65. **GET /api/training-participants/:trainingId** - Participants formation
-66. **POST /api/training-participants** - Inscription formation
-67. **PATCH /api/training-participants/:id** - Mise à jour statut
-68. **DELETE /api/training-participants/:id** - Désinscription
+#### 12. **trainings** - Formations
+```typescript
+id, title, description, category, difficulty
+duration, instructorId, instructorName
+startDate, endDate, location, maxParticipants
+currentParticipants, isMandatory, isActive
+isVisible, thumbnailUrl, documentUrls[]
+createdAt, updatedAt
+```
 
-### 16. PLATEFORME E-LEARNING - COURS (7 endpoints)
-69. **GET /api/courses** - Liste tous les cours e-learning
-70. **GET /api/courses/:id** - Détails cours spécifique
-71. **POST /api/courses** - Création cours (admin/mod)
-72. **PUT /api/courses/:id** - Mise à jour cours complète
-73. **DELETE /api/courses/:id** - Suppression cours (admin)
-74. **GET /api/courses/featured** - Cours mis en avant
-75. **GET /api/courses/by-category/:category** - Cours par catégorie
+#### 13. **trainingParticipants** - Participants formations
+```typescript
+id, trainingId, userId, registeredAt
+status, completionDate, score, feedback
+```
 
-### 17. PLATEFORME E-LEARNING - LEÇONS (4 endpoints)
-76. **GET /api/courses/:courseId/lessons** - Leçons d'un cours
-77. **GET /api/lessons/:id** - Détails leçon spécifique
-78. **POST /api/lessons** - Création leçon (admin/mod)
-79. **PUT /api/lessons/:id** - Mise à jour leçon
+### Tables E-Learning (8 tables)
 
-### 18. INSCRIPTIONS E-LEARNING (2 endpoints)
-80. **GET /api/my-enrollments** - Inscriptions utilisateur
-81. **POST /api/enroll/:courseId** - Inscription à un cours
+#### 14. **courses** - Cours e-learning
+```typescript
+id, title, description, category, difficulty
+duration, thumbnailUrl, authorId, authorName
+isPublished, isMandatory, prerequisites
+tags, createdAt, updatedAt
+```
 
-### 19. SUIVI PROGRESSION (4 endpoints)
-82. **POST /api/lessons/:lessonId/complete** - Marquer leçon terminée
-83. **GET /api/courses/:courseId/my-progress** - Progression cours
-84. **GET /api/my-progress** - Progression globale utilisateur
-85. **GET /api/progress-analytics** - Analytics progression
+#### 15. **lessons** - Leçons de cours
+```typescript
+id, courseId, title, description, content
+order, duration, videoUrl, documentUrl
+isRequired, createdAt, updatedAt
+```
 
-### 20. RESSOURCES E-LEARNING (3 endpoints)
-86. **GET /api/resources** - Toutes les ressources
-87. **POST /api/resources** - Création ressource (admin/mod)
-88. **PUT /api/resources/:id** - Mise à jour ressource
+#### 16. **quizzes** - Quiz et évaluations
+```typescript
+id, courseId, lessonId, title, description
+questions, passingScore, timeLimit
+allowRetries, maxAttempts, isRequired
+createdAt, updatedAt
+```
 
-### 21. CERTIFICATS (1 endpoint)
-89. **GET /api/my-certificates** - Certificats utilisateur
+#### 17. **enrollments** - Inscriptions cours
+```typescript
+id, userId, courseId, enrolledAt, startedAt
+completedAt, progress, status, certificateUrl
+```
 
-### 22. FORUM - CATÉGORIES (4 endpoints)
-90. **GET /api/forum/categories** - Catégories forum
-91. **POST /api/forum/categories** - Création catégorie
-92. **PUT /api/forum/categories/:id** - Mise à jour catégorie
-93. **DELETE /api/forum/categories/:id** - Suppression catégorie
+#### 18. **lessonProgress** - Progression leçons
+```typescript
+id, userId, lessonId, courseId, isCompleted
+timeSpent, completedAt, createdAt
+```
 
-### 23. FORUM - SUJETS (4 endpoints)  
-94. **GET /api/forum/topics** - Tous les sujets forum
-95. **POST /api/forum/topics** - Création nouveau sujet
-96. **PUT /api/forum/topics/:id** - Mise à jour sujet
-97. **DELETE /api/forum/topics/:id** - Suppression sujet
+#### 19. **quizAttempts** - Tentatives quiz
+```typescript
+id, userId, quizId, score, answers
+completedAt, createdAt
+```
 
-### 24. ANALYTICS AVANCÉS (2 endpoints)
-98. **GET /api/training-analytics** - Analytics formation détaillés
-99. **GET /api/analytics/dashboard** - Analytics dashboard admin
+#### 20. **certificates** - Certificats
+```typescript
+id, userId, courseId, type, status
+issuedAt, expiresAt, certificateUrl
+```
 
-## COUCHE DATA/STORAGE (Interface IStorage)
+#### 21. **resources** - Ressources partagées
+```typescript
+id, title, description, type, fileUrl
+category, isPublic, authorId, createdAt
+```
 
-### Interface IStorage Complète (75+ méthodes)
+### Tables Forum (5 tables)
 
-#### Gestion Utilisateurs (11 méthodes)
-- `getUser(id: string)` - Récupération utilisateur par ID
-- `getUserByUsername(username: string)` - Recherche par nom d'utilisateur
-- `getUserByEmployeeId(employeeId: string)` - Recherche par ID employé
-- `createUser(user: InsertUser)` - Création nouvel utilisateur
-- `updateUser(id: string, user: Partial<User>)` - Mise à jour utilisateur
-- `getUsers()` - Liste tous les utilisateurs
-- `deleteUser(id: string)` - Suppression utilisateur
-- `activateUser(id: string)` - Activation compte
-- `deactivateUser(id: string)` - Désactivation compte
-- `getUsersByRole(role: string)` - Utilisateurs par rôle
-- `getUsersByDepartment(department: string)` - Utilisateurs par département
+#### 22. **forumCategories** - Catégories forum
+```typescript
+id, name, description, icon, color
+isVisible, sortOrder, createdAt
+```
 
-#### Gestion Annonces (5 méthodes)
-- `getAnnouncements()` - Toutes les annonces
-- `getAnnouncementById(id: string)` - Annonce spécifique
-- `createAnnouncement(announcement: InsertAnnouncement)` - Création
-- `updateAnnouncement(id: string, announcement: Partial<Announcement>)` - Mise à jour
-- `deleteAnnouncement(id: string)` - Suppression
+#### 23. **forumTopics** - Sujets forum
+```typescript
+id, categoryId, title, description, authorId
+authorName, isSticky, isLocked, viewCount
+postCount, lastPostAt, createdAt
+```
 
-#### Gestion Documents (5 méthodes)
-- `getDocuments()` - Tous les documents
-- `getDocumentById(id: string)` - Document spécifique
-- `createDocument(document: InsertDocument)` - Création
-- `updateDocument(id: string, document: Partial<Document>)` - Mise à jour
-- `deleteDocument(id: string)` - Suppression
+#### 24. **forumPosts** - Messages forum
+```typescript
+id, topicId, authorId, authorName, content
+isDeleted, deletedBy, likeCount
+createdAt, updatedAt
+```
 
-#### Gestion Événements (5 méthodes)
-- `getEvents()` - Tous les événements
-- `getEventById(id: string)` - Événement spécifique
-- `createEvent(event: InsertEvent)` - Création
-- `updateEvent(id: string, event: Partial<Event>)` - Mise à jour
-- `deleteEvent(id: string)` - Suppression
+#### 25. **forumLikes** - Likes forum
+```typescript
+id, postId, userId, createdAt
+```
 
-#### Messagerie (4 méthodes)
-- `getMessages(userId: string)` - Messages utilisateur
-- `getMessageById(id: string)` - Message spécifique
-- `createMessage(message: InsertMessage)` - Envoi message
-- `markMessageAsRead(id: string)` - Marquer comme lu
+#### 26. **forumUserStats** - Statistiques utilisateur forum
+```typescript
+userId, postCount, likeCount, topicCount
+reputation, lastActiveAt
+```
 
-#### Réclamations (5 méthodes)
-- `getComplaints()` - Toutes les réclamations
-- `getComplaintById(id: string)` - Réclamation spécifique
-- `getComplaintsByUser(userId: string)` - Réclamations par utilisateur
-- `createComplaint(complaint: InsertComplaint)` - Création
-- `updateComplaint(id: string, complaint: Partial<Complaint>)` - Mise à jour
+## INTERFACE DE STOCKAGE (IStorage)
 
-#### Permissions (4 méthodes)
-- `getPermissions(userId: string)` - Permissions utilisateur
-- `createPermission(permission: InsertPermission)` - Création permission
-- `revokePermission(id: string)` - Révocation permission
-- `hasPermission(userId: string, permission: string)` - Vérification permission
+### Méthodes Utilisateurs (6 méthodes)
+- `getUser(id)` - Récupérer utilisateur par ID
+- `getUserByUsername(username)` - Par nom d'utilisateur
+- `getUserByEmployeeId(employeeId)` - Par ID employé
+- `createUser(user)` - Créer utilisateur
+- `updateUser(id, user)` - Mettre à jour
+- `getUsers()` - Liste tous utilisateurs
 
-#### Contenu (5 méthodes)
-- `getContents()` - Tout le contenu
-- `getContentById(id: string)` - Contenu spécifique
-- `createContent(content: InsertContent)` - Création
-- `updateContent(id: string, content: Partial<Content>)` - Mise à jour
-- `deleteContent(id: string)` - Suppression
+### Méthodes Annonces (5 méthodes)
+- `getAnnouncements()` - Liste annonces
+- `getAnnouncementById(id)` - Par ID
+- `createAnnouncement(announcement)` - Créer
+- `updateAnnouncement(id, data)` - Mettre à jour
+- `deleteAnnouncement(id)` - Supprimer
 
-#### Catégories (10 méthodes)
-- `getCategories()` - Toutes les catégories
-- `getCategoryById(id: string)` - Catégorie spécifique
-- `createCategory(category: InsertCategory)` - Création
-- `updateCategory(id: string, category: Partial<Category>)` - Mise à jour
-- `deleteCategory(id: string)` - Suppression
-- `getEmployeeCategories()` - Catégories employés
-- `getEmployeeCategoryById(id: string)` - Catégorie employé spécifique
-- `createEmployeeCategory(category: InsertEmployeeCategory)` - Création
-- `updateEmployeeCategory(id: string, category: Partial<EmployeeCategory>)` - Mise à jour
-- `deleteEmployeeCategory(id: string)` - Suppression
+### Méthodes Documents (5 méthodes)
+- `getDocuments()` - Liste documents
+- `getDocumentById(id)` - Par ID
+- `createDocument(document)` - Créer
+- `updateDocument(id, data)` - Mettre à jour
+- `deleteDocument(id)` - Supprimer
 
-#### Paramètres Système (2 méthodes)
-- `getSystemSettings()` - Paramètres système
-- `updateSystemSettings(settings: Partial<SystemSettings>)` - Mise à jour
+### Méthodes Événements (5 méthodes)
+- `getEvents()` - Liste événements
+- `getEventById(id)` - Par ID
+- `createEvent(event)` - Créer
+- `updateEvent(id, data)` - Mettre à jour
+- `deleteEvent(id)` - Supprimer
 
-#### Plateforme E-Learning (35+ méthodes)
-**Formations**:
-- `getTrainings()` - Toutes les formations
-- `getTrainingById(id: string)` - Formation spécifique
-- `createTraining(training: InsertTraining)` - Création
-- `updateTraining(id: string, training: Partial<Training>)` - Mise à jour
-- `deleteTraining(id: string)` - Suppression
+### Méthodes Messagerie (8 méthodes)
+- `getMessages(userId)` - Messages utilisateur
+- `getMessageById(id)` - Par ID
+- `createMessage(message)` - Créer
+- `markMessageAsRead(id)` - Marquer lu
+- `getUserConversations(userId)` - Conversations
+- `getConversationMessages(user1, user2)` - Messages conversation
+- `getUnreadMessageCount(userId)` - Nombre non lus
+- `deleteMessage(id)` - Supprimer
 
-**Cours**:
-- `getCourses()` - Tous les cours
-- `getCourseById(id: string)` - Cours spécifique
-- `createCourse(course: InsertCourse)` - Création
-- `updateCourse(id: string, course: Partial<Course>)` - Mise à jour
-- `deleteCourse(id: string)` - Suppression
-- `getFeaturedCourses()` - Cours mis en avant
-- `getCoursesByCategory(category: string)` - Cours par catégorie
+### Méthodes Réclamations (6 méthodes)
+- `getComplaints()` - Liste réclamations
+- `getComplaintById(id)` - Par ID
+- `getUserComplaints(userId)` - Par utilisateur
+- `createComplaint(complaint)` - Créer
+- `updateComplaint(id, data)` - Mettre à jour
+- `deleteComplaint(id)` - Supprimer
 
-**Leçons**:
-- `getLessons(courseId: string)` - Leçons d'un cours
-- `getLessonById(id: string)` - Leçon spécifique
-- `createLesson(lesson: InsertLesson)` - Création
-- `updateLesson(id: string, lesson: Partial<Lesson>)` - Mise à jour
-- `deleteLesson(id: string)` - Suppression
+### Méthodes Permissions (4 méthodes)
+- `getPermissions(userId)` - Par utilisateur
+- `createPermission(permission)` - Créer
+- `hasPermission(userId, permission)` - Vérifier
+- `deletePermission(id)` - Supprimer
 
-**Inscriptions & Progression**:
-- `getUserEnrollments(userId: string)` - Inscriptions utilisateur
-- `enrollUser(userId: string, courseId: string)` - Inscription cours
-- `updateLessonProgress(userId: string, lessonId: string, courseId: string, completed: boolean)` - Progression leçon
-- `getUserLessonProgress(userId: string, courseId: string)` - Progression cours
-- `getUserProgress(userId: string)` - Progression globale
+### Méthodes Contenu (11 méthodes)
+- `getContents()` - Liste contenu
+- `getContentById(id)` - Par ID
+- `createContent(content)` - Créer
+- `updateContent(id, data)` - Mettre à jour
+- `deleteContent(id)` - Supprimer
+- `getCategories()` - Catégories
+- `createCategory(category)` - Créer catégorie
+- `updateCategory(id, data)` - Mettre à jour catégorie
+- `deleteCategory(id)` - Supprimer catégorie
+- `incrementContentView(id)` - Incrémenter vues
+- `getPopularContent()` - Contenu populaire
 
-**Ressources**:
-- `getResources()` - Toutes les ressources
-- `getResourceById(id: string)` - Ressource spécifique
-- `createResource(resource: InsertResource)` - Création
-- `updateResource(id: string, resource: Partial<Resource>)` - Mise à jour
-- `deleteResource(id: string)` - Suppression
+### Méthodes Formations (12 méthodes)
+- `getTrainings()` - Liste formations
+- `getTrainingById(id)` - Par ID
+- `createTraining(training)` - Créer
+- `updateTraining(id, data)` - Mettre à jour
+- `deleteTraining(id)` - Supprimer
+- `getTrainingParticipants(trainingId)` - Participants
+- `getUserTrainingParticipations(userId)` - Participations utilisateur
+- `addTrainingParticipant(participant)` - Ajouter participant
+- `updateTrainingParticipant(id, data)` - Mettre à jour participant
+- `removeTrainingParticipant(trainingId, userId)` - Retirer participant
+- `getAllTrainingParticipants()` - Tous participants
+- `getTrainingRecommendations(userId)` - Recommandations
 
-**Certificats**:
-- `getUserCertificates(userId: string)` - Certificats utilisateur
-- `generateCertificate(userId: string, courseId: string)` - Génération certificat
+### Méthodes E-Learning (15 méthodes)
+- `getCourses()` - Liste cours
+- `getCourseById(id)` - Par ID
+- `createCourse(course)` - Créer
+- `updateCourse(id, data)` - Mettre à jour
+- `deleteCourse(id)` - Supprimer
+- `getLessons(courseId)` - Leçons cours
+- `getCourseLessons(courseId)` - Alias leçons
+- `createLesson(lesson)` - Créer leçon
+- `updateLesson(id, data)` - Mettre à jour leçon
+- `deleteLesson(id)` - Supprimer leçon
+- `enrollUser(userId, courseId)` - Inscrire utilisateur
+- `getUserEnrollments(userId)` - Inscriptions utilisateur
+- `updateEnrollmentProgress(id, progress)` - Mettre à jour progression
+- `getUserLessonProgress(userId, courseId)` - Progression leçons
+- `markLessonComplete(userId, courseId, lessonId)` - Marquer leçon complète
 
-#### Forum (15+ méthodes)
-**Catégories**:
+### Méthodes Forum (12 méthodes)
 - `getForumCategories()` - Catégories forum
-- `getForumCategoryById(id: string)` - Catégorie spécifique
-- `createForumCategory(category: InsertForumCategory)` - Création
-- `updateForumCategory(id: string, category: Partial<ForumCategory>)` - Mise à jour
-- `deleteForumCategory(id: string)` - Suppression
+- `createForumCategory(category)` - Créer catégorie
+- `updateForumCategory(id, data)` - Mettre à jour catégorie
+- `deleteForumCategory(id)` - Supprimer catégorie
+- `getForumTopics(categoryId?)` - Sujets forum
+- `createForumTopic(topic)` - Créer sujet
+- `updateForumTopic(id, data)` - Mettre à jour sujet
+- `deleteForumTopic(id)` - Supprimer sujet
+- `getForumPosts(topicId)` - Messages forum
+- `createForumPost(post)` - Créer message
+- `updateForumPost(id, data)` - Mettre à jour message
+- `deleteForumPost(id, deletedBy)` - Supprimer message
 
-**Sujets**:
-- `getForumTopics(categoryId?: string)` - Sujets forum
-- `getForumTopicById(id: string)` - Sujet spécifique
-- `createForumTopic(topic: InsertForumTopic)` - Création
-- `updateForumTopic(id: string, topic: Partial<ForumTopic>)` - Mise à jour
-- `deleteForumTopic(id: string)` - Suppression
+### Méthodes Recherche (4 méthodes)
+- `searchUsers(query)` - Rechercher utilisateurs
+- `searchContent(query)` - Rechercher contenu
+- `searchDocuments(query)` - Rechercher documents
+- `searchAnnouncements(query)` - Rechercher annonces
 
-**Posts & Interactions**:
-- `getForumPosts(topicId: string)` - Posts d'un sujet
-- `createForumPost(post: InsertForumPost)` - Création post
-- `updateForumPost(id: string, post: Partial<ForumPost>)` - Mise à jour
-- `deleteForumPost(id: string)` - Suppression
-- `likeForumPost(userId: string, postId: string)` - Like post
-- `getForumUserStats(userId: string)` - Statistiques utilisateur forum
+### Méthodes Statistiques (2 méthodes)
+- `getStats()` - Statistiques générales
+- `resetToTestData()` - Réinitialiser données test
 
-## SERVICES BACKEND (3 services)
+## ROUTES API
 
-### 1. AuthService (auth.ts)
-- **Fonctionnalités**: Hash/vérification passwords bcrypt, gestion sessions
-- **Méthodes principales**:
-  - `hashPassword(password: string)` - Hash sécurisé
-  - `verifyPassword(password: string, hash: string)` - Vérification
-  - `generateSessionToken()` - Génération tokens session
-  - Intégration Express sessions
+### Authentification (4 routes)
+- `POST /api/auth/login` - Connexion utilisateur
+- `POST /api/auth/register` - Inscription utilisateur
+- `POST /api/auth/logout` - Déconnexion
+- `GET /api/auth/me` - Profil utilisateur actuel
 
-### 2. EmailService (email.ts)  
-- **Fonctionnalités**: Envoi emails notifications, bienvenue, confirmations
-- **Méthodes principales**:
-  - `sendWelcomeEmail(email: string, name: string)` - Email bienvenue
-  - `sendNotificationEmail(email: string, subject: string, content: string)` - Notifications
-  - `sendPasswordResetEmail(email: string, token: string)` - Reset password
-  - Configuration Nodemailer SMTP
+### Utilisateurs (6 routes)
+- `GET /api/users` - Liste utilisateurs
+- `GET /api/users/:id` - Utilisateur par ID
+- `PUT /api/users/:id` - Mettre à jour utilisateur
+- `POST /api/users` - Créer utilisateur
+- `DELETE /api/users/:id` - Supprimer utilisateur
+- `GET /api/users/search` - Rechercher utilisateurs
 
-### 3. WebSocketService (websocket.ts)
-- **Fonctionnalités**: Communication temps réel, notifications push
-- **Méthodes principales**:
-  - `broadcast(message: any)` - Diffusion globale
-  - `sendToUser(userId: string, message: any)` - Message privé
-  - `notifyNewAnnouncement(announcement: any)` - Notification annonce
-  - `notifyNewMessage(message: any)` - Notification message
-  - Gestion connexions/déconnexions utilisateurs
+### Annonces (5 routes)
+- `GET /api/announcements` - Liste annonces
+- `GET /api/announcements/:id` - Annonce par ID
+- `POST /api/announcements` - Créer annonce
+- `PUT /api/announcements/:id` - Mettre à jour annonce
+- `DELETE /api/announcements/:id` - Supprimer annonce
 
-## MIDDLEWARES DE SÉCURITÉ (security.ts)
+### Documents (5 routes)
+- `GET /api/documents` - Liste documents
+- `GET /api/documents/:id` - Document par ID
+- `POST /api/documents` - Créer document
+- `PUT /api/documents/:id` - Mettre à jour document
+- `DELETE /api/documents/:id` - Supprimer document
 
-### Middlewares d'Authentification
-- **requireAuth**: Vérification session utilisateur connecté
-- **requireRole(roles: string[])**: Contrôle d'accès par rôles
-- **validateRequest**: Validation données entrantes Zod
+### Événements (5 routes)
+- `GET /api/events` - Liste événements
+- `GET /api/events/:id` - Événement par ID
+- `POST /api/events` - Créer événement
+- `PUT /api/events/:id` - Mettre à jour événement
+- `DELETE /api/events/:id` - Supprimer événement
 
-### Sécurité Générale
-- **Helmet**: Headers sécurité HTTP
-- **Rate Limiting**: Limitation requêtes par IP
-- **CORS**: Configuration domaines autorisés
-- **Session Security**: Configuration sessions sécurisées
-- **Request Logging**: Logs détaillés requêtes/erreurs
+### Messagerie (8 routes)
+- `GET /api/messages` - Messages utilisateur
+- `GET /api/messages/:id` - Message par ID
+- `POST /api/messages` - Créer message
+- `PUT /api/messages/:id/read` - Marquer lu
+- `GET /api/conversations` - Conversations
+- `GET /api/conversations/:userId` - Messages conversation
+- `GET /api/messages/unread-count` - Nombre non lus
+- `DELETE /api/messages/:id` - Supprimer message
 
-## CONFIGURATION & INFRASTRUCTURE
+### Réclamations (6 routes)
+- `GET /api/complaints` - Liste réclamations
+- `GET /api/complaints/:id` - Réclamation par ID
+- `GET /api/complaints/user/:userId` - Par utilisateur
+- `POST /api/complaints` - Créer réclamation
+- `PUT /api/complaints/:id` - Mettre à jour réclamation
+- `DELETE /api/complaints/:id` - Supprimer réclamation
 
-### Configuration Base de Données (db.ts)
-- **Pool de connexions**: Neon PostgreSQL serverless
-- **WebSocket constructor**: Configuration ws pour Neon
-- **Drizzle ORM**: Configuration avec schémas typés
-- **Variables d'environnement**: DATABASE_URL requise
-- **Gestion d'erreurs**: Validation connexion DB
+### Permissions (4 routes)
+- `GET /api/permissions/:userId` - Permissions utilisateur
+- `POST /api/permissions` - Créer permission
+- `GET /api/permissions/:userId/:permission` - Vérifier permission
+- `DELETE /api/permissions/:id` - Supprimer permission
 
-### Migrations (migrations.ts)
-- **Migration automatique**: Passwords bcrypt au démarrage
-- **Données de test**: Injection testData.ts
-- **Validation schéma**: Vérification structure DB
-- **Logs migrations**: Feedback détaillé processus
+### Contenu (11 routes)
+- `GET /api/content` - Liste contenu
+- `GET /api/content/:id` - Contenu par ID
+- `POST /api/content` - Créer contenu
+- `PUT /api/content/:id` - Mettre à jour contenu
+- `DELETE /api/content/:id` - Supprimer contenu
+- `POST /api/content/:id/view` - Incrémenter vues
+- `GET /api/content/popular` - Contenu populaire
+- `GET /api/categories` - Catégories
+- `POST /api/categories` - Créer catégorie
+- `PUT /api/categories/:id` - Mettre à jour catégorie
+- `DELETE /api/categories/:id` - Supprimer catégorie
 
-### Configuration Serveur (config.ts)
-- **Variables d'environnement**: PORT, NODE_ENV, SESSION_SECRET
-- **Configuration sessions**: Sécurité et durée de vie
-- **Configuration CORS**: Domaines et headers autorisés
-- **Configuration logging**: Niveaux et formats logs
+### Formations (12 routes)
+- `GET /api/trainings` - Liste formations
+- `GET /api/trainings/:id` - Formation par ID
+- `POST /api/trainings` - Créer formation
+- `PUT /api/trainings/:id` - Mettre à jour formation
+- `DELETE /api/trainings/:id` - Supprimer formation
+- `GET /api/trainings/:id/participants` - Participants
+- `POST /api/trainings/:id/participants` - Ajouter participant
+- `DELETE /api/trainings/:trainingId/participants/:userId` - Retirer participant
+- `PUT /api/training-participants/:id` - Mettre à jour participant
+- `GET /api/users/:userId/trainings` - Formations utilisateur
+- `GET /api/training-participants` - Tous participants
+- `GET /api/users/:userId/training-recommendations` - Recommandations
 
-### Intégration Vite (vite.ts)
-- **Middleware mode**: Intégration serveur dev Vite
-- **HMR**: Hot Module Replacement
-- **Static serving**: Service fichiers statiques
-- **Template transformation**: Gestion index.html
-- **Error handling**: Gestion erreurs Vite SSR
+### E-Learning (15 routes)
+- `GET /api/courses` - Liste cours
+- `GET /api/courses/:id` - Cours par ID
+- `POST /api/courses` - Créer cours
+- `PUT /api/courses/:id` - Mettre à jour cours
+- `DELETE /api/courses/:id` - Supprimer cours
+- `GET /api/courses/:id/lessons` - Leçons cours
+- `POST /api/lessons` - Créer leçon
+- `PUT /api/lessons/:id` - Mettre à jour leçon
+- `DELETE /api/lessons/:id` - Supprimer leçon
+- `POST /api/enrollments` - Inscrire utilisateur
+- `GET /api/users/:userId/enrollments` - Inscriptions utilisateur
+- `PUT /api/enrollments/:id/progress` - Mettre à jour progression
+- `GET /api/users/:userId/lesson-progress/:courseId` - Progression leçons
+- `POST /api/lesson-progress` - Marquer leçon complète
+- `GET /api/users/:userId/certificates` - Certificats utilisateur
 
-## SCHÉMAS ET VALIDATION (shared/schema.ts)
+### Forum (12 routes)
+- `GET /api/forum/categories` - Catégories forum
+- `POST /api/forum/categories` - Créer catégorie
+- `PUT /api/forum/categories/:id` - Mettre à jour catégorie
+- `DELETE /api/forum/categories/:id` - Supprimer catégorie
+- `GET /api/forum/topics` - Sujets forum
+- `POST /api/forum/topics` - Créer sujet
+- `PUT /api/forum/topics/:id` - Mettre à jour sujet
+- `DELETE /api/forum/topics/:id` - Supprimer sujet
+- `GET /api/forum/topics/:id/posts` - Messages sujet
+- `POST /api/forum/posts` - Créer message
+- `PUT /api/forum/posts/:id` - Mettre à jour message
+- `DELETE /api/forum/posts/:id` - Supprimer message
 
-### Tables PostgreSQL (25 tables)
-1. **users** - Utilisateurs avec profils employés étendus
-2. **announcements** - Annonces avec types et importance
-3. **documents** - Documents avec versioning
-4. **events** - Événements avec organisateurs
-5. **messages** - Messagerie interne
-6. **complaints** - Réclamations avec statuts
-7. **permissions** - Délégations et permissions
-8. **contents** - Contenu multimédia
-9. **categories** - Catégories contenu
-10. **employeeCategories** - Types d'employés
-11. **systemSettings** - Configuration système
-12. **trainings** - Formations présentielles
-13. **trainingParticipants** - Participants formations
-14. **courses** - Cours e-learning
-15. **lessons** - Leçons des cours
-16. **quizzes** - Quiz et évaluations
-17. **enrollments** - Inscriptions cours
-18. **lessonProgress** - Progression leçons
-19. **quizAttempts** - Tentatives quiz
-20. **certificates** - Certificats obtenus
-21. **resources** - Ressources pédagogiques
-22. **forumCategories** - Catégories forum
-23. **forumTopics** - Sujets forum
-24. **forumPosts** - Posts forum
-25. **forumLikes** - Likes/réactions forum
+### Statistiques et Recherche (5 routes)
+- `GET /api/stats` - Statistiques générales
+- `POST /api/reset-test-data` - Réinitialiser données test
+- `GET /api/search/users` - Rechercher utilisateurs
+- `GET /api/search/content` - Rechercher contenu
+- `GET /api/search/global` - Recherche globale
 
-### Schemas Zod de Validation (25+ schémas)
-- **Insert schemas**: Validation création entités
-- **Update schemas**: Validation modifications partielles
-- **Relations**: Gestion relations entre entités
-- **Extended validation**: Règles métier personnalisées
-- **Type inference**: Types TypeScript automatiques
+## MIDDLEWARE DE SÉCURITÉ
 
-## DONNÉES DE TEST (testData.ts)
+### Fonctionnalités de Sécurité
+- **configureSecurity(app)** - Configuration Helmet et CORS
+- **sanitizeInput** - Sanitisation des entrées
+- **getSessionConfig()** - Configuration sessions sécurisées
+- **requireAuth** - Middleware authentification requis
+- **requireRole(roles[])** - Middleware contrôle rôles
 
-### Utilisateurs de Test (5 utilisateurs)
-- **admin** (Marie Dupont) - Directrice Générale
-- **moderator** (Pierre Martin) - Responsable RH  
-- **employee** (Sophie Bernard) - Développeuse
-- **jdoe** (Jean Doe) - Chef de projet Marketing
-- **adurand** (Alice Durand) - Commerciale
+### Protection Implémentée
+- **Rate Limiting** - Protection contre spam
+- **Input Sanitization** - Nettoyage données entrées
+- **Session Security** - Sessions sécurisées avec secrets
+- **CORS Protection** - Configuration cross-origin
+- **Helmet Security** - Headers HTTP sécurisés
 
-### Annonces de Test (5+ annonces)
-- Politique télétravail, formations obligatoires, réunions
-- Nouveaux arrivants, maintenance serveurs
-- Types: important, formation, event, info
+## SERVICES
 
-### Documents de Test (5+ documents)
-- Règlement intérieur, politique sécurité
-- Guides procédures, fiches techniques
-- Catégories: regulation, policy, guide, procedure
+### Service d'Authentification (AuthService)
+- **hashPassword(password)** - Hacher mot de passe avec bcrypt
+- **verifyPassword(password, hash)** - Vérifier mot de passe
+- **generateToken()** - Générer tokens sécurisés
 
-### Événements de Test (5+ événements)
-- Réunions équipe, formations, événements sociaux
-- Types: meeting, training, social, other
+### Service Email (emailService)
+- **sendWelcomeEmail(email, name)** - Email de bienvenue
+- **sendPasswordResetEmail(email, token)** - Reset mot de passe
+- **sendNotificationEmail(email, subject, content)** - Notifications
 
-## MÉTRIQUES BACKEND
+### Service WebSocket
+- **setupWebSocket(server)** - Configuration WebSocket
+- **broadcastToAll(message)** - Diffusion globale
+- **sendToUser(userId, message)** - Message utilisateur
+- **notifyUserUpdate(userId, data)** - Notification mise à jour
 
-- **Total lignes de code**: 5,703 lignes TypeScript
-- **Endpoints API**: 99 endpoints REST complets
-- **Méthodes Storage**: 75+ méthodes interface IStorage
-- **Services**: 3 services métier (Auth, Email, WebSocket)
-- **Middlewares**: 5+ middlewares sécurité
-- **Tables DB**: 25 tables PostgreSQL
-- **Schémas Validation**: 25+ schémas Zod
-- **Utilisateurs test**: 5 profils différents
-- **Gestion erreurs**: Logging complet et structured
+## MIGRATIONS ET DONNÉES
 
-## POINTS FORTS ARCHITECTURE BACKEND
+### Système de Migrations
+- **runMigrations()** - Exécuter migrations de sécurité
+- **migratePasswords()** - Migration mots de passe bcrypt
+- **initializeDefaultData()** - Données par défaut
 
-1. **API REST complète** - 99 endpoints couvrant tous les besoins
-2. **Type Safety strict** - TypeScript + Drizzle ORM + Zod
-3. **Architecture en couches** - Services, Storage, Routes séparés
-4. **Sécurité robuste** - Sessions, bcrypt, rate limiting, CORS
-5. **Temps réel** - WebSocket intégré pour notifications push
-6. **Scalabilité** - Pattern Storage interface, Neon serverless
-7. **Validation stricte** - Zod schemas partagés frontend/backend
-8. **Logging avancé** - Traces détaillées erreurs et requêtes
-9. **Tests intégrés** - Données de test et utilisateurs prêts
-10. **E-Learning complet** - Plateforme formation avec progression
+### Données de Test
+- **3 utilisateurs de test** (admin, marie.martin, pierre.dubois)
+- **Données d'exemple** pour toutes les entités
+- **resetToTestData()** - Réinitialisation complète
 
-## COMPATIBILITÉ & INTÉGRATIONS
+## CONFIGURATION ET DÉPLOIEMENT
 
-- **Frontend**: Types partagés shared/schema.ts
-- **Database**: PostgreSQL Neon avec migrations automatiques  
-- **Authentication**: Sessions Express avec bcrypt
-- **Real-time**: WebSocket pour notifications instantanées
-- **Email**: Nodemailer pour communications automatiques
-- **Security**: Helmet + Rate limiting + CORS configurés
-- **Development**: Vite middleware intégré HMR
-- **Production**: Configuration environnement flexible
+### Configuration Express
+- **Parsing JSON** - Limite 50MB
+- **Sessions sécurisées** - Cookies HttpOnly
+- **Middleware de logging** - Logs détaillés API
+- **Gestion d'erreurs** - Error handlers globaux
+
+### Configuration Vite (Développement)
+- **Proxy API** - /api/* vers backend
+- **HMR** - Hot Module Replacement
+- **Serve Static** - Fichiers statiques production
+
+## WEBSOCKET ET TEMPS RÉEL
+
+### Fonctionnalités WebSocket
+- **Connexions persistantes** - Maintien connexion client
+- **Diffusion en temps réel** - Notifications instantanées
+- **Gestion des déconnexions** - Nettoyage automatique
+- **Sécurisation** - Authentification requise
+
+### Messages Types
+- **user_update** - Mise à jour utilisateur
+- **announcement_created** - Nouvelle annonce
+- **message_received** - Nouveau message
+- **training_enrolled** - Inscription formation
+
+## LOGS ET MONITORING
+
+### Système de Logs
+- **Logs API détaillés** - Méthode, path, status, durée
+- **Logs d'erreurs** - Stack traces complètes
+- **Logs de sécurité** - Tentatives intrusion
+- **Logs WebSocket** - Connexions/déconnexions
+
+### Monitoring
+- **Performance tracking** - Temps réponse API
+- **Error tracking** - Gestion erreurs centralisée
+- **Database monitoring** - Requêtes et performance
+
+## ÉTAT DES FONCTIONNALITÉS
+
+### ✅ Fonctionnalités Complètes
+- Authentification bcrypt sécurisée
+- CRUD complet pour toutes entités
+- Système de permissions granulaire
+- WebSocket temps réel
+- Sécurité complète (Helmet, Rate Limiting, CORS)
+- API REST complète (120+ endpoints)
+- E-Learning system complet
+- Forum avec modération
+- Système de recherche
+- Analytics et statistiques
+- Migrations automatiques
+- Service email
+
+### 🔄 En Développement
+- Optimisations performance base de données
+- Analytics avancées
+- Système de cache Redis
+
+### 📋 Sécurité et Qualité
+- Validation Zod sur toutes entrées
+- Sanitisation complète des données
+- Sessions sécurisées
+- Protection CSRF
+- Rate limiting par IP
+- Gestion d'erreurs complète
+- Logs de sécurité
