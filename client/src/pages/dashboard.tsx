@@ -32,7 +32,7 @@ export default function Dashboard() {
           <GlassCard className="gradient-overlay p-8 shadow-2xl hover-lift">
             <div className="flex items-center justify-between">
               <div className="text-white">
-                <h1 className="text-3xl font-bold mb-2">{getCurrentGreeting()}, Jean !</h1>
+                <h1 className="text-3xl font-bold mb-2">{getCurrentGreeting()} !</h1>
                 <p className="text-white/90 text-lg">Bienvenue sur votre portail d'entreprise</p>
                 <p className="text-white/75 mt-1">{getCurrentDate()}</p>
               </div>

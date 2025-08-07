@@ -25,7 +25,11 @@ export default function Messages() {
   const { toast } = useToast();
 
   // For demo purposes, using user-1 as current user
-  const currentUserId = "user-1";
+  // Get current user ID from session
+  const { data: currentUser } = useQuery<any>({
+    queryKey: ['/api/auth/me'],
+  });
+  const currentUserId = currentUser?.id || "user-1";
 
   const { data: messages = [], isLoading: messagesLoading } = useQuery<Message[]>({
     queryKey: ["/api/messages", currentUserId],
