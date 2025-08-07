@@ -7,16 +7,6 @@ import { runMigrations } from "./migrations";
 
 const app = express();
 
-function log(message: string, source = "express") {
-  const formattedTime = new Date().toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit", 
-    second: "2-digit",
-    hour12: true,
-  });
-  console.log(`${formattedTime} [${source}] ${message}`);
-}
-
 // Configure trust proxy for production rate limiting
 if (process.env.NODE_ENV === 'production') {
   app.set('trust proxy', true);
@@ -34,6 +24,7 @@ app.use(sanitizeInput);
 // Session configuration with security
 app.use(session(getSessionConfig()));
 
+// Simple logging middleware
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -52,12 +43,10 @@ app.use((req, res, next) => {
       if (capturedJsonResponse) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
-
       if (logLine.length > 80) {
         logLine = logLine.slice(0, 79) + "…";
       }
-
-      log(logLine);
+      console.log(`${new Date().toLocaleTimeString()} [express] ${logLine}`);
     }
   });
 
@@ -67,19 +56,12 @@ app.use((req, res, next) => {
 // Global error handlers to prevent process crashes
 process.on('uncaughtException', (error) => {
   console.error('Uncaught Exception:', error.message);
-  if (error.message.includes('Vite') || error.message.includes('vite')) {
-    console.log('Vite error detected, continuing server operation...');
-    return;
-  }
-  console.error('Non-Vite error, stack:', error.stack);
+  // Don't crash the server for any errors
 });
 
 process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-  if (typeof reason === 'string' && (reason.includes('Vite') || reason.includes('vite'))) {
-    console.log('Vite rejection detected, continuing server operation...');
-    return;
-  }
+  // Don't crash the server for any rejections
 });
 
 (async () => {
@@ -88,52 +70,42 @@ process.on('unhandledRejection', (reason, promise) => {
   
   const server = await registerRoutes(app);
 
+  // Error handling middleware
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
-
     res.status(status).json({ message });
-    
-    // Log error but don't re-throw to prevent crashes
     console.error('Server error:', err.message);
-    if (err.stack) {
-      console.error('Stack trace:', err.stack);
-    }
   });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  
-  // Stable static serving - completely avoid Vite
+  // Serve static files from build directory
   const staticPath = path.resolve(import.meta.dirname, "../dist/public");
-  log(`Serving static files from: ${staticPath}`);
+  console.log(`Static files directory: ${staticPath}`);
   
   app.use(express.static(staticPath));
   
-  // Catch-all handler: send back React's index.html file  
+  // Catch-all handler: send back React's index.html file
   app.get("*", (_req, res) => {
     res.sendFile(path.resolve(staticPath, "index.html"));
   });
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
+  // Start server
   const port = parseInt(process.env.PORT || '5000', 10);
   const httpServer = server.listen({
     port,
     host: "0.0.0.0",
     reusePort: true,
   }, () => {
-    log(`serving on port ${port}`);
+    console.log(`${new Date().toLocaleTimeString()} [express] Stable server running on port ${port}`);
+    console.log(`${new Date().toLocaleTimeString()} [express] Serving static files from: ${staticPath}`);
   });
 
   // Initialize WebSocket after server creation
   try {
     const { initializeWebSocket } = await import("./services/websocket");
     initializeWebSocket(httpServer);
+    console.log('✅ WebSocket server initialized on /ws');
   } catch (error: any) {
-    log(`WebSocket initialization skipped: ${error?.message || 'Unknown error'}`);
+    console.log(`WebSocket initialization skipped: ${error?.message || 'Unknown error'}`);
   }
 })();
