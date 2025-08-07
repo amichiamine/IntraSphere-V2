@@ -1540,7 +1540,7 @@ export class MemStorage implements IStorage {
 
   async resetToTestData(): Promise<void> {
     // Import test data
-    const { testUsers, testAnnouncements, testDocuments, testEvents, testMessages, testComplaints } = await import("./testData");
+    const { testUsers, testAnnouncements, testDocuments, testEvents, testMessages, testComplaints } = await import("../testData");
     
     // Clear existing data
     this.users.clear();
@@ -1554,12 +1554,12 @@ export class MemStorage implements IStorage {
     this.categories.clear();
     
     // Load test data
-    testUsers.forEach(user => this.users.set(user.id, user));
-    testAnnouncements.forEach(ann => this.announcements.set(ann.id, ann));
-    testDocuments.forEach(doc => this.documents.set(doc.id, doc));
-    testEvents.forEach(event => this.events.set(event.id, event));
-    testMessages.forEach(msg => this.messages.set(msg.id, msg));
-    testComplaints.forEach(complaint => this.complaints.set(complaint.id, complaint));
+    testUsers.forEach((user: User) => this.users.set(user.id, user));
+    testAnnouncements.forEach((ann: Announcement) => this.announcements.set(ann.id, ann));
+    testDocuments.forEach((doc: Document) => this.documents.set(doc.id, doc));
+    testEvents.forEach((event: Event) => this.events.set(event.id, event));
+    testMessages.forEach((msg: Message) => this.messages.set(msg.id, msg));
+    testComplaints.forEach((complaint: Complaint) => this.complaints.set(complaint.id, complaint));
     
     // Re-initialize default categories and content
     this.initializeDefaultCategories();
@@ -2042,10 +2042,9 @@ export class MemStorage implements IStorage {
     const searchTerm = query.toLowerCase();
     return Array.from(this.users.values()).filter(user => 
       user.isActive && (
-        user.firstName.toLowerCase().includes(searchTerm) ||
-        user.lastName.toLowerCase().includes(searchTerm) ||
+        user.name.toLowerCase().includes(searchTerm) ||
         user.username.toLowerCase().includes(searchTerm) ||
-        user.email.toLowerCase().includes(searchTerm) ||
+        (user.email && user.email.toLowerCase().includes(searchTerm)) ||
         (user.employeeId && user.employeeId.toLowerCase().includes(searchTerm))
       )
     );
@@ -2055,8 +2054,7 @@ export class MemStorage implements IStorage {
     const lowerQuery = query.toLowerCase();
     return Array.from(this.contents.values()).filter(content =>
       content.title.toLowerCase().includes(lowerQuery) ||
-      content.description?.toLowerCase().includes(lowerQuery) ||
-      content.tags?.some(tag => tag.toLowerCase().includes(lowerQuery))
+      content.description?.toLowerCase().includes(lowerQuery)
     );
   }
 
@@ -2064,8 +2062,7 @@ export class MemStorage implements IStorage {
     const lowerQuery = query.toLowerCase();
     return Array.from(this.documents.values()).filter(doc =>
       doc.title.toLowerCase().includes(lowerQuery) ||
-      doc.description?.toLowerCase().includes(lowerQuery) ||
-      doc.tags?.some(tag => tag.toLowerCase().includes(lowerQuery))
+      doc.description?.toLowerCase().includes(lowerQuery)
     );
   }
 
@@ -2073,8 +2070,7 @@ export class MemStorage implements IStorage {
     const lowerQuery = query.toLowerCase();
     return Array.from(this.announcements.values()).filter(ann =>
       ann.title.toLowerCase().includes(lowerQuery) ||
-      ann.content.toLowerCase().includes(lowerQuery) ||
-      ann.tags?.some(tag => tag.toLowerCase().includes(lowerQuery))
+      ann.content.toLowerCase().includes(lowerQuery)
     );
   }
 

@@ -1,4 +1,4 @@
-import WebSocket from 'ws';
+import WebSocket, { WebSocketServer } from 'ws';
 import { IncomingMessage } from 'http';
 import { parse } from 'url';
 
@@ -16,13 +16,13 @@ interface WebSocketMessage {
 }
 
 export class WebSocketManager {
-  private wss: WebSocket.Server;
+  private wss: WebSocketServer;
   private clients: Map<string, WebSocketClient> = new Map();
   private channels: Map<string, Set<string>> = new Map();
   private heartbeatInterval: NodeJS.Timeout;
 
   constructor(server: any) {
-    this.wss = new WebSocket.Server({ 
+    this.wss = new WebSocketServer({ 
       server,
       path: '/ws',
       verifyClient: this.verifyClient.bind(this)
