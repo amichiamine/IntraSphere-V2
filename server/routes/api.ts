@@ -539,7 +539,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const query = q.toLowerCase();
-      const results = [];
+      const results: any[] = [];
 
       // Search users
       const users = await storage.getUsers();
@@ -616,7 +616,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Dashboard analytics endpoints
   app.get("/api/dashboard/recent-activity", requireAuth, async (req, res) => {
     try {
-      const activities = [];
+      const activities: any[] = [];
       
       // Get recent announcements
       const announcements = await storage.getAnnouncements();
@@ -744,7 +744,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/courses/featured", requireAuth, async (req, res) => {
     try {
       const courses = await storage.getCourses();
-      const featured = courses.filter(course => course.isFeatured);
+      const featured = courses.filter(course => (course as any).isFeatured);
       res.json(featured);
     } catch (error) {
       console.error("Error fetching featured courses:", error);
@@ -762,6 +762,119 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching courses by category:", error);
       res.status(500).json({ error: "Failed to fetch courses by category" });
+    }
+  });
+
+  // Forum endpoints
+  app.get("/api/forum/categories", requireAuth, async (req, res) => {
+    try {
+      const categories = await storage.getForumCategories();
+      res.json(categories);
+    } catch (error) {
+      console.error("Error fetching forum categories:", error);
+      res.status(500).json({ error: "Failed to fetch forum categories" });
+    }
+  });
+
+  app.get("/api/forum/topics", requireAuth, async (req, res) => {
+    try {
+      const { categoryId } = req.query;
+      const topics = await storage.getForumTopics(categoryId as string);
+      res.json(topics);
+    } catch (error) {
+      console.error("Error fetching forum topics:", error);
+      res.status(500).json({ error: "Failed to fetch forum topics" });
+    }
+  });
+
+  app.get("/api/forum/topics/:id", requireAuth, async (req, res) => {
+    try {
+      const topic = await storage.getForumTopicById(req.params.id);
+      if (!topic) {
+        return res.status(404).json({ error: "Topic not found" });
+      }
+      res.json(topic);
+    } catch (error) {
+      console.error("Error fetching forum topic:", error);
+      res.status(500).json({ error: "Failed to fetch forum topic" });
+    }
+  });
+
+  app.get("/api/forum/topics/:id/posts", requireAuth, async (req, res) => {
+    try {
+      const posts = await storage.getForumPosts(req.params.id);
+      res.json(posts);
+    } catch (error) {
+      console.error("Error fetching forum posts:", error);
+      res.status(500).json({ error: "Failed to fetch forum posts" });
+    }
+  });
+
+  // User enrollments and certificates endpoints
+  app.get("/api/my-enrollments", requireAuth, async (req, res) => {
+    try {
+      const enrollments = await storage.getUserEnrollments(req.session.userId!);
+      res.json(enrollments);
+    } catch (error) {
+      console.error("Error fetching user enrollments:", error);
+      res.status(500).json({ error: "Failed to fetch user enrollments" });
+    }
+  });
+
+  app.get("/api/my-certificates", requireAuth, async (req, res) => {
+    try {
+      const certificates = await storage.getUserCertificates(req.session.userId!);
+      res.json(certificates);
+    } catch (error) {
+      console.error("Error fetching user certificates:", error);
+      res.status(500).json({ error: "Failed to fetch user certificates" });
+    }
+  });
+
+  app.get("/api/training-recommendations", requireAuth, async (req, res) => {
+    try {
+      const recommendations = await storage.getTrainingRecommendations(req.session.userId!);
+      res.json(recommendations);
+    } catch (error) {
+      console.error("Error fetching training recommendations:", error);
+      res.status(500).json({ error: "Failed to fetch training recommendations" });
+    }
+  });
+
+  // Course lessons endpoint
+  app.get("/api/courses/:id/lessons", requireAuth, async (req, res) => {
+    try {
+      const lessons = await storage.getCourseLessons(req.params.id);
+      res.json(lessons);
+    } catch (error) {
+      console.error("Error fetching course lessons:", error);
+      res.status(500).json({ error: "Failed to fetch course lessons" });
+    }
+  });
+
+  // Resources endpoint
+  app.get("/api/resources", requireAuth, async (req, res) => {
+    try {
+      const resources = await storage.getResources();
+      res.json(resources);
+    } catch (error) {
+      console.error("Error fetching resources:", error);
+      res.status(500).json({ error: "Failed to fetch resources" });
+    }
+  });
+
+  // Auth me endpoint
+  app.get("/api/auth/me", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      const { password, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Error fetching current user:", error);
+      res.status(500).json({ error: "Failed to fetch current user" });
     }
   });
 

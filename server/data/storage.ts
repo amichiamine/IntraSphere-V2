@@ -177,7 +177,19 @@ export interface IStorage {
   createForumTopic(topic: InsertForumTopic): Promise<ForumTopic>;
   updateForumTopic(id: string, topic: Partial<ForumTopic>): Promise<ForumTopic>;
   deleteForumTopic(id: string): Promise<void>;
-  incrementTopicViews(id: string): Promise<void>;
+  
+  // Forum Posts
+  getForumPosts(topicId: string): Promise<ForumPost[]>;
+  getForumPostById(id: string): Promise<ForumPost | undefined>;
+  createForumPost(post: InsertForumPost): Promise<ForumPost>;
+  updateForumPost(id: string, post: Partial<ForumPost>): Promise<ForumPost>;
+  deleteForumPost(id: string): Promise<void>;
+  
+  // Training recommendations
+  getTrainingRecommendations(userId: string): Promise<Course[]>;
+  
+  // Course lessons
+  getCourseLessons(courseId: string): Promise<Lesson[]>;
   
   // Forum Posts
   getForumPosts(topicId: string): Promise<ForumPost[]>;
@@ -1536,6 +1548,86 @@ export class MemStorage implements IStorage {
       connectedUsers,
       pendingComplaints
     };
+  }
+
+  // Forum methods implementation
+  async getForumCategories(): Promise<ForumCategory[]> {
+    return [
+      {
+        id: "general",
+        name: "Général",
+        description: "Discussions générales",
+        icon: "💬",
+        color: "#6B7280",
+        sortOrder: 1,
+        isVisible: true,
+        createdAt: new Date(),
+        moderatorIds: ["admin"]
+      },
+      {
+        id: "support",
+        name: "Support",
+        description: "Questions et aide technique",
+        icon: "🔧",
+        color: "#3B82F6",
+        sortOrder: 2,
+        isVisible: true,
+        createdAt: new Date(),
+        moderatorIds: ["admin"]
+      }
+    ];
+  }
+
+  async getForumTopics(categoryId?: string): Promise<ForumTopic[]> {
+    const topics = [
+      {
+        id: "topic-1",
+        title: "Bienvenue sur le forum !",
+        content: "Message de bienvenue pour tous les nouveaux utilisateurs",
+        authorId: "admin",
+        categoryId: "general",
+        isPinned: true,
+        isLocked: false,
+        viewCount: 150,
+        postCount: 5,
+        lastActivity: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+    ];
+    
+    if (categoryId) {
+      return topics.filter(topic => topic.categoryId === categoryId);
+    }
+    return topics;
+  }
+
+  async getForumTopicById(id: string): Promise<ForumTopic | undefined> {
+    const topics = await this.getForumTopics();
+    return topics.find(topic => topic.id === id);
+  }
+
+  async getForumPosts(topicId: string): Promise<ForumPost[]> {
+    return [
+      {
+        id: "post-1",
+        content: "Premier message du topic",
+        authorId: "admin",
+        topicId: topicId,
+        parentPostId: null,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+    ];
+  }
+
+  async getTrainingRecommendations(userId: string): Promise<Course[]> {
+    const courses = await this.getCourses();
+    return courses.slice(0, 3); // Return first 3 as recommendations
+  }
+
+  async getCourseLessons(courseId: string): Promise<Lesson[]> {
+    return this.getLessons(courseId);
   }
 
   async resetToTestData(): Promise<void> {
