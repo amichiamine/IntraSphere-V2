@@ -1550,76 +1550,13 @@ export class MemStorage implements IStorage {
     };
   }
 
-  // Forum methods implementation
-  async getForumCategories(): Promise<ForumCategory[]> {
-    return [
-      {
-        id: "general",
-        name: "Général",
-        description: "Discussions générales",
-        icon: "💬",
-        color: "#6B7280",
-        sortOrder: 1,
-        isVisible: true,
-        createdAt: new Date(),
-        moderatorIds: ["admin"]
-      },
-      {
-        id: "support",
-        name: "Support",
-        description: "Questions et aide technique",
-        icon: "🔧",
-        color: "#3B82F6",
-        sortOrder: 2,
-        isVisible: true,
-        createdAt: new Date(),
-        moderatorIds: ["admin"]
-      }
-    ];
-  }
+  // Forum methods implementation - removed duplicate, using the complete one below
 
-  async getForumTopics(categoryId?: string): Promise<ForumTopic[]> {
-    const topics = [
-      {
-        id: "topic-1",
-        title: "Bienvenue sur le forum !",
-        content: "Message de bienvenue pour tous les nouveaux utilisateurs",
-        authorId: "admin",
-        categoryId: "general",
-        isPinned: true,
-        isLocked: false,
-        viewCount: 150,
-        postCount: 5,
-        lastActivity: new Date(),
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-    ];
-    
-    if (categoryId) {
-      return topics.filter(topic => topic.categoryId === categoryId);
-    }
-    return topics;
-  }
+  // Forum topics - removed duplicate, using the complete one below
 
-  async getForumTopicById(id: string): Promise<ForumTopic | undefined> {
-    const topics = await this.getForumTopics();
-    return topics.find(topic => topic.id === id);
-  }
+  // Forum topic by ID - removed duplicate, using the complete one below
 
-  async getForumPosts(topicId: string): Promise<ForumPost[]> {
-    return [
-      {
-        id: "post-1",
-        content: "Premier message du topic",
-        authorId: "admin",
-        topicId: topicId,
-        parentPostId: null,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-    ];
-  }
+  // Forum posts - removed duplicate, using the complete one below
 
   async getTrainingRecommendations(userId: string): Promise<Course[]> {
     const courses = await this.getCourses();
@@ -1997,7 +1934,10 @@ export class MemStorage implements IStorage {
       completedAt: null,
       progress: 0,
       status: "enrolled",
-      certificateUrl: null
+      certificateUrl: null,
+      timeSpent: 0,
+      score: null,
+      courseTitle: null
     };
     this.enrollments.set(id, enrollment);
     return enrollment;

@@ -22,11 +22,19 @@ import {
   insertForumLikeSchema
 } from "@shared/schema";
 
-// Extend Express Request type for session
+// Extend Express Request type for session and user
 declare module 'express-session' {
   interface SessionData {
     userId: string;
     user: any;
+  }
+}
+
+declare global {
+  namespace Express {
+    interface Request {
+      user?: any;
+    }
   }
 }
 

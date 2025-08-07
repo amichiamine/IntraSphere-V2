@@ -406,6 +406,9 @@ export const enrollments = pgTable("enrollments", {
   progress: integer("progress").default(0), // percentage
   status: text("status").default("enrolled"), // enrolled, in-progress, completed, failed
   certificateUrl: text("certificate_url"),
+  timeSpent: integer("time_spent").default(0), // in minutes
+  score: integer("score"), // average score percentage
+  courseTitle: text("course_title"), // denormalized for analytics
 });
 
 // User lesson progress
