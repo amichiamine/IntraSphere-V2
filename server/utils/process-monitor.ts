@@ -13,16 +13,17 @@ const execAsync = promisify(exec);
  */
 export async function isPortInUse(port: number): Promise<boolean> {
   try {
-    const { stdout } = await execAsync(`ss -tulpn 2>/dev/null | grep :${port} || true`);
-    return stdout.trim().length > 0;
+    // For Replit environment, use a simpler Node.js based approach
+    const net = require('net');
+    return new Promise((resolve) => {
+      const server = net.createServer();
+      server.listen(port, () => {
+        server.close(() => resolve(false));
+      });
+      server.on('error', () => resolve(true));
+    });
   } catch {
-    // Fallback method if ss is not available
-    try {
-      const { stdout } = await execAsync(`netstat -tulpn 2>/dev/null | grep :${port} || true`);
-      return stdout.trim().length > 0;
-    } catch {
-      return false;
-    }
+    return false;
   }
 }
 
@@ -31,7 +32,8 @@ export async function isPortInUse(port: number): Promise<boolean> {
  */
 export async function findProcessesOnPort(port: number): Promise<string[]> {
   try {
-    const { stdout } = await execAsync(`lsof -ti:${port} 2>/dev/null || true`);
+    // Use ps and grep approach for Replit
+    const { stdout } = await execAsync(`ps aux | grep -E "(tsx|node).*${port}" | grep -v grep | awk '{print $2}' || true`);
     return stdout.trim().split('\n').filter(pid => pid.length > 0);
   } catch {
     return [];

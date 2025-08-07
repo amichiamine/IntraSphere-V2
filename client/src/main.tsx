@@ -58,50 +58,71 @@ window.addEventListener('unhandledrejection', (event) => {
   let reconnectAttempts = 0;
   const maxAttempts = 15;
   
-  // Enhanced WebSocket management for Vite
+  // Stabilized WebSocket management for Replit environment
   const originalWebSocket = window.WebSocket;
-  const OriginalWebSocketConstructor = originalWebSocket;
   
-  // Create a proper constructor function
-  function ViteStabilizedWebSocket(url: string | URL, protocols?: string | string[]) {
-    const ws = new OriginalWebSocketConstructor(url, protocols);
+  // Enhanced WebSocket wrapper with better error handling
+  function createStabilizedWebSocket(url: string | URL, protocols?: string | string[]) {
+    const urlStr = url.toString();
+    let ws: WebSocket;
     
-    // Add connection monitoring
-    ws.addEventListener('close', function(event) {
-      // Only handle Vite-related WebSockets
-      const urlStr = url.toString();
-      if ((urlStr.includes('__vite_ping') || urlStr.includes('/ws') || urlStr.includes('5000')) 
-          && event.code !== 1000 && reconnectAttempts < maxAttempts) {
-        
-        reconnectAttempts++;
-        const delay = Math.min(500 * reconnectAttempts, 5000); // Progressive backoff
-        
+    try {
+      ws = new originalWebSocket(url, protocols);
+    } catch (error) {
+      // If creation fails, create a mock WebSocket that fails gracefully
+      ws = {
+        readyState: WebSocket.CLOSED,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        send: () => {},
+        close: () => {},
+        dispatchEvent: () => false,
+      } as any;
+      return ws;
+    }
+    
+    // Only apply special handling to Vite WebSockets
+    if (urlStr.includes('__vite_ping') || urlStr.includes('/ws') || urlStr.includes('24678')) {
+      
+      const handleError = () => {
+        if (reconnectAttempts < maxAttempts) {
+          reconnectAttempts++;
+          clearTimeout(reconnectTimer);
+          reconnectTimer = setTimeout(() => {
+            try {
+              // Attempt to create a new connection silently
+              createStabilizedWebSocket(url, protocols);
+            } catch (e) {
+              // Silently handle reconnection failures
+            }
+          }, Math.min(1000 + (reconnectAttempts * 500), 8000));
+        }
+      };
+      
+      ws.addEventListener('error', handleError);
+      ws.addEventListener('close', (event) => {
+        if (event.code !== 1000) { // Not a normal closure
+          handleError();
+        }
+      });
+      
+      ws.addEventListener('open', () => {
+        reconnectAttempts = 0;
         clearTimeout(reconnectTimer);
-        reconnectTimer = setTimeout(() => {
-          try {
-            // Create new connection
-            new OriginalWebSocketConstructor(url, protocols);
-          } catch (e) {
-            // Silent fail, will retry
-          }
-        }, delay);
-      }
-    });
-    
-    ws.addEventListener('open', function() {
-      reconnectAttempts = 0; // Reset on successful connection
-      clearTimeout(reconnectTimer);
-    });
+      });
+    }
     
     return ws;
   }
   
-  // Copy static properties
-  Object.assign(ViteStabilizedWebSocket, originalWebSocket);
-  ViteStabilizedWebSocket.prototype = originalWebSocket.prototype;
+  // Replace WebSocket constructor while preserving prototype
+  Object.setPrototypeOf(createStabilizedWebSocket, originalWebSocket);
+  Object.defineProperty(createStabilizedWebSocket, 'prototype', {
+    value: originalWebSocket.prototype,
+    writable: false
+  });
   
-  // Replace the global WebSocket
-  (window as any).WebSocket = ViteStabilizedWebSocket;
+  (window as any).WebSocket = createStabilizedWebSocket;
 })();
 
 createRoot(document.getElementById("root")!).render(<App />);
