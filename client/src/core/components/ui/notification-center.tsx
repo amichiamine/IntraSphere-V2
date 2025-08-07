@@ -79,6 +79,162 @@ export function NotificationCenter() {
         <Button
           variant="ghost"
           size="sm"
+          className="p-3 glass-card rounded-2xl hover:bg-white/80 transition-all duration-300 hover-lift shadow-lg relative"
+          data-testid="button-notifications"
+        >
+          <Bell className="h-5 w-5 text-gray-700" />
+          {unreadCount > 0 && (
+            <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 text-xs bg-red-500 hover:bg-red-500 text-white border-0 animate-pulse">
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </Badge>
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-96 p-0 glass-card border-white/20 shadow-2xl" align="end">
+        <div className="p-4 border-b border-white/20">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="font-semibold text-gray-900">Notifications</h4>
+              {unreadCount > 0 && (
+                <p className="text-sm text-muted-foreground">
+                  {unreadCount} nouvelle{unreadCount > 1 ? 's' : ''} notification{unreadCount > 1 ? 's' : ''}
+                </p>
+              )}
+            </div>
+            <div className="flex items-center space-x-1">
+              {unreadCount > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleMarkAllAsRead}
+                  className="text-xs h-8 px-2"
+                  data-testid="button-mark-all-read"
+                >
+                  <Check className="h-3 w-3 mr-1" />
+                  Tout lire
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => clearAll()}
+                className="text-xs h-8 px-2 text-red-600 hover:text-red-700"
+                data-testid="button-clear-all"
+              >
+                <Trash2 className="h-3 w-3 mr-1" />
+                Effacer
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs h-8 w-8 p-0"
+                data-testid="button-notification-settings"
+              >
+                <Settings className="h-3 w-3" />
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        <ScrollArea className="h-96">
+          {notifications.length === 0 ? (
+            <div className="p-8 text-center">
+              <Bell className="h-12 w-12 mx-auto mb-3 text-muted-foreground opacity-30" />
+              <p className="text-sm font-medium text-gray-900 mb-1">
+                Aucune notification
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Vous recevrez ici toutes les notifications importantes
+              </p>
+            </div>
+          ) : (
+            <div className="p-3 space-y-2">
+              {notifications.map((notification) => (
+                <div
+                  key={notification.id}
+                  className={cn(
+                    "group p-3 rounded-xl border cursor-pointer transition-all duration-200 hover:shadow-md",
+                    getNotificationBgColor(notification.type),
+                    !notification.isRead && "border-l-4 border-l-primary shadow-sm"
+                  )}
+                  onClick={() => handleMarkAsRead(notification.id)}
+                  data-testid={`notification-${notification.id}`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-lg flex-shrink-0">{getNotificationIcon(notification.type)}</span>
+                        <h5 className="text-sm font-medium text-gray-900 truncate">
+                          {notification.title}
+                        </h5>
+                        {!notification.isRead && (
+                          <div className="h-2 w-2 bg-primary rounded-full flex-shrink-0 animate-pulse"></div>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-700 line-clamp-2 mb-2">
+                        {notification.message}
+                      </p>
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-muted-foreground">
+                          {formatRelativeTime(notification.timestamp)}
+                        </p>
+                        {notification.actionUrl && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-xs h-6 px-2 text-primary hover:text-primary/80"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              window.location.href = notification.actionUrl!;
+                            }}
+                          >
+                            Voir →
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleMarkAsRead(notification.id);
+                      }}
+                      className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity ml-2 flex-shrink-0"
+                      data-testid={`button-mark-read-${notification.id}`}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </ScrollArea>
+
+        {notifications.length > 0 && (
+          <div className="p-3 border-t border-white/20">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full text-xs text-muted-foreground hover:text-primary"
+              data-testid="button-view-all-notifications"
+            >
+              Voir toutes les notifications
+            </Button>
+          </div>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+  return (
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
           className="relative p-2 data-[testid]:data-[testid='button-notifications']"
           data-testid="button-notifications"
         >

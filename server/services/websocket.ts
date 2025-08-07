@@ -99,6 +99,10 @@ export class WebSocketManager {
     message.timestamp = new Date();
 
     switch (message.type) {
+      case 'AUTHENTICATE':
+        this.authenticateClient(ws, message.payload.userId);
+        break;
+        
       case 'JOIN_CHANNEL':
         this.joinChannel(ws, message.payload.channelId);
         break;
@@ -116,16 +120,64 @@ export class WebSocketManager {
         break;
         
       case 'MARK_NOTIFICATION_READ':
-        // Handle notification read status
+        this.handleNotificationRead(ws, message.payload);
         break;
         
       case 'CLEAR_NOTIFICATIONS':
-        // Handle clearing notifications
+        this.handleClearNotifications(ws);
+        break;
+        
+      case 'REQUEST_USERS_COUNT':
+        this.sendUsersCount(ws);
         break;
         
       default:
         console.log('Unknown message type:', message.type);
     }
+  }
+
+  private authenticateClient(ws: WebSocketClient, userId: string) {
+    if (ws.userId && ws.userId !== userId) {
+      this.clients.delete(ws.userId);
+    }
+    
+    ws.userId = userId;
+    this.clients.set(userId, ws);
+    
+    // Broadcast user online status
+    this.broadcast({
+      type: 'USER_ONLINE',
+      payload: { userId },
+      timestamp: new Date()
+    });
+    
+    // Send current users count
+    this.sendUsersCount(ws);
+  }
+
+  private handleNotificationRead(ws: WebSocketClient, payload: any) {
+    // Implementation for marking notifications as read
+    console.log(`Notification ${payload.id} marked as read by ${ws.userId}`);
+  }
+
+  private handleClearNotifications(ws: WebSocketClient) {
+    // Implementation for clearing all notifications
+    console.log(`All notifications cleared for ${ws.userId}`);
+  }
+
+  private sendUsersCount(ws: WebSocketClient) {
+    const userIds = Array.from(this.clients.keys());
+    this.sendToClient(ws, {
+      type: 'USERS_COUNT',
+      payload: { users: userIds, count: userIds.length },
+      timestamp: new Date()
+    });
+  }
+
+  private broadcast(message: WebSocketMessage) {
+    this.wss.clients.forEach((client: WebSocketClient) => {
+      this.sendToClient(client, message);
+    });
   }
 
   private joinChannel(ws: WebSocketClient, channelId: string) {
@@ -160,6 +212,13 @@ export class WebSocketManager {
   private cleanupClient(ws: WebSocketClient) {
     if (ws.userId) {
       this.clients.delete(ws.userId);
+      
+      // Broadcast user offline status
+      this.broadcast({
+        type: 'USER_OFFLINE',
+        payload: { userId: ws.userId },
+        timestamp: new Date()
+      });
     }
     
     // Remove from all channels

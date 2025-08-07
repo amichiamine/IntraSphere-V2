@@ -1,6 +1,16 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { queryClient } from '@/core/lib/queryClient';
 
+// Helper function to get current user ID
+function getCurrentUserId(): string | null {
+  try {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    return user.id || null;
+  } catch {
+    return null;
+  }
+}
+
 interface WebSocketMessage {
   type: string;
   payload: any;
@@ -31,11 +41,14 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   const [connectionState, setConnectionState] = useState<'connecting' | 'connected' | 'disconnected' | 'error'>('disconnected');
   const [lastMessage, setLastMessage] = useState<WebSocketMessage | null>(null);
   const [messageHistory, setMessageHistory] = useState<WebSocketMessage[]>([]);
+  const [reconnectAttempts, setReconnectAttempts] = useState(0);
+  const [connectedUsers, setConnectedUsers] = useState<string[]>([]);
   
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const reconnectAttempts = useRef(0);
+  const reconnectAttemptsRef = useRef(0);
   const maxReconnectAttempts = 5;
+  const reconnectDelay = 3000;
 
   const connect = useCallback(() => {
     if (!enabled || wsRef.current?.readyState === WebSocket.CONNECTING || wsRef.current?.readyState === WebSocket.OPEN) {
@@ -49,8 +62,15 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
       wsRef.current.onopen = () => {
         setIsConnected(true);
         setConnectionState('connected');
-        reconnectAttempts.current = 0;
+        reconnectAttemptsRef.current = 0;
+        setReconnectAttempts(0);
         onConnect?.();
+        
+        // Send authentication if available
+        const userId = getCurrentUserId();
+        if (userId) {
+          sendMessage({ type: 'AUTHENTICATE', payload: { userId } });
+        }
       };
 
       wsRef.current.onmessage = (event) => {
@@ -66,18 +86,29 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
               break;
             case 'NEW_MESSAGE':
               queryClient.invalidateQueries({ queryKey: ['/api/messages'] });
+              queryClient.invalidateQueries({ queryKey: ['/api/messages/unread'] });
               break;
             case 'FORUM_UPDATE':
               queryClient.invalidateQueries({ queryKey: ['/api/forum'] });
               break;
             case 'TRAINING_UPDATE':
-              queryClient.invalidateQueries({ queryKey: ['/api/training-analytics'] });
+              queryClient.invalidateQueries({ queryKey: ['/api/trainings'] });
+              queryClient.invalidateQueries({ queryKey: ['/api/stats'] });
+              break;
+            case 'USER_ONLINE':
+              setConnectedUsers(prev => [...new Set([...prev, message.payload.userId])]);
+              break;
+            case 'USER_OFFLINE':
+              setConnectedUsers(prev => prev.filter(id => id !== message.payload.userId));
+              break;
+            case 'USERS_COUNT':
+              setConnectedUsers(message.payload.users || []);
+              break;
+            case 'NOTIFICATION':
+              queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
               break;
             case 'USER_STATUS_CHANGE':
               queryClient.invalidateQueries({ queryKey: ['/api/users'] });
-              break;
-            case 'NOTIFICATION':
-              // Handle real-time notifications
               break;
           }
           
@@ -92,11 +123,17 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
         setConnectionState('disconnected');
         onDisconnect?.();
         
-        // Attempt reconnection if enabled and under limit
-        if (enabled && reconnectAttempts.current < maxReconnectAttempts) {
-          reconnectAttempts.current++;
-          const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000); // Exponential backoff
-          reconnectTimeoutRef.current = setTimeout(connect, delay);
+        // Attempt to reconnect if enabled and not reached max attempts
+        if (enabled && reconnectAttemptsRef.current < maxReconnectAttempts) {
+          const delay = Math.min(reconnectDelay * Math.pow(2, reconnectAttemptsRef.current), 30000);
+          setConnectionState('connecting');
+          reconnectTimeoutRef.current = setTimeout(() => {
+            reconnectAttemptsRef.current++;
+            setReconnectAttempts(reconnectAttemptsRef.current);
+            connect();
+          }, delay);
+        } else if (reconnectAttemptsRef.current >= maxReconnectAttempts) {
+          setConnectionState('error');
         }
       };
 
@@ -168,11 +205,12 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     connectionState,
     lastMessage,
     messageHistory,
+    reconnectAttempts,
+    connectedUsers,
     connect,
     disconnect,
     sendMessage,
-    clearHistory,
-    reconnectAttempts: reconnectAttempts.current
+    clearHistory
   };
 }
 

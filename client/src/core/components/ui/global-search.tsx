@@ -79,21 +79,21 @@ export function GlobalSearch() {
         id: doc.id,
         title: doc.title,
         type: 'document',
-        description: doc.description,
-        url: `/content/documents?doc=${doc.id}`,
+        description: doc.description || `${doc.category} - ${doc.type}`,
+        url: `/content/documents?id=${doc.id}`,
         metadata: doc
       });
     });
 
     // Add announcements
-    announcements.forEach((ann: any) => {
+    announcements.forEach((announcement: any) => {
       combined.push({
-        id: ann.id,
-        title: ann.title,
+        id: announcement.id,
+        title: announcement.title,
         type: 'announcement',
-        description: ann.content.substring(0, 100) + '...',
-        url: `/content/announcements?ann=${ann.id}`,
-        metadata: ann
+        description: announcement.summary || announcement.content?.substring(0, 100),
+        url: `/content/announcements?id=${announcement.id}`,
+        metadata: announcement
       });
     });
 
@@ -103,8 +103,8 @@ export function GlobalSearch() {
         id: content.id,
         title: content.title,
         type: 'content',
-        description: content.description,
-        url: `/content?content=${content.id}`,
+        description: content.description || content.excerpt,
+        url: `/content?id=${content.id}`,
         metadata: content
       });
     });
