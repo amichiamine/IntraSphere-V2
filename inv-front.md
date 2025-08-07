@@ -1,354 +1,415 @@
-# INVENTAIRE FRONTEND - INTRASPHERE LEARNING PLATFORM
+# INVENTAIRE EXHAUSTIF - FRONTEND
 
-## ARCHITECTURE GÉNÉRALE
-### Technologies Principales
+## Vue d'ensemble de l'architecture Frontend
 - **Framework**: React 18 avec TypeScript
-- **Build Tool**: Vite (pour le développement et build)
-- **Routing**: Wouter (SPA router)
-- **State Management**: TanStack React Query v5 pour les données serveur
-- **Styling**: Tailwind CSS + shadcn/ui components
-- **Forms**: React Hook Form avec Zod validation
-- **Icons**: Lucide React + React Icons
+- **Bundler**: Vite
+- **Routage**: Wouter
+- **Gestion d'État**: React Query (TanStack Query v5)
+- **UI Library**: Shadcn/ui avec Radix UI
+- **Styling**: TailwindCSS avec animations personnalisées
+- **Thèmes**: Support du mode sombre avec next-themes
+- **Communication en temps réel**: WebSocket
 
-### Structure des Dossiers
+## Structure des dossiers Frontend
+
+### `/client` - Racine Frontend
 ```
-client/src/
-├── core/                    # Fonctionnalités centrales
-│   ├── components/          # Composants réutilisables
-│   │   ├── dashboard/       # Composants de tableau de bord
-│   │   ├── layout/          # Layouts et structure
-│   │   └── ui/              # Composants UI de base (shadcn)
-│   ├── hooks/               # Hooks personnalisés
-│   └── lib/                 # Utilitaires et configurations
-├── features/                # Fonctionnalités métier
-│   ├── admin/               # Administration
-│   ├── auth/                # Authentification
-│   ├── content/             # Gestion de contenu
-│   ├── events/              # Gestion d'événements
-│   ├── messaging/           # Messagerie et forum
-│   └── training/            # Formation et e-learning
-├── pages/                   # Pages principales
-└── assets/                  # Ressources statiques
+client/
+├── index.html                     # Point d'entrée HTML
+├── public/                        # Assets statiques
+├── src/                          # Code source principal
+│   ├── App.tsx                   # Composant racine et routage
+│   ├── main.tsx                  # Point d'entrée React
+│   ├── index.css                 # Styles globaux et variables CSS
+│   ├── core/                     # Composants et utilitaires centraux
+│   ├── features/                 # Fonctionnalités métier par module
+│   └── pages/                    # Pages principales de l'application
 ```
 
-## COMPOSANTS UI (SHADCN/UI)
+### `/client/src/core` - Infrastructure Frontend
+```
+core/
+├── components/                    # Composants réutilisables
+│   ├── ThemeLoader.tsx           # Gestionnaire de thèmes
+│   ├── dashboard/                # Composants spécifiques au tableau de bord
+│   ├── layout/                   # Composants de mise en page
+│   └── ui/                       # Composants UI de base (shadcn/ui)
+├── hooks/                        # Hooks React personnalisés
+│   ├── use-mobile.tsx           # Détection mobile
+│   ├── use-toast.ts             # Système de notifications
+│   ├── useAuth.ts               # Gestion d'authentification
+│   ├── useTheme.ts              # Gestion des thèmes
+│   └── useWebSocket.ts          # WebSocket client
+└── lib/                         # Utilitaires et configurations
+    ├── queryClient.ts           # Configuration React Query
+    └── utils.ts                 # Fonctions utilitaires
+```
 
-### Composants de Base (44 composants)
-- **accordion.tsx** - Accordéons pliables
-- **alert-dialog.tsx** - Dialogues d'alerte
-- **alert.tsx** - Messages d'alerte
-- **aspect-ratio.tsx** - Ratios d'aspect
-- **avatar.tsx** - Avatars utilisateur
-- **badge.tsx** - Badges et étiquettes
-- **breadcrumb.tsx** - Fil d'Ariane
-- **button.tsx** - Boutons interactifs
-- **calendar.tsx** - Calendriers
-- **card.tsx** - Cartes conteneurs
-- **carousel.tsx** - Carrousels d'images
-- **chart.tsx** - Graphiques et charts
-- **checkbox.tsx** - Cases à cocher
-- **collapsible.tsx** - Éléments pliables
-- **command.tsx** - Interface de commandes
-- **context-menu.tsx** - Menus contextuels
-- **dialog.tsx** - Dialogues modaux
-- **drawer.tsx** - Tiroirs latéraux
-- **dropdown-menu.tsx** - Menus déroulants
-- **enhanced-dashboard.tsx** - Tableau de bord amélioré
-- **file-uploader.tsx** - Upload de fichiers
-- **form.tsx** - Formulaires avec validation
-- **glass-card.tsx** - Cartes avec effet verre
-- **global-search.tsx** - Recherche globale
-- **hover-card.tsx** - Cartes au survol
-- **icon-picker.tsx** - Sélecteur d'icônes
-- **image-picker.tsx** - Sélecteur d'images
-- **input-otp.tsx** - Saisie OTP
-- **input.tsx** - Champs de saisie
-- **label.tsx** - Étiquettes
-- **menubar.tsx** - Barres de menus
-- **navigation-menu.tsx** - Menus de navigation
-- **notification-center.tsx** - Centre de notifications
-- **pagination.tsx** - Pagination
-- **popover.tsx** - Popovers
-- **progress.tsx** - Barres de progression
-- **radio-group.tsx** - Groupes radio
-- **resizable.tsx** - Éléments redimensionnables
-- **scroll-area.tsx** - Zones de défilement
-- **select.tsx** - Listes de sélection
-- **separator.tsx** - Séparateurs
-- **sheet.tsx** - Feuilles modales
-- **sidebar.tsx** - Barres latérales
-- **simple-modal.tsx** - Modales simples
-- **simple-select.tsx** - Sélecteurs simples
-- **skeleton.tsx** - Squelettes de chargement
-- **slider.tsx** - Curseurs
-- **switch.tsx** - Interrupteurs
-- **table.tsx** - Tableaux
-- **tabs.tsx** - Onglets
-- **textarea.tsx** - Zones de texte
-- **toast.tsx** - Notifications toast
-- **toaster.tsx** - Gestionnaire de toasts
-- **toggle-group.tsx** - Groupes de bascules
-- **toggle.tsx** - Bascules
-- **tooltip.tsx** - Info-bulles
+### `/client/src/features` - Modules Fonctionnels
 
-### Composants Dashboard (7 composants)
-- **analytics-dashboard.tsx** - Tableau de bord analytique
-- **announcements-feed.tsx** - Flux d'annonces
-- **quick-links.tsx** - Liens rapides
-- **recent-documents.tsx** - Documents récents
-- **stats-cards.tsx** - Cartes de statistiques
-- **training-analytics.tsx** - Analytiques de formation
-- **upcoming-events.tsx** - Événements à venir
+#### `/admin` - Administration
+- **admin.tsx**: Interface d'administration principale
+- **analytics-admin.tsx**: Tableau de bord analytique admin
+- **dashboard-management.tsx**: Gestion des tableaux de bord
 
-### Composants Layout (3 composants)
-- **header.tsx** - En-tête principal
-- **main-layout.tsx** - Layout principal
-- **sidebar.tsx** - Barre latérale
+#### `/auth` - Authentification
+- **login.tsx**: Page de connexion et inscription
+- **settings.tsx**: Paramètres utilisateur
 
-## HOOKS PERSONNALISÉS
+#### `/content` - Gestion de Contenu
+- **announcements.tsx**: Affichage des annonces
+- **content.tsx**: Navigation du contenu
+- **create-announcement.tsx**: Création d'annonces
+- **create-content.tsx**: Création de contenu
+- **documents.tsx**: Gestion des documents
+- **advanced-content.tsx**: Gestion avancée de contenu
 
-### Hooks Core (5 hooks)
-- **use-mobile.tsx** - Détection mobile
-- **use-toast.ts** - Gestion des toasts
-- **useAuth.ts** - Authentification et session
-- **useTheme.ts** - Gestion des thèmes
-- **useWebSocket.ts** - Communication WebSocket
+#### `/events` - Gestion d'Événements
+- **events-management.tsx**: Administration des événements
 
-## FONCTIONNALITÉS MÉTIER
+#### `/messaging` - Communication
+- **complaints.tsx**: Système de réclamations
+- **forum.tsx**: Forum de discussion principale
+- **forum-new-topic.tsx**: Création de nouveaux sujets
+- **forum-topic.tsx**: Vue d'un sujet spécifique
+- **messages.tsx**: Messagerie interne
 
-### Administration (3 pages)
-- **admin.tsx** - Interface d'administration principale
-  - Gestion des utilisateurs
-  - Gestion des permissions
-  - Gestion des documents système
-  - Configuration des catégories d'employés
-- **analytics-admin.tsx** - Analytiques administrateur
-- **dashboard-management.tsx** - Gestion des tableaux de bord
+#### `/training` - Formation
+- **training.tsx**: Centre de formation principal
+- **training-admin.tsx**: Administration des formations
+- **trainings.tsx**: Liste des formations disponibles
 
-### Authentification (2 pages)
-- **login.tsx** - Page de connexion
-- **settings.tsx** - Paramètres utilisateur
-  - Paramètres de l'entreprise
-  - Profil utilisateur
-  - Préférences de notification
-  - Paramètres d'apparence
-  - Paramètres de confidentialité
-  - Paramètres avancés
+### `/client/src/pages` - Pages Principales
+- **dashboard.tsx**: Tableau de bord administrateur
+- **directory.tsx**: Annuaire des employés
+- **employee-dashboard.tsx**: Tableau de bord employé
+- **not-found.tsx**: Page d'erreur 404
+- **public-dashboard.tsx**: Page d'accueil publique
+- **views-management.tsx**: Gestion des vues
 
-### Gestion de Contenu (6 pages)
-- **announcements.tsx** - Affichage des annonces
-- **content.tsx** - Bibliothèque de contenu
-- **documents.tsx** - Gestion documentaire
-- **advanced-content.tsx** - Gestion avancée du contenu
-- **create-announcement.tsx** - Création d'annonces
-- **create-content.tsx** - Création de contenu
+## Composants UI (Shadcn/ui) - `/client/src/core/components/ui`
 
-### Événements (1 page)
-- **events-management.tsx** - Gestion des événements
+### Composants de Base
+- **accordion.tsx**: Composant accordéon
+- **alert.tsx**, **alert-dialog.tsx**: Composants d'alerte
+- **avatar.tsx**: Composant avatar utilisateur
+- **badge.tsx**: Badges et étiquettes
+- **button.tsx**: Boutons avec variantes
+- **calendar.tsx**: Sélecteur de date
+- **card.tsx**: Cartes de contenu
+- **checkbox.tsx**: Cases à cocher
+- **dialog.tsx**: Modales et dialogues
+- **form.tsx**: Composants de formulaire
+- **input.tsx**, **textarea.tsx**: Champs de saisie
+- **select.tsx**: Listes déroulantes
+- **table.tsx**: Tableaux de données
+- **tabs.tsx**: Onglets
+- **toast.tsx**, **toaster.tsx**: Notifications
 
-### Messagerie et Forum (5 pages)
-- **messages.tsx** - Messagerie interne
-- **complaints.tsx** - Système de réclamations
-- **forum.tsx** - Forum communautaire
-- **forum-topic.tsx** - Sujets de forum
-- **forum-new-topic.tsx** - Création de nouveaux sujets
+### Composants Avancés
+- **carousel.tsx**: Carrousel d'images
+- **chart.tsx**: Graphiques et diagrammes
+- **command.tsx**: Interface de commande
+- **dropdown-menu.tsx**: Menus déroulants
+- **navigation-menu.tsx**: Navigation principale
+- **pagination.tsx**: Pagination
+- **progress.tsx**: Barres de progression
+- **resizable.tsx**: Panneaux redimensionnables
+- **scroll-area.tsx**: Zones de défilement
+- **sheet.tsx**: Panneaux latéraux
+- **skeleton.tsx**: Squelettes de chargement
+- **slider.tsx**: Curseurs de valeur
 
-### Formation et E-Learning (3 pages)
-- **training.tsx** - Interface de formation
-- **training-admin.tsx** - Administration des formations
-- **trainings.tsx** - Catalogue de formations
+### Composants Spécialisés
+- **enhanced-dashboard.tsx**: Tableau de bord amélioré
+- **file-uploader.tsx**: Téléversement de fichiers
+- **glass-card.tsx**: Cartes avec effet verre
+- **global-search.tsx**: Recherche globale
+- **icon-picker.tsx**: Sélecteur d'icônes
+- **image-picker.tsx**: Sélecteur d'images
+- **input-otp.tsx**: Saisie de code OTP
+- **notification-center.tsx**: Centre de notifications
+- **simple-modal.tsx**: Modale simplifiée
+- **simple-select.tsx**: Sélecteur simplifié
+- **sidebar.tsx**: Barre latérale
 
-## PAGES PRINCIPALES
-
-### Pages Core (6 pages)
-- **dashboard.tsx** - Tableau de bord administrateur
-- **employee-dashboard.tsx** - Tableau de bord employé
-- **public-dashboard.tsx** - Tableau de bord public
-- **directory.tsx** - Annuaire des employés
-- **views-management.tsx** - Gestion des vues
-- **not-found.tsx** - Page d'erreur 404
-
-## ROUTING ET NAVIGATION
+## Routage et Navigation
 
 ### Routes Publiques
-- `/` - Tableau de bord public
+- `/` - Dashboard public
 - `/login` - Page de connexion
 
-### Routes Authentifiées
-#### Routes Communes (tous rôles)
-- `/` - Tableau de bord (varie selon le rôle)
+### Routes Authentifiées - Employés
+- `/` - Dashboard employé (EmployeeDashboard)
 - `/announcements` - Annonces
 - `/content` - Contenu
 - `/documents` - Documents
 - `/directory` - Annuaire
 - `/training` - Formation
-- `/trainings` - Catalogue formations
+- `/trainings` - Liste des formations
 - `/messages` - Messages
 - `/complaints` - Réclamations
 - `/forum` - Forum
-- `/forum/topic/:id` - Sujet spécifique
+- `/forum/topic/:id` - Sujet de forum
 - `/forum/new-topic` - Nouveau sujet
 - `/settings` - Paramètres
 
-#### Routes Admin/Modérateur
+### Routes Administrateurs (Admin/Moderator)
+Toutes les routes employés plus :
 - `/admin` - Administration
-- `/views-management` - Gestion vues
-- `/create-announcement` - Créer annonce
-- `/create-content` - Créer contenu
-- `/training-admin` - Admin formations
-- `/analytics` - Analytiques
-- `/events` - Gestion événements
+- `/views-management` - Gestion des vues
+- `/create-announcement` - Créer une annonce
+- `/create-content` - Créer du contenu
+- `/training-admin` - Administration formation
+- `/analytics` - Analyses
+- `/events` - Gestion d'événements
 - `/advanced-content` - Contenu avancé
 
-## ÉTAT ET GESTION DES DONNÉES
+## Hooks et Services Frontend
 
-### TanStack React Query
-- **Configuration centralisée** dans `queryClient.ts`
-- **Invalidation automatique** du cache après mutations
-- **Gestion des erreurs** intégrée
-- **États de chargement** pour toutes les requêtes
+### Hook d'Authentification (`useAuth`)
+**Fonctionnalités :**
+- Gestion de l'état de connexion
+- Fonctions login/logout/register
+- Validation des sessions
+- Gestion des rôles utilisateur
 
-### Hooks d'État Principaux
-- **useAuth** - Session utilisateur et authentification
-- **useTheme** - Thème et apparence
-- **useWebSocket** - Communication temps réel
-- **use-toast** - Notifications utilisateur
-
-## THÈMES ET STYLING
-
-### Système de Thèmes
-- **Thème clair/sombre** avec variables CSS
-- **Variables dynamiques** de couleurs
-- **Support multi-langues** (FR, EN, ES, DE)
-- **Modes compacts** et accessibilité
-
-### Variables CSS Principales
-```css
---background, --foreground
---muted, --muted-foreground
---card, --card-foreground
---primary, --primary-foreground
---secondary, --secondary-foreground
---accent, --accent-foreground
---destructive, --destructive-foreground
---border, --input, --ring
---glass-light, --glass-medium, --glass-card
---gradient-primary, --gradient-secondary, --gradient-overlay
+**API :**
+```typescript
+interface AuthContextType {
+  user: User | null;
+  isLoading: boolean;
+  login: (username: string, password: string) => Promise<void>;
+  register: (userData: RegisterData) => Promise<void>;
+  logout: () => Promise<void>;
+  isAuthenticated: boolean;
+}
 ```
 
-## INTERNATIONALISATION
+### Client React Query (`queryClient`)
+**Configuration :**
+- Retry: désactivé
+- Cache permanent (staleTime: Infinity)
+- Gestion d'erreur 401 automatique
+- Support des credentials pour les sessions
 
-### Langues Supportées
-- **Français** (par défaut)
-- **Anglais**
-- **Espagnol**
-- **Allemand**
+**Fonctions utilitaires :**
+- `apiRequest()`: Requêtes HTTP avec gestion d'erreur
+- `getQueryFn()`: Factory de fonctions de requête
 
-## FONCTIONNALITÉS TRANSVERSALES
+### Hook WebSocket (`useWebSocket`)
+**Fonctionnalités :**
+- Connexion temps réel
+- Gestion des canaux
+- Messages de chat
+- Notifications en temps réel
 
-### Recherche Globale
-- **Recherche multi-entités** (utilisateurs, contenu, documents, annonces)
-- **Interface unifiée** dans le header
-- **Résultats catégorisés**
+### Hook de Thème (`useTheme`)
+**Fonctionnalités :**
+- Basculement mode clair/sombre
+- Persistance localStorage
+- Application CSS automatique
 
-### Notifications
-- **Centre de notifications** temps réel
-- **Toasts** pour actions utilisateur
-- **WebSocket** pour notifications push
+## Gestion d'État et Données
 
-### Upload et Média
-- **File Uploader** avec support multi-formats
-- **Image Picker** avec prévisualisation
-- **Icon Picker** avec bibliothèque d'icônes
+### React Query - Clés de Cache
+```typescript
+// Authentification
+["/api/auth/me"]
 
-## SÉCURITÉ FRONTEND
+// Statistiques
+["/api/stats"]
 
-### Validation
-- **Zod schemas** pour validation des formulaires
-- **Sanitisation** des données utilisateur
-- **Validation côté client** avant envoi
+// Contenu
+["/api/announcements"]
+["/api/documents"]
+["/api/events"]
+["/api/contents"]
+["/api/categories"]
 
-### Authentification
-- **Session management** avec cookies sécurisés
-- **Contrôle d'accès** basé sur les rôles
-- **Redirection automatique** selon statut auth
+// Utilisateurs et Communication
+["/api/users"]
+["/api/messages", userId]
+["/api/complaints"]
 
-## PERFORMANCE
+// Formation
+["/api/trainings"]
+["/api/training-participants"]
+["/api/courses"]
+["/api/my-enrollments"]
+["/api/my-certificates"]
+["/api/resources"]
 
-### Optimisations
-- **Lazy loading** des composants
-- **React Query caching** intelligent
-- **Debouncing** pour la recherche
-- **Pagination** pour les listes longues
+// Forum
+["/api/forum/categories"]
+["/api/forum/topics", categoryId]
+["/api/forum/posts", topicId]
+["/api/forum/stats/me"]
 
-### Chargement
-- **Skeleton loaders** pendant le chargement
-- **États de loading** granulaires
-- **Gestion d'erreurs** gracieuse
+// Administration
+["/api/permissions"]
+["/api/employee-categories"]
+["/api/system-settings"]
+```
 
-## ACCESSIBILITÉ
+## Fonctionnalités par Module
 
-### Standards
-- **ARIA labels** sur les composants interactifs
-- **Navigation clavier** complète
-- **Contraste** respectant WCAG
-- **Support lecteurs d'écran**
+### Dashboard Administrateur
+**Composants :**
+- StatsCards: Cartes de statistiques
+- AnnouncementsFeed: Flux d'annonces
+- QuickLinks: Liens rapides
+- RecentDocuments: Documents récents
+- UpcomingEvents: Événements à venir
+- EnhancedDashboard: Analytique avancée
 
-### Responsive Design
-- **Mobile-first** approach
-- **Breakpoints** Tailwind
-- **Touch-friendly** interfaces
-- **Adaptive layouts**
+### Dashboard Employé
+**Fonctionnalités :**
+- Vue simplifiée
+- Accès limité selon les permissions
+- Focus sur la consommation de contenu
 
-## TESTING ET DÉVELOPPEMENT
+### Système de Formation
+**Composants :**
+- TrainingAnalytics: Analytiques de formation
+- Filtres par catégorie/difficulté
+- Système d'inscription
+- Suivi de progression
+- Gestion de certificats
 
-### Test IDs
-- **data-testid** sur tous éléments interactifs
-- **Naming convention**: `{action}-{target}` ou `{type}-{content}`
-- **Identifiants uniques** pour éléments dynamiques
+### Forum de Discussion
+**Fonctionnalités :**
+- Catégories de forum
+- Création de sujets
+- Système de likes/réactions
+- Statistiques utilisateur
+- Recherche et filtres
 
-### Développement
-- **Hot reload** avec Vite
-- **TypeScript strict** mode
-- **ESLint** et Prettier
-- **Error boundaries** pour récupération
+### Gestion de Contenu
+**Types de contenu :**
+- Annonces (info, important, event, formation)
+- Documents (regulation, policy, guide, procedure)
+- Médias (video, image, document, audio)
+- Événements (meeting, training, social, other)
 
-## INTÉGRATIONS EXTERNES
-
-### APIs Externes
-- **Google Cloud Storage** pour fichiers
-- **Email services** (Nodemailer)
-- **WebSocket** pour temps réel
-
-### Bibliothèques Tiers
-- **Date-fns** pour manipulation dates
-- **Framer Motion** pour animations
-- **Recharts** pour graphiques
-- **React Hook Form** pour formulaires
-
-## ÉTAT DES FONCTIONNALITÉS
-
-### ✅ Fonctionnalités Complètes
-- Système d'authentification multi-rôles
-- Gestion complète des annonces
-- Bibliothèque de contenu multimédia
-- Système de documents avec catégories
-- Forum communautaire avec modération
-- Messagerie interne
+### Messagerie
+**Fonctionnalités :**
+- Messages privés
 - Système de réclamations
-- Formations et e-learning
-- Analytics et tableaux de bord
-- Paramètres utilisateur avancés
-- Thèmes clair/sombre
-- Recherche globale
+- Statuts de lecture
+- Catégorisation
 
-### 🔄 En Développement
-- Système de notifications push
-- Analytics avancées
-- Intégrations API externes
+## Système de Permissions Frontend
 
-### 📋 Tests et Qualité
-- Tous composants ont des test-ids
-- Validation Zod sur tous formulaires
-- Gestion d'erreurs complète
-- États de chargement partout
+### Rôles Utilisateur
+- **employee**: Accès lecture seule, participation aux formations/forum
+- **moderator**: Gestion de contenu, modération forum
+- **admin**: Accès complet, administration système
+
+### Contrôle d'Accès Routes
+```typescript
+// Vérification dans App.tsx
+{(user.role === "admin" || user.role === "moderator") && (
+  <>
+    <Route path="/admin" component={Admin} />
+    <Route path="/create-announcement" component={CreateAnnouncement} />
+    // ... autres routes admin
+  </>
+)}
+```
+
+## Configuration et Thèmes
+
+### Variables CSS Personnalisées
+```css
+:root {
+  --background: hsl(0 0% 100%);
+  --foreground: hsl(222.2 84% 4.9%);
+  --primary: hsl(262.1 83.3% 57.8%);
+  --secondary: hsl(210 40% 98%);
+  /* ... autres variables */
+}
+
+.dark {
+  --background: hsl(222.2 84% 4.9%);
+  --foreground: hsl(210 40% 98%);
+  /* ... variables mode sombre */
+}
+```
+
+### Configuration Tailwind
+- Plugin typography
+- Animations personnalisées
+- Composants UI étendus
+- Support mode sombre automatique
+
+## Points d'Intégration Backend
+
+### Endpoints API Utilisés
+- **Auth**: `/api/auth/*` (login, register, me, logout)
+- **Contenu**: `/api/announcements`, `/api/documents`, `/api/events`
+- **Utilisateurs**: `/api/users`, `/api/messages`, `/api/complaints`
+- **Formation**: `/api/trainings`, `/api/courses`, `/api/enrollments`
+- **Forum**: `/api/forum/*` (categories, topics, posts)
+- **Admin**: `/api/permissions`, `/api/settings`
+
+### WebSocket Events
+- `CONNECTED`: Confirmation connexion
+- `JOIN_CHANNEL`: Rejoindre un canal
+- `CHAT_MESSAGE`: Message de chat
+- `USER_TYPING`: Utilisateur en train de taper
+- `NOTIFICATION`: Nouvelle notification
+
+## Tests et Accessibilité
+
+### Data TestIds Implémentés
+- Tous les éléments interactifs ont des `data-testid`
+- Format: `{action}-{target}` ou `{type}-{content}`
+- Éléments dynamiques: `{type}-{description}-{id}`
+
+### Accessibilité
+- Support clavier complet
+- ARIA labels appropriés
+- Contraste couleurs conforme
+- Focus visible
+- Screen reader friendly
+
+## Performance et Optimisation
+
+### Stratégies Implémentées
+- Code splitting par route
+- Lazy loading des composants
+- Optimisation des images
+- Cache React Query
+- Debouncing des recherches
+- Skeleton loading states
+
+### Bundle Optimization
+- Tree shaking activé
+- Chunks séparés pour les vendors
+- Compression gzip
+- Import dynamique pour les gros composants
+
+## État Actuel et Limitations
+
+### Points Forts
+- Architecture modulaire bien structurée
+- Système de permission robuste
+- UI/UX moderne et responsive
+- Intégration WebSocket fonctionnelle
+- Système de cache efficace
+
+### Améliorations Possibles
+- Tests unitaires à ajouter
+- Documentation des composants
+- Optimisation des performances mobiles
+- Internationalisation (i18n)
+- Progressive Web App (PWA)
+- Gestion d'erreur plus granulaire
+
+### Compatibilité Technique
+- React 18+ 
+- TypeScript 5+
+- Modern browsers (ES2020+)
+- Responsive design (mobile-first)
+- Support mode sombre complet

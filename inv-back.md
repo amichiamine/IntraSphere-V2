@@ -1,601 +1,885 @@
-# INVENTAIRE BACKEND - INTRASPHERE LEARNING PLATFORM
+# INVENTAIRE EXHAUSTIF - BACKEND
 
-## ARCHITECTURE GÉNÉRALE
-### Technologies Principales
+## Vue d'ensemble de l'architecture Backend
 - **Runtime**: Node.js avec TypeScript
-- **Framework Web**: Express.js
-- **Base de Données**: PostgreSQL avec Drizzle ORM
-- **Communication Temps Réel**: WebSocket (ws)
+- **Framework**: Express.js
+- **ORM**: Drizzle ORM
+- **Base de données**: PostgreSQL (avec fallback en mémoire)
+- **Validation**: Zod
 - **Authentification**: Sessions Express avec bcrypt
-- **Sécurité**: Helmet, express-rate-limit, sanitization
-- **Email**: Nodemailer
-- **Stockage Cloud**: Google Cloud Storage
+- **Communication temps réel**: WebSocket (ws)
+- **Sécurité**: Helmet, CORS, rate limiting
 
-### Structure des Dossiers
+## Structure des dossiers Backend
+
+### `/server` - Racine Backend
 ```
 server/
-├── config.ts               # Configuration générale
-├── index.ts                # Point d'entrée principal
-├── db.ts                   # Configuration base de données
-├── vite.ts                 # Configuration Vite pour développement
-├── migrations.ts           # Migrations et sécurité
-├── testData.ts            # Données de test
-├── data/
-│   └── storage.ts         # Interface et implémentation storage
-├── middleware/
-│   └── security.ts        # Middleware de sécurité
-├── routes/
-│   └── api.ts             # Routes API principales
-└── services/
-    ├── auth.ts            # Service d'authentification
-    ├── email.ts           # Service email
-    └── websocket.ts       # Service WebSocket
+├── index.ts                      # Point d'entrée principal du serveur
+├── config.ts                     # Configuration environnement
+├── db.ts                         # Configuration base de données
+├── migrations.ts                 # Migrations et setup initial
+├── testData.ts                   # Données de test et seed
+├── vite.ts                       # Intégration Vite development
+├── data/                         # Couche de données
+│   └── storage.ts               # Interface storage et implémentation
+├── middleware/                   # Middlewares Express
+│   └── security.ts             # Sécurité et authentification
+├── routes/                       # Routes et endpoints API
+│   └── api.ts                   # Toutes les routes API
+└── services/                     # Services métier
+    ├── auth.ts                  # Service d'authentification
+    ├── email.ts                 # Service email/SMTP
+    └── websocket.ts             # Gestionnaire WebSocket
 ```
 
-## CONFIGURATION ET ENVIRONNEMENT
+### `/shared` - Schémas partagés
+```
+shared/
+└── schema.ts                     # Schémas Drizzle et types TypeScript
+```
+
+### `/config` - Configuration
+```
+config/
+├── components.json              # Configuration shadcn/ui
+├── drizzle.config.ts           # Configuration Drizzle ORM
+├── postcss.config.js           # Configuration PostCSS
+└── tailwind.config.ts          # Configuration TailwindCSS
+```
+
+## Modèle de Données (Drizzle Schema)
+
+### Tables Principales
+
+#### `users` - Utilisateurs
+```typescript
+{
+  id: varchar (UUID, primary key)
+  username: text (unique, not null)
+  password: text (not null, hashed avec bcrypt)
+  name: text (not null)
+  role: text (employee|admin|moderator, default: employee)
+  avatar: text (URL optionnelle)
+  employeeId: varchar (unique, pour communication interne)
+  department: varchar
+  position: varchar
+  isActive: boolean (default: true)
+  phone: varchar
+  email: varchar
+  createdAt: timestamp (auto)
+  updatedAt: timestamp (auto)
+}
+```
+
+#### `announcements` - Annonces
+```typescript
+{
+  id: varchar (UUID, primary key)
+  title: text (not null)
+  content: text (not null)
+  type: text (info|important|event|formation, default: info)
+  authorId: varchar (foreign key users.id)
+  authorName: text (not null)
+  imageUrl: text (optionnel)
+  icon: text (default: 📢)
+  createdAt: timestamp (not null, auto)
+  isImportant: boolean (default: false)
+}
+```
+
+#### `documents` - Documents
+```typescript
+{
+  id: varchar (UUID, primary key)
+  title: text (not null)
+  description: text
+  category: text (regulation|policy|guide|procedure, not null)
+  fileName: text (not null)
+  fileUrl: text (not null)
+  updatedAt: timestamp (not null, auto)
+  version: text (default: 1.0)
+}
+```
+
+#### `events` - Événements
+```typescript
+{
+  id: varchar (UUID, primary key)
+  title: text (not null)
+  description: text
+  date: timestamp (not null)
+  location: text
+  type: text (meeting|training|social|other, default: meeting)
+  organizerId: varchar (foreign key users.id)
+  createdAt: timestamp (auto)
+}
+```
+
+#### `messages` - Messagerie interne
+```typescript
+{
+  id: varchar (UUID, primary key)
+  senderId: varchar (foreign key users.id, not null)
+  recipientId: varchar (foreign key users.id, not null)
+  subject: text (not null)
+  content: text (not null)
+  isRead: boolean (default: false)
+  createdAt: timestamp (auto)
+}
+```
+
+#### `complaints` - Réclamations
+```typescript
+{
+  id: varchar (UUID, primary key)
+  submitterId: varchar (foreign key users.id, not null)
+  assignedToId: varchar (foreign key users.id)
+  title: text (not null)
+  description: text (not null)
+  category: text (hr|it|facilities|other, not null)
+  priority: text (low|medium|high|urgent, default: medium)
+  status: text (open|in_progress|resolved|closed, default: open)
+  createdAt: timestamp (auto)
+  updatedAt: timestamp (auto)
+}
+```
+
+#### `permissions` - Délégation de permissions
+```typescript
+{
+  id: varchar (UUID, primary key)
+  userId: varchar (foreign key users.id, not null)
+  grantedBy: varchar (foreign key users.id, not null)
+  permission: text (not null)
+  // Permissions possibles:
+  // - manage_announcements
+  // - manage_documents
+  // - manage_events
+  // - manage_users
+  // - validate_topics
+  // - validate_posts
+  // - manage_employee_categories
+  // - manage_trainings
+  createdAt: timestamp (auto)
+}
+```
+
+### Tables de Formation
+
+#### `trainings` - Formations
+```typescript
+{
+  id: varchar (UUID, primary key)
+  title: text (not null)
+  description: text
+  category: text (technical|management|safety|compliance|other, not null)
+  difficulty: text (beginner|intermediate|advanced, default: beginner)
+  duration: integer (en minutes, not null)
+  instructorId: varchar (foreign key users.id)
+  instructorName: text (not null)
+  startDate: timestamp
+  endDate: timestamp
+  location: text
+  maxParticipants: integer
+  currentParticipants: integer (default: 0)
+  isMandatory: boolean (default: false)
+  isActive: boolean (default: true)
+  isVisible: boolean (default: true)
+  thumbnailUrl: text
+  documentUrls: text[] (array, default: [])
+  createdAt: timestamp (not null, auto)
+  updatedAt: timestamp (auto)
+}
+```
+
+#### `trainingParticipants` - Participants formations
+```typescript
+{
+  id: varchar (UUID, primary key)
+  trainingId: varchar (foreign key trainings.id, cascade delete, not null)
+  userId: varchar (foreign key users.id, cascade delete, not null)
+  registeredAt: timestamp (auto)
+  status: text (registered|completed|cancelled, default: registered)
+  completionDate: timestamp
+  score: integer (0-100)
+  feedback: text
+}
+```
+
+### Tables E-Learning
+
+#### `courses` - Cours/modules
+```typescript
+{
+  id: varchar (UUID, primary key)
+  title: text (not null)
+  description: text
+  category: text (technical|compliance|soft-skills|leadership, not null)
+  difficulty: text (beginner|intermediate|advanced, default: beginner)
+  duration: integer (en minutes)
+  thumbnailUrl: text
+  authorId: varchar (foreign key users.id)
+  authorName: text (not null)
+  isPublished: boolean (default: false)
+  isMandatory: boolean (default: false)
+  prerequisites: text (JSON array course IDs)
+  tags: text (JSON array tags)
+  createdAt: timestamp (auto)
+  updatedAt: timestamp (auto)
+}
+```
+
+#### `lessons` - Leçons/chapitres
+```typescript
+{
+  id: varchar (UUID, primary key)
+  courseId: varchar (foreign key courses.id, not null)
+  title: text (not null)
+  description: text
+  content: text (HTML content, not null)
+  order: integer (default: 0)
+  duration: integer (en minutes)
+  videoUrl: text
+  documentUrl: text
+  isRequired: boolean (default: true)
+  createdAt: timestamp (auto)
+  updatedAt: timestamp (auto)
+}
+```
+
+#### `quizzes` - Quiz et évaluations
+```typescript
+{
+  id: varchar (UUID, primary key)
+  courseId: varchar (foreign key courses.id)
+  lessonId: varchar (foreign key lessons.id)
+  title: text (not null)
+  description: text
+  questions: text (JSON array questions, not null)
+  passingScore: integer (pourcentage, default: 70)
+  timeLimit: integer (en minutes)
+  allowRetries: boolean (default: true)
+  maxAttempts: integer (default: 3)
+  isRequired: boolean (default: false)
+  createdAt: timestamp (auto)
+  updatedAt: timestamp (auto)
+}
+```
+
+#### `enrollments` - Inscriptions et progression
+```typescript
+{
+  id: varchar (UUID, primary key)
+  userId: varchar (foreign key users.id, not null)
+  courseId: varchar (foreign key courses.id, not null)
+  enrolledAt: timestamp (auto)
+  startedAt: timestamp
+  completedAt: timestamp
+  progress: integer (pourcentage, default: 0)
+  status: text (enrolled|in-progress|completed|failed, default: enrolled)
+  certificateUrl: text
+  timeSpent: integer (en minutes, default: 0)
+  score: integer (pourcentage moyen)
+  courseTitle: text (dénormalisé pour analytics)
+}
+```
+
+#### `lessonProgress` - Progression leçons
+```typescript
+{
+  id: varchar (UUID, primary key)
+  userId: varchar (foreign key users.id, not null)
+  lessonId: varchar (foreign key lessons.id, not null)
+  courseId: varchar (foreign key courses.id, not null)
+  isCompleted: boolean (default: false)
+  timeSpent: integer (en minutes, default: 0)
+  completedAt: timestamp
+  createdAt: timestamp (auto)
+}
+```
+
+#### `quizAttempts` - Tentatives de quiz
+```typescript
+{
+  id: varchar (UUID, primary key)
+  userId: varchar (foreign key users.id, not null)
+  quizId: varchar (foreign key quizzes.id, not null)
+  answers: text (JSON answers)
+  score: integer (pourcentage)
+  passed: boolean
+  startedAt: timestamp (auto)
+  completedAt: timestamp
+  timeSpent: integer (en minutes)
+}
+```
+
+#### `certificates` - Certificats
+```typescript
+{
+  id: varchar (UUID, primary key)
+  userId: varchar (foreign key users.id, not null)
+  courseId: varchar (foreign key courses.id, not null)
+  certificateUrl: text (not null)
+  issuedAt: timestamp (auto)
+  expiresAt: timestamp
+  metadata: text (JSON metadata)
+}
+```
+
+### Tables de Contenu
+
+#### `contents` - Contenu multimédia
+```typescript
+{
+  id: varchar (UUID, primary key)
+  title: text (not null)
+  type: text (video|image|document|audio, not null)
+  category: text (not null)
+  description: text
+  fileUrl: text (not null)
+  thumbnailUrl: text
+  duration: text
+  viewCount: integer (default: 0)
+  rating: integer (default: 0)
+  tags: text[] (array)
+  isPopular: boolean (default: false)
+  isFeatured: boolean (default: false)
+  createdAt: timestamp (not null, auto)
+  updatedAt: timestamp (not null, auto)
+}
+```
+
+#### `categories` - Catégories
+```typescript
+{
+  id: varchar (UUID, primary key)
+  name: text (unique, not null)
+  description: text
+  icon: text (default: 📁)
+  color: text (default: #3B82F6)
+  isVisible: boolean (default: true)
+  sortOrder: integer (default: 0)
+  createdAt: timestamp (not null, auto)
+}
+```
+
+#### `employeeCategories` - Catégories employés
+```typescript
+{
+  id: varchar (UUID, primary key)
+  name: text (unique, not null)
+  description: text
+  color: text (default: #10B981)
+  permissions: text[] (array codes permissions, default: [])
+  isActive: boolean (default: true)
+  createdAt: timestamp (not null, auto)
+}
+```
+
+#### `resources` - Ressources e-learning
+```typescript
+{
+  id: varchar (UUID, primary key)
+  title: text (not null)
+  description: text
+  type: text (document|video|link|tool, not null)
+  category: text (not null)
+  url: text (not null)
+  downloadUrl: text
+  thumbnailUrl: text
+  tags: text[] (array)
+  isPublic: boolean (default: true)
+  requiredRole: text
+  createdAt: timestamp (not null, auto)
+  updatedAt: timestamp (auto)
+}
+```
+
+### Tables Forum
+
+#### `forumCategories` - Catégories forum
+```typescript
+{
+  id: varchar (UUID, primary key)
+  name: text (unique, not null)
+  description: text
+  icon: text (default: 💬)
+  color: text (default: #3B82F6)
+  isVisible: boolean (default: true)
+  sortOrder: integer (default: 0)
+  moderatorIds: text[] (array user IDs)
+  permissions: text[] (array permissions)
+  createdAt: timestamp (auto)
+}
+```
+
+#### `forumTopics` - Sujets forum
+```typescript
+{
+  id: varchar (UUID, primary key)
+  categoryId: varchar (foreign key forumCategories.id, not null)
+  authorId: varchar (foreign key users.id, not null)
+  title: text (not null)
+  description: text
+  isSticky: boolean (default: false)
+  isLocked: boolean (default: false)
+  tags: text[] (array)
+  viewCount: integer (default: 0)
+  postCount: integer (default: 0)
+  lastPostAt: timestamp
+  lastPostAuthor: text
+  createdAt: timestamp (auto)
+  updatedAt: timestamp (auto)
+}
+```
+
+#### `forumPosts` - Posts forum
+```typescript
+{
+  id: varchar (UUID, primary key)
+  topicId: varchar (foreign key forumTopics.id, not null)
+  authorId: varchar (foreign key users.id, not null)
+  content: text (not null)
+  isEdited: boolean (default: false)
+  editedAt: timestamp
+  likeCount: integer (default: 0)
+  isDeleted: boolean (default: false)
+  deletedAt: timestamp
+  deletedBy: varchar (foreign key users.id)
+  createdAt: timestamp (auto)
+}
+```
+
+#### `forumLikes` - Likes/réactions forum
+```typescript
+{
+  id: varchar (UUID, primary key)
+  postId: varchar (foreign key forumPosts.id, not null)
+  userId: varchar (foreign key users.id, not null)
+  reactionType: text (like|love|laugh|angry, default: like)
+  createdAt: timestamp (auto)
+}
+```
+
+#### `forumUserStats` - Statistiques utilisateur forum
+```typescript
+{
+  id: varchar (UUID, primary key)
+  userId: varchar (foreign key users.id, unique, not null)
+  postCount: integer (default: 0)
+  topicCount: integer (default: 0)
+  likeCount: integer (default: 0)
+  reputation: integer (default: 0)
+  joinedAt: timestamp (auto)
+  lastActiveAt: timestamp (auto)
+}
+```
+
+### Tables Configuration
+
+#### `systemSettings` - Paramètres système
+```typescript
+{
+  id: varchar (primary key, default: "settings")
+  showAnnouncements: boolean (default: true)
+  showContent: boolean (default: true)
+  showDocuments: boolean (default: true)
+  showForum: boolean (default: true)
+  showMessages: boolean (default: true)
+  showComplaints: boolean (default: true)
+  showTraining: boolean (default: true)
+  updatedAt: timestamp (auto)
+}
+```
+
+## API Routes et Endpoints
+
+### Routes d'Authentification (`/api/auth/*`)
+- **POST** `/api/auth/login` - Connexion utilisateur
+- **POST** `/api/auth/register` - Inscription utilisateur
+- **GET** `/api/auth/me` - Informations utilisateur connecté
+- **POST** `/api/auth/logout` - Déconnexion
+
+### Routes de Contenu
+- **GET** `/api/announcements` - Liste des annonces
+- **GET** `/api/announcements/:id` - Annonce spécifique
+- **POST** `/api/announcements` - Créer annonce
+- **PATCH** `/api/announcements/:id` - Modifier annonce
+- **DELETE** `/api/announcements/:id` - Supprimer annonce
+
+- **GET** `/api/documents` - Liste des documents
+- **GET** `/api/documents/:id` - Document spécifique
+- **POST** `/api/documents` - Créer document
+- **PATCH** `/api/documents/:id` - Modifier document
+- **DELETE** `/api/documents/:id` - Supprimer document
+
+- **GET** `/api/events` - Liste des événements
+- **GET** `/api/events/:id` - Événement spécifique
+- **POST** `/api/events` - Créer événement
+- **PATCH** `/api/events/:id` - Modifier événement
+- **DELETE** `/api/events/:id` - Supprimer événement
+
+- **GET** `/api/contents` - Liste du contenu multimédia
+- **GET** `/api/contents/:id` - Contenu spécifique
+- **POST** `/api/contents` - Créer contenu
+- **PATCH** `/api/contents/:id` - Modifier contenu
+- **DELETE** `/api/contents/:id` - Supprimer contenu
+
+### Routes Utilisateurs et Communication
+- **GET** `/api/users` - Liste des utilisateurs (admin)
+- **POST** `/api/users` - Créer utilisateur (admin)
+- **PATCH** `/api/users/:id` - Modifier utilisateur
+- **DELETE** `/api/users/:id` - Désactiver utilisateur (soft delete)
+
+- **GET** `/api/messages/:userId` - Messages d'un utilisateur
+- **POST** `/api/messages` - Envoyer message
+- **PATCH** `/api/messages/:id/read` - Marquer comme lu
+
+- **GET** `/api/complaints` - Liste des réclamations
+- **POST** `/api/complaints` - Créer réclamation
+- **PATCH** `/api/complaints/:id` - Modifier réclamation
+
+### Routes de Formation
+- **GET** `/api/trainings` - Liste des formations
+- **GET** `/api/trainings/:id` - Formation spécifique
+- **POST** `/api/trainings` - Créer formation
+- **PATCH** `/api/trainings/:id` - Modifier formation
+- **DELETE** `/api/trainings/:id` - Supprimer formation
+
+- **GET** `/api/training-participants/:trainingId` - Participants formation
+- **POST** `/api/training-participants` - Inscrire à formation
+- **PATCH** `/api/training-participants/:id` - Modifier participation
+- **DELETE** `/api/training-participants/:trainingId/:userId` - Désinscrire
+
+### Routes E-Learning
+- **GET** `/api/courses` - Liste des cours
+- **GET** `/api/courses/:id` - Cours spécifique
+- **POST** `/api/courses` - Créer cours
+- **PATCH** `/api/courses/:id` - Modifier cours
+- **DELETE** `/api/courses/:id` - Supprimer cours
+
+- **GET** `/api/courses/:id/lessons` - Leçons d'un cours
+- **POST** `/api/lessons` - Créer leçon
+- **PATCH** `/api/lessons/:id` - Modifier leçon
+- **DELETE** `/api/lessons/:id` - Supprimer leçon
+
+- **GET** `/api/my-enrollments` - Inscriptions utilisateur
+- **POST** `/api/enroll/:courseId` - S'inscrire à un cours
+- **PATCH** `/api/enrollments/:id` - Mettre à jour progression
+
+- **GET** `/api/my-certificates` - Certificats utilisateur
+- **POST** `/api/certificates` - Générer certificat
+
+- **GET** `/api/resources` - Ressources e-learning
+- **POST** `/api/resources` - Créer ressource
+- **PATCH** `/api/resources/:id` - Modifier ressource
+- **DELETE** `/api/resources/:id` - Supprimer ressource
+
+### Routes Forum
+- **GET** `/api/forum/categories` - Catégories forum
+- **POST** `/api/forum/categories` - Créer catégorie
+- **PATCH** `/api/forum/categories/:id` - Modifier catégorie
+- **DELETE** `/api/forum/categories/:id` - Supprimer catégorie
+
+- **GET** `/api/forum/topics` - Sujets forum (avec filtre catégorie)
+- **GET** `/api/forum/topics/:id` - Sujet spécifique
+- **POST** `/api/forum/topics` - Créer sujet
+- **PATCH** `/api/forum/topics/:id` - Modifier sujet
+- **DELETE** `/api/forum/topics/:id` - Supprimer sujet
+
+- **GET** `/api/forum/posts/:topicId` - Posts d'un sujet
+- **POST** `/api/forum/posts` - Créer post
+- **PATCH** `/api/forum/posts/:id` - Modifier post
+- **DELETE** `/api/forum/posts/:id` - Supprimer post
+
+- **POST** `/api/forum/posts/:postId/like` - Liker un post
+- **GET** `/api/forum/stats/me` - Statistiques utilisateur forum
+
+### Routes Administration
+- **GET** `/api/stats` - Statistiques globales
+- **GET** `/api/permissions/:userId` - Permissions utilisateur
+- **POST** `/api/permissions` - Accorder permission
+- **DELETE** `/api/permissions/:id` - Révoquer permission
+
+- **GET** `/api/categories` - Catégories de contenu
+- **POST** `/api/categories` - Créer catégorie
+- **PATCH** `/api/categories/:id` - Modifier catégorie
+- **DELETE** `/api/categories/:id` - Supprimer catégorie
+
+- **GET** `/api/employee-categories` - Catégories employés
+- **POST** `/api/employee-categories` - Créer catégorie employé
+- **PATCH** `/api/employee-categories/:id` - Modifier catégorie
+- **DELETE** `/api/employee-categories/:id` - Supprimer catégorie
+
+- **GET** `/api/system-settings` - Paramètres système
+- **PATCH** `/api/system-settings` - Modifier paramètres
+
+### Routes Recherche et Recommandations
+- **GET** `/api/search/users?q=...` - Rechercher utilisateurs
+- **GET** `/api/search/content?q=...` - Rechercher contenu
+- **GET** `/api/search/documents?q=...` - Rechercher documents
+- **GET** `/api/search/announcements?q=...` - Rechercher annonces
+- **GET** `/api/training-recommendations` - Recommandations formation
+
+## Services Backend
+
+### Service d'Authentification (`AuthService`)
+**Fonctionnalités :**
+- Hash de mots de passe avec bcrypt (12 rounds)
+- Vérification de mots de passe
+- Validation de force de mot de passe
+
+**Méthodes :**
+```typescript
+static async hashPassword(password: string): Promise<string>
+static async verifyPassword(password: string, hash: string): Promise<boolean>
+static validatePasswordStrength(password: string): { isValid: boolean; errors: string[] }
+```
+
+### Service Email (`emailService`)
+**Fonctionnalités :**
+- Configuration SMTP
+- Envoi d'emails de bienvenue
+- Notifications par email
+- Templates HTML
+
+**Configuration :**
+- Support SMTP standard
+- Authentification utilisateur/mot de passe
+- TLS/SSL
+- Templates personnalisables
+
+### Gestionnaire WebSocket (`WebSocketManager`)
+**Fonctionnalités :**
+- Gestion de connexions multiples
+- Système de canaux/channels
+- Heartbeat pour détecter déconnexions
+- Broadcast de messages
+
+**Events supportés :**
+- `AUTHENTICATE`: Authentification client
+- `JOIN_CHANNEL`: Rejoindre un canal
+- `LEAVE_CHANNEL`: Quitter un canal
+- `CHAT_MESSAGE`: Message de chat
+- `USER_TYPING`: Indicateur de frappe
+- `MARK_NOTIFICATION_READ`: Marquer notification lue
+
+**Méthodes principales :**
+```typescript
+sendToClient(ws: WebSocketClient, message: WebSocketMessage): void
+sendToUser(userId: string, message: WebSocketMessage): void
+broadcastToChannel(channelId: string, message: WebSocketMessage, exclude?: string): void
+joinChannel(ws: WebSocketClient, channelId: string): void
+leaveChannel(ws: WebSocketClient, channelId: string): void
+```
+
+## Storage Interface et Implémentation
+
+### Interface de Storage (`IStorage`)
+**Types d'opérations :**
+- CRUD complet pour toutes les entités
+- Recherche et filtrage
+- Statistiques et analytics
+- Gestion des relations
+
+### Implémentation Mémoire (`MemStorage`)
+**Caractéristiques :**
+- Stockage en Map pour performance
+- Données de test préchargées
+- Simulation des relations
+- Méthodes de reset pour tests
+
+**Collections principales :**
+```typescript
+private users: Map<string, User>
+private announcements: Map<string, Announcement>
+private documents: Map<string, Document>
+private events: Map<string, Event>
+private messages: Map<string, Message>
+private complaints: Map<string, Complaint>
+private permissions: Map<string, Permission>
+private contents: Map<string, Content>
+private categories: Map<string, Category>
+private trainings: Map<string, Training>
+private courses: Map<string, Course>
+private forumCategories: Map<string, ForumCategory>
+// ... autres collections
+```
+
+## Middleware et Sécurité
+
+### Middleware de Sécurité (`security.ts`)
+**Fonctionnalités :**
+- Configuration Helmet pour sécurité HTTP
+- CORS configuré pour frontend
+- Rate limiting par IP
+- Sessions Express sécurisées
+
+### Middleware d'Authentification
+**Fonctions :**
+- `requireAuth`: Vérification session active
+- `requireRole(roles[])`: Vérification rôle utilisateur
+- Extension des types Express pour session
+
+## Configuration (`config.ts`)
 
 ### Variables d'Environnement
-- **NODE_ENV** - Environnement (development/production)
-- **DATABASE_URL** - URL connexion PostgreSQL
-- **SESSION_SECRET** - Secret pour sessions
-- **PORT** - Port serveur (défaut: 5000)
-- **REPL_ID** - Identifiant Replit
-
-### Configuration de Sécurité
-- **Trust Proxy** - Configuration pour production
-- **Helmet** - Protection headers HTTP
-- **Rate Limiting** - Protection contre spamming
-- **CORS** - Configuration cross-origin
-- **Session Security** - Cookies sécurisés
-
-## BASE DE DONNÉES (DRIZZLE ORM)
-
-### Tables Principales (17 tables)
-
-#### 1. **users** - Gestion des utilisateurs
 ```typescript
-id, username, password, name, role, avatar
-employeeId, department, position, isActive
-phone, email, createdAt, updatedAt
-```
-- **Rôles**: employee, admin, moderator
-- **Index**: username unique, employeeId unique
-
-#### 2. **announcements** - Annonces système
-```typescript
-id, title, content, type, authorId, authorName
-imageUrl, icon, createdAt, isImportant
-```
-- **Types**: info, important, event, formation
-
-#### 3. **documents** - Gestion documentaire
-```typescript
-id, title, description, category, fileName
-fileUrl, updatedAt, version
-```
-- **Catégories**: regulation, policy, guide, procedure
-
-#### 4. **events** - Événements
-```typescript
-id, title, description, date, location
-type, organizerId, createdAt
-```
-- **Types**: meeting, training, social, other
-
-#### 5. **messages** - Messagerie interne
-```typescript
-id, senderId, recipientId, subject
-content, isRead, createdAt
+interface AppConfig {
+  port: number                    // PORT (default: 5000)
+  nodeEnv: string                // NODE_ENV (development|production|test)
+  sessionSecret: string          // SESSION_SECRET
+  bcryptSaltRounds: number       // BCRYPT_SALT_ROUNDS (default: 12)
+  databaseUrl?: string           // DATABASE_URL
+  smtp: {                        // Configuration SMTP
+    enabled: boolean             // SMTP_ENABLED
+    host?: string               // SMTP_HOST
+    port?: number               // SMTP_PORT
+    secure?: boolean            // SMTP_SECURE
+    user?: string               // SMTP_USER
+    pass?: string               // SMTP_PASS
+    from?: string               // EMAIL_FROM
+  }
+  upload: {                      // Configuration upload
+    maxFileSize: number         // MAX_FILE_SIZE (default: 10MB)
+    allowedTypes: string[]      // ALLOWED_FILE_TYPES
+    storageType: string         // STORAGE_TYPE (local|cloud)
+    storagePath: string         // STORAGE_PATH
+  }
+  features: {                    // Feature flags
+    registration: boolean       // ENABLE_REGISTRATION
+    emailNotifications: boolean // ENABLE_EMAIL_NOTIFICATIONS
+    fileUpload: boolean         // ENABLE_FILE_UPLOAD
+    forum: boolean              // ENABLE_FORUM
+    training: boolean           // ENABLE_TRAINING
+  }
+}
 ```
 
-#### 6. **complaints** - Système de réclamations
-```typescript
-id, submitterId, assignedToId, title, description
-category, priority, status, createdAt, updatedAt
-```
-- **Catégories**: hr, it, facilities, other
-- **Priorités**: low, medium, high, urgent
-- **Statuts**: open, in_progress, resolved, closed
-
-#### 7. **permissions** - Délégation de permissions
-```typescript
-id, userId, grantedBy, permission, createdAt
-```
-- **Permissions**: manage_announcements, manage_documents, manage_events, manage_users, validate_topics, validate_posts, manage_employee_categories, manage_trainings
-
-#### 8. **contents** - Bibliothèque de contenu
-```typescript
-id, title, type, category, description
-fileUrl, thumbnailUrl, duration, viewCount
-rating, tags, isPopular, isFeatured
-createdAt, updatedAt
-```
-- **Types**: video, image, document, audio
-
-#### 9. **categories** - Catégories de contenu
-```typescript
-id, name, description, icon, color
-isVisible, sortOrder, createdAt
-```
-
-#### 10. **employeeCategories** - Catégories d'employés
-```typescript
-id, name, description, color
-permissions[], isActive, createdAt
-```
-
-#### 11. **systemSettings** - Paramètres système
-```typescript
-id, showAnnouncements, showContent, showDocuments
-showForum, showMessages, showComplaints
-showTraining, updatedAt
-```
-
-#### 12. **trainings** - Formations
-```typescript
-id, title, description, category, difficulty
-duration, instructorId, instructorName
-startDate, endDate, location, maxParticipants
-currentParticipants, isMandatory, isActive
-isVisible, thumbnailUrl, documentUrls[]
-createdAt, updatedAt
-```
-
-#### 13. **trainingParticipants** - Participants formations
-```typescript
-id, trainingId, userId, registeredAt
-status, completionDate, score, feedback
-```
-
-### Tables E-Learning (8 tables)
-
-#### 14. **courses** - Cours e-learning
-```typescript
-id, title, description, category, difficulty
-duration, thumbnailUrl, authorId, authorName
-isPublished, isMandatory, prerequisites
-tags, createdAt, updatedAt
-```
-
-#### 15. **lessons** - Leçons de cours
-```typescript
-id, courseId, title, description, content
-order, duration, videoUrl, documentUrl
-isRequired, createdAt, updatedAt
-```
-
-#### 16. **quizzes** - Quiz et évaluations
-```typescript
-id, courseId, lessonId, title, description
-questions, passingScore, timeLimit
-allowRetries, maxAttempts, isRequired
-createdAt, updatedAt
-```
-
-#### 17. **enrollments** - Inscriptions cours
-```typescript
-id, userId, courseId, enrolledAt, startedAt
-completedAt, progress, status, certificateUrl
-```
-
-#### 18. **lessonProgress** - Progression leçons
-```typescript
-id, userId, lessonId, courseId, isCompleted
-timeSpent, completedAt, createdAt
-```
-
-#### 19. **quizAttempts** - Tentatives quiz
-```typescript
-id, userId, quizId, score, answers
-completedAt, createdAt
-```
-
-#### 20. **certificates** - Certificats
-```typescript
-id, userId, courseId, type, status
-issuedAt, expiresAt, certificateUrl
-```
-
-#### 21. **resources** - Ressources partagées
-```typescript
-id, title, description, type, fileUrl
-category, isPublic, authorId, createdAt
-```
-
-### Tables Forum (5 tables)
-
-#### 22. **forumCategories** - Catégories forum
-```typescript
-id, name, description, icon, color
-isVisible, sortOrder, createdAt
-```
-
-#### 23. **forumTopics** - Sujets forum
-```typescript
-id, categoryId, title, description, authorId
-authorName, isSticky, isLocked, viewCount
-postCount, lastPostAt, createdAt
-```
-
-#### 24. **forumPosts** - Messages forum
-```typescript
-id, topicId, authorId, authorName, content
-isDeleted, deletedBy, likeCount
-createdAt, updatedAt
-```
-
-#### 25. **forumLikes** - Likes forum
-```typescript
-id, postId, userId, createdAt
-```
-
-#### 26. **forumUserStats** - Statistiques utilisateur forum
-```typescript
-userId, postCount, likeCount, topicCount
-reputation, lastActiveAt
-```
-
-## INTERFACE DE STOCKAGE (IStorage)
-
-### Méthodes Utilisateurs (6 méthodes)
-- `getUser(id)` - Récupérer utilisateur par ID
-- `getUserByUsername(username)` - Par nom d'utilisateur
-- `getUserByEmployeeId(employeeId)` - Par ID employé
-- `createUser(user)` - Créer utilisateur
-- `updateUser(id, user)` - Mettre à jour
-- `getUsers()` - Liste tous utilisateurs
-
-### Méthodes Annonces (5 méthodes)
-- `getAnnouncements()` - Liste annonces
-- `getAnnouncementById(id)` - Par ID
-- `createAnnouncement(announcement)` - Créer
-- `updateAnnouncement(id, data)` - Mettre à jour
-- `deleteAnnouncement(id)` - Supprimer
-
-### Méthodes Documents (5 méthodes)
-- `getDocuments()` - Liste documents
-- `getDocumentById(id)` - Par ID
-- `createDocument(document)` - Créer
-- `updateDocument(id, data)` - Mettre à jour
-- `deleteDocument(id)` - Supprimer
-
-### Méthodes Événements (5 méthodes)
-- `getEvents()` - Liste événements
-- `getEventById(id)` - Par ID
-- `createEvent(event)` - Créer
-- `updateEvent(id, data)` - Mettre à jour
-- `deleteEvent(id)` - Supprimer
-
-### Méthodes Messagerie (8 méthodes)
-- `getMessages(userId)` - Messages utilisateur
-- `getMessageById(id)` - Par ID
-- `createMessage(message)` - Créer
-- `markMessageAsRead(id)` - Marquer lu
-- `getUserConversations(userId)` - Conversations
-- `getConversationMessages(user1, user2)` - Messages conversation
-- `getUnreadMessageCount(userId)` - Nombre non lus
-- `deleteMessage(id)` - Supprimer
-
-### Méthodes Réclamations (6 méthodes)
-- `getComplaints()` - Liste réclamations
-- `getComplaintById(id)` - Par ID
-- `getUserComplaints(userId)` - Par utilisateur
-- `createComplaint(complaint)` - Créer
-- `updateComplaint(id, data)` - Mettre à jour
-- `deleteComplaint(id)` - Supprimer
-
-### Méthodes Permissions (4 méthodes)
-- `getPermissions(userId)` - Par utilisateur
-- `createPermission(permission)` - Créer
-- `hasPermission(userId, permission)` - Vérifier
-- `deletePermission(id)` - Supprimer
-
-### Méthodes Contenu (11 méthodes)
-- `getContents()` - Liste contenu
-- `getContentById(id)` - Par ID
-- `createContent(content)` - Créer
-- `updateContent(id, data)` - Mettre à jour
-- `deleteContent(id)` - Supprimer
-- `getCategories()` - Catégories
-- `createCategory(category)` - Créer catégorie
-- `updateCategory(id, data)` - Mettre à jour catégorie
-- `deleteCategory(id)` - Supprimer catégorie
-- `incrementContentView(id)` - Incrémenter vues
-- `getPopularContent()` - Contenu populaire
-
-### Méthodes Formations (12 méthodes)
-- `getTrainings()` - Liste formations
-- `getTrainingById(id)` - Par ID
-- `createTraining(training)` - Créer
-- `updateTraining(id, data)` - Mettre à jour
-- `deleteTraining(id)` - Supprimer
-- `getTrainingParticipants(trainingId)` - Participants
-- `getUserTrainingParticipations(userId)` - Participations utilisateur
-- `addTrainingParticipant(participant)` - Ajouter participant
-- `updateTrainingParticipant(id, data)` - Mettre à jour participant
-- `removeTrainingParticipant(trainingId, userId)` - Retirer participant
-- `getAllTrainingParticipants()` - Tous participants
-- `getTrainingRecommendations(userId)` - Recommandations
-
-### Méthodes E-Learning (15 méthodes)
-- `getCourses()` - Liste cours
-- `getCourseById(id)` - Par ID
-- `createCourse(course)` - Créer
-- `updateCourse(id, data)` - Mettre à jour
-- `deleteCourse(id)` - Supprimer
-- `getLessons(courseId)` - Leçons cours
-- `getCourseLessons(courseId)` - Alias leçons
-- `createLesson(lesson)` - Créer leçon
-- `updateLesson(id, data)` - Mettre à jour leçon
-- `deleteLesson(id)` - Supprimer leçon
-- `enrollUser(userId, courseId)` - Inscrire utilisateur
-- `getUserEnrollments(userId)` - Inscriptions utilisateur
-- `updateEnrollmentProgress(id, progress)` - Mettre à jour progression
-- `getUserLessonProgress(userId, courseId)` - Progression leçons
-- `markLessonComplete(userId, courseId, lessonId)` - Marquer leçon complète
-
-### Méthodes Forum (12 méthodes)
-- `getForumCategories()` - Catégories forum
-- `createForumCategory(category)` - Créer catégorie
-- `updateForumCategory(id, data)` - Mettre à jour catégorie
-- `deleteForumCategory(id)` - Supprimer catégorie
-- `getForumTopics(categoryId?)` - Sujets forum
-- `createForumTopic(topic)` - Créer sujet
-- `updateForumTopic(id, data)` - Mettre à jour sujet
-- `deleteForumTopic(id)` - Supprimer sujet
-- `getForumPosts(topicId)` - Messages forum
-- `createForumPost(post)` - Créer message
-- `updateForumPost(id, data)` - Mettre à jour message
-- `deleteForumPost(id, deletedBy)` - Supprimer message
-
-### Méthodes Recherche (4 méthodes)
-- `searchUsers(query)` - Rechercher utilisateurs
-- `searchContent(query)` - Rechercher contenu
-- `searchDocuments(query)` - Rechercher documents
-- `searchAnnouncements(query)` - Rechercher annonces
-
-### Méthodes Statistiques (2 méthodes)
-- `getStats()` - Statistiques générales
-- `resetToTestData()` - Réinitialiser données test
-
-## ROUTES API
-
-### Authentification (4 routes)
-- `POST /api/auth/login` - Connexion utilisateur
-- `POST /api/auth/register` - Inscription utilisateur
-- `POST /api/auth/logout` - Déconnexion
-- `GET /api/auth/me` - Profil utilisateur actuel
-
-### Utilisateurs (6 routes)
-- `GET /api/users` - Liste utilisateurs
-- `GET /api/users/:id` - Utilisateur par ID
-- `PUT /api/users/:id` - Mettre à jour utilisateur
-- `POST /api/users` - Créer utilisateur
-- `DELETE /api/users/:id` - Supprimer utilisateur
-- `GET /api/users/search` - Rechercher utilisateurs
-
-### Annonces (5 routes)
-- `GET /api/announcements` - Liste annonces
-- `GET /api/announcements/:id` - Annonce par ID
-- `POST /api/announcements` - Créer annonce
-- `PUT /api/announcements/:id` - Mettre à jour annonce
-- `DELETE /api/announcements/:id` - Supprimer annonce
-
-### Documents (5 routes)
-- `GET /api/documents` - Liste documents
-- `GET /api/documents/:id` - Document par ID
-- `POST /api/documents` - Créer document
-- `PUT /api/documents/:id` - Mettre à jour document
-- `DELETE /api/documents/:id` - Supprimer document
-
-### Événements (5 routes)
-- `GET /api/events` - Liste événements
-- `GET /api/events/:id` - Événement par ID
-- `POST /api/events` - Créer événement
-- `PUT /api/events/:id` - Mettre à jour événement
-- `DELETE /api/events/:id` - Supprimer événement
-
-### Messagerie (8 routes)
-- `GET /api/messages` - Messages utilisateur
-- `GET /api/messages/:id` - Message par ID
-- `POST /api/messages` - Créer message
-- `PUT /api/messages/:id/read` - Marquer lu
-- `GET /api/conversations` - Conversations
-- `GET /api/conversations/:userId` - Messages conversation
-- `GET /api/messages/unread-count` - Nombre non lus
-- `DELETE /api/messages/:id` - Supprimer message
-
-### Réclamations (6 routes)
-- `GET /api/complaints` - Liste réclamations
-- `GET /api/complaints/:id` - Réclamation par ID
-- `GET /api/complaints/user/:userId` - Par utilisateur
-- `POST /api/complaints` - Créer réclamation
-- `PUT /api/complaints/:id` - Mettre à jour réclamation
-- `DELETE /api/complaints/:id` - Supprimer réclamation
-
-### Permissions (4 routes)
-- `GET /api/permissions/:userId` - Permissions utilisateur
-- `POST /api/permissions` - Créer permission
-- `GET /api/permissions/:userId/:permission` - Vérifier permission
-- `DELETE /api/permissions/:id` - Supprimer permission
-
-### Contenu (11 routes)
-- `GET /api/content` - Liste contenu
-- `GET /api/content/:id` - Contenu par ID
-- `POST /api/content` - Créer contenu
-- `PUT /api/content/:id` - Mettre à jour contenu
-- `DELETE /api/content/:id` - Supprimer contenu
-- `POST /api/content/:id/view` - Incrémenter vues
-- `GET /api/content/popular` - Contenu populaire
-- `GET /api/categories` - Catégories
-- `POST /api/categories` - Créer catégorie
-- `PUT /api/categories/:id` - Mettre à jour catégorie
-- `DELETE /api/categories/:id` - Supprimer catégorie
-
-### Formations (12 routes)
-- `GET /api/trainings` - Liste formations
-- `GET /api/trainings/:id` - Formation par ID
-- `POST /api/trainings` - Créer formation
-- `PUT /api/trainings/:id` - Mettre à jour formation
-- `DELETE /api/trainings/:id` - Supprimer formation
-- `GET /api/trainings/:id/participants` - Participants
-- `POST /api/trainings/:id/participants` - Ajouter participant
-- `DELETE /api/trainings/:trainingId/participants/:userId` - Retirer participant
-- `PUT /api/training-participants/:id` - Mettre à jour participant
-- `GET /api/users/:userId/trainings` - Formations utilisateur
-- `GET /api/training-participants` - Tous participants
-- `GET /api/users/:userId/training-recommendations` - Recommandations
-
-### E-Learning (15 routes)
-- `GET /api/courses` - Liste cours
-- `GET /api/courses/:id` - Cours par ID
-- `POST /api/courses` - Créer cours
-- `PUT /api/courses/:id` - Mettre à jour cours
-- `DELETE /api/courses/:id` - Supprimer cours
-- `GET /api/courses/:id/lessons` - Leçons cours
-- `POST /api/lessons` - Créer leçon
-- `PUT /api/lessons/:id` - Mettre à jour leçon
-- `DELETE /api/lessons/:id` - Supprimer leçon
-- `POST /api/enrollments` - Inscrire utilisateur
-- `GET /api/users/:userId/enrollments` - Inscriptions utilisateur
-- `PUT /api/enrollments/:id/progress` - Mettre à jour progression
-- `GET /api/users/:userId/lesson-progress/:courseId` - Progression leçons
-- `POST /api/lesson-progress` - Marquer leçon complète
-- `GET /api/users/:userId/certificates` - Certificats utilisateur
-
-### Forum (12 routes)
-- `GET /api/forum/categories` - Catégories forum
-- `POST /api/forum/categories` - Créer catégorie
-- `PUT /api/forum/categories/:id` - Mettre à jour catégorie
-- `DELETE /api/forum/categories/:id` - Supprimer catégorie
-- `GET /api/forum/topics` - Sujets forum
-- `POST /api/forum/topics` - Créer sujet
-- `PUT /api/forum/topics/:id` - Mettre à jour sujet
-- `DELETE /api/forum/topics/:id` - Supprimer sujet
-- `GET /api/forum/topics/:id/posts` - Messages sujet
-- `POST /api/forum/posts` - Créer message
-- `PUT /api/forum/posts/:id` - Mettre à jour message
-- `DELETE /api/forum/posts/:id` - Supprimer message
-
-### Statistiques et Recherche (5 routes)
-- `GET /api/stats` - Statistiques générales
-- `POST /api/reset-test-data` - Réinitialiser données test
-- `GET /api/search/users` - Rechercher utilisateurs
-- `GET /api/search/content` - Rechercher contenu
-- `GET /api/search/global` - Recherche globale
-
-## MIDDLEWARE DE SÉCURITÉ
-
-### Fonctionnalités de Sécurité
-- **configureSecurity(app)** - Configuration Helmet et CORS
-- **sanitizeInput** - Sanitisation des entrées
-- **getSessionConfig()** - Configuration sessions sécurisées
-- **requireAuth** - Middleware authentification requis
-- **requireRole(roles[])** - Middleware contrôle rôles
-
-### Protection Implémentée
-- **Rate Limiting** - Protection contre spam
-- **Input Sanitization** - Nettoyage données entrées
-- **Session Security** - Sessions sécurisées avec secrets
-- **CORS Protection** - Configuration cross-origin
-- **Helmet Security** - Headers HTTP sécurisés
-
-## SERVICES
-
-### Service d'Authentification (AuthService)
-- **hashPassword(password)** - Hacher mot de passe avec bcrypt
-- **verifyPassword(password, hash)** - Vérifier mot de passe
-- **generateToken()** - Générer tokens sécurisés
-
-### Service Email (emailService)
-- **sendWelcomeEmail(email, name)** - Email de bienvenue
-- **sendPasswordResetEmail(email, token)** - Reset mot de passe
-- **sendNotificationEmail(email, subject, content)** - Notifications
-
-### Service WebSocket
-- **setupWebSocket(server)** - Configuration WebSocket
-- **broadcastToAll(message)** - Diffusion globale
-- **sendToUser(userId, message)** - Message utilisateur
-- **notifyUserUpdate(userId, data)** - Notification mise à jour
-
-## MIGRATIONS ET DONNÉES
-
-### Système de Migrations
-- **runMigrations()** - Exécuter migrations de sécurité
-- **migratePasswords()** - Migration mots de passe bcrypt
-- **initializeDefaultData()** - Données par défaut
-
-### Données de Test
-- **3 utilisateurs de test** (admin, marie.martin, pierre.dubois)
-- **Données d'exemple** pour toutes les entités
-- **resetToTestData()** - Réinitialisation complète
-
-## CONFIGURATION ET DÉPLOIEMENT
-
-### Configuration Express
-- **Parsing JSON** - Limite 50MB
-- **Sessions sécurisées** - Cookies HttpOnly
-- **Middleware de logging** - Logs détaillés API
-- **Gestion d'erreurs** - Error handlers globaux
-
-### Configuration Vite (Développement)
-- **Proxy API** - /api/* vers backend
-- **HMR** - Hot Module Replacement
-- **Serve Static** - Fichiers statiques production
-
-## WEBSOCKET ET TEMPS RÉEL
-
-### Fonctionnalités WebSocket
-- **Connexions persistantes** - Maintien connexion client
-- **Diffusion en temps réel** - Notifications instantanées
-- **Gestion des déconnexions** - Nettoyage automatique
-- **Sécurisation** - Authentification requise
-
-### Messages Types
-- **user_update** - Mise à jour utilisateur
-- **announcement_created** - Nouvelle annonce
-- **message_received** - Nouveau message
-- **training_enrolled** - Inscription formation
-
-## LOGS ET MONITORING
-
-### Système de Logs
-- **Logs API détaillés** - Méthode, path, status, durée
-- **Logs d'erreurs** - Stack traces complètes
-- **Logs de sécurité** - Tentatives intrusion
-- **Logs WebSocket** - Connexions/déconnexions
-
-### Monitoring
-- **Performance tracking** - Temps réponse API
-- **Error tracking** - Gestion erreurs centralisée
-- **Database monitoring** - Requêtes et performance
-
-## ÉTAT DES FONCTIONNALITÉS
-
-### ✅ Fonctionnalités Complètes
-- Authentification bcrypt sécurisée
-- CRUD complet pour toutes entités
-- Système de permissions granulaire
-- WebSocket temps réel
-- Sécurité complète (Helmet, Rate Limiting, CORS)
-- API REST complète (120+ endpoints)
-- E-Learning system complet
-- Forum avec modération
-- Système de recherche
-- Analytics et statistiques
+### Validation de Configuration
+- Vérifications de sécurité pour production
+- Warnings pour configurations manquantes
+- Validation SMTP
+- Erreurs bloquantes en production
+
+## Base de Données et Migrations
+
+### Configuration Drizzle
+- Support PostgreSQL natif
+- Fallback en mémoire pour développement
+- Pool de connexions
 - Migrations automatiques
-- Service email
 
-### 🔄 En Développement
-- Optimisations performance base de données
-- Analytics avancées
-- Système de cache Redis
+### Système de Migrations (`migrations.ts`)
+**Fonctionnalités :**
+- Migration des mots de passe vers bcrypt
+- Setup initial des données
+- Migration incrémentale
+- Rollback support
 
-### 📋 Sécurité et Qualité
-- Validation Zod sur toutes entrées
-- Sanitisation complète des données
-- Sessions sécurisées
+### Données de Test (`testData.ts`)
+**Contenu :**
+- 3 utilisateurs par défaut (admin, moderator, employee)
+- Annonces d'exemple
+- Documents de test
+- Événements
+- Messages et réclamations
+- Formations et cours
+- Catégories forum
+
+## Performances et Optimisation
+
+### Stratégies Implémentées
+- Connection pooling PostgreSQL
+- Cache en mémoire pour storage
+- Requêtes optimisées avec indexes
+- Pagination automatique
+- Lazy loading des relations
+
+### Monitoring et Logs
+- Logs structurés par service
+- Monitoring WebSocket connexions
+- Tracking des performances API
+- Error tracking détaillé
+
+## Points d'Intégration Frontend
+
+### Session Management
+- Sessions Express avec store sécurisé
+- Cookies httpOnly et secure
+- Expiration automatique
+- Cross-tab synchronization
+
+### API Response Format
+```typescript
+// Success responses
+{ data: T }
+
+// Error responses  
+{ 
+  message: string, 
+  errors?: ValidationError[] 
+}
+
+// Statistics responses
+{
+  totalUsers: number,
+  totalAnnouncements: number,
+  // ... autres métriques
+}
+```
+
+### WebSocket Integration
+- Path: `/ws`
+- Query params: `userId` pour authentification
+- JSON message format standardisé
+- Automatic reconnection support
+
+## Sécurité et Authentification
+
+### Authentification
+- Sessions Express avec store PostgreSQL
+- Mots de passe hashés avec bcrypt (12 rounds)
 - Protection CSRF
-- Rate limiting par IP
-- Gestion d'erreurs complète
-- Logs de sécurité
+- Rate limiting par endpoint
+
+### Autorisation
+- Système de rôles (employee, moderator, admin)
+- Permissions granulaires par module
+- Validation côté serveur pour toutes les opérations
+- Contrôle d'accès par route
+
+### Sécurité Données
+- Validation Zod pour tous les inputs
+- Sanitization des données
+- Protection injection SQL (ORM)
+- HTTPS en production
+
+## État Actuel et Limitations
+
+### Points Forts
+- API RESTful complète et cohérente
+- Architecture modulaire et extensible
+- Sécurité robuste
+- Support temps réel avec WebSocket
+- Système de permissions flexible
+- Configuration environment-based
+
+### Améliorations Possibles
+- Cache Redis pour scalabilité
+- Queue system pour traitement asynchrone
+- Monitoring APM (Application Performance Monitoring)
+- API rate limiting plus granulaire
+- Backup automatique base de données
+- Health checks détaillés
+- Documentation OpenAPI/Swagger
+- Tests d'intégration automatisés
+
+### Compatibilité et Déploiement
+- Node.js 18+
+- PostgreSQL 12+
+- Compatible Docker
+- Support cloud providers
+- Variables d'environnement standardisées
+- Prêt pour CI/CD
