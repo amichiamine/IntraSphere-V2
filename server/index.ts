@@ -54,24 +54,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// Global error handlers to prevent process crashes
-process.on('uncaughtException', (error) => {
-  console.error('Uncaught Exception:', error.message);
-  if (error.message.includes('Vite') || error.message.includes('vite')) {
-    console.log('Vite error detected, continuing server operation...');
-    return;
-  }
-  console.error('Non-Vite error, stack:', error.stack);
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-  if (typeof reason === 'string' && (reason.includes('Vite') || reason.includes('vite'))) {
-    console.log('Vite rejection detected, continuing server operation...');
-    return;
-  }
-});
-
 (async () => {
   // Run security migrations on startup
   await runMigrations();
@@ -83,27 +65,16 @@ process.on('unhandledRejection', (reason, promise) => {
     const message = err.message || "Internal Server Error";
 
     res.status(status).json({ message });
-    
-    // Log error but don't re-throw to prevent crashes
-    console.error('Server error:', err.message);
-    if (err.stack) {
-      console.error('Stack trace:', err.stack);
-    }
+    throw err;
   });
 
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
-  
-  // Use static serving to avoid Vite instability issues
-  try {
+  if (app.get("env") === "development") {
+    await setupVite(app, server);
+  } else {
     serveStatic(app);
-    log("Using static file serving (production build)");
-  } catch (error) {
-    log("Static serving failed, falling back to Vite");
-    if (app.get("env") === "development") {
-      await setupVite(app, server);
-    }
   }
 
   // ALWAYS serve the app on the port specified in the environment variable PORT
