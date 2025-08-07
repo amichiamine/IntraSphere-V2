@@ -7,6 +7,11 @@ import { runMigrations } from "./migrations";
 
 const app = express();
 
+// Configure trust proxy for production rate limiting
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', true);
+}
+
 // Configure security middleware
 configureSecurity(app);
 
