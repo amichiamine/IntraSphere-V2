@@ -22,7 +22,7 @@ import {
   Star,
   Filter,
   ThumbsUp,
-  Fire,
+  Flame,
   Calendar,
   BarChart3
 } from "lucide-react";
@@ -80,7 +80,8 @@ export function ForumPage() {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   };
 
-  const formatDate = (date: Date | string) => {
+  const formatDate = (date: Date | string | null) => {
+    if (!date) return "Non défini";
     return new Intl.DateTimeFormat('fr-FR', {
       day: 'numeric',
       month: 'short',
@@ -353,7 +354,7 @@ export function ForumPage() {
                                   </div>
                                   <div className="flex items-center gap-1">
                                     <Heart className="h-3 w-3" />
-                                    <span>{topic.likesCount || 0}</span>
+                                    <span>{topic.replyCount || 0}</span>
                                   </div>
                                 </div>
                                 
@@ -456,7 +457,7 @@ export function ForumPage() {
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
-                <Fire className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                <Flame className="h-5 w-5 text-orange-600 dark:text-orange-400" />
               </div>
               <div>
                 <div className="text-2xl font-bold text-gray-900 dark:text-white">

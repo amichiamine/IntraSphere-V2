@@ -183,20 +183,13 @@ export interface IStorage {
   getForumPostById(id: string): Promise<ForumPost | undefined>;
   createForumPost(post: InsertForumPost): Promise<ForumPost>;
   updateForumPost(id: string, post: Partial<ForumPost>): Promise<ForumPost>;
-  deleteForumPost(id: string): Promise<void>;
+  deleteForumPost(id: string, deletedBy: string): Promise<void>;
   
   // Training recommendations
   getTrainingRecommendations(userId: string): Promise<Course[]>;
   
   // Course lessons
   getCourseLessons(courseId: string): Promise<Lesson[]>;
-  
-  // Forum Posts
-  getForumPosts(topicId: string): Promise<ForumPost[]>;
-  getForumPostById(id: string): Promise<ForumPost | undefined>;
-  createForumPost(post: InsertForumPost): Promise<ForumPost>;
-  updateForumPost(id: string, post: Partial<ForumPost>): Promise<ForumPost>;
-  deleteForumPost(id: string, deletedBy: string): Promise<void>;
   
   // Forum Likes/Reactions
   getForumPostLikes(postId: string): Promise<ForumLike[]>;

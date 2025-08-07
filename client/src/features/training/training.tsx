@@ -242,7 +242,7 @@ export default function Training() {
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <span className="flex items-center gap-1">
                           <FileText className="h-4 w-4" />
-                          {resource.fileType || 'PDF'}
+                          {resource.type || 'PDF'}
                         </span>
                         <span className="flex items-center gap-1">
                           <Download className="h-4 w-4" />
