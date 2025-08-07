@@ -1,21 +1,11 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
-import path from "path";
 import { registerRoutes } from "./routes/api";
+import { setupVite, serveStatic, log } from "./vite";
 import { configureSecurity, sanitizeInput, getSessionConfig } from "./middleware/security";
 import { runMigrations } from "./migrations";
 
 const app = express();
-
-function log(message: string, source = "express") {
-  const formattedTime = new Date().toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit", 
-    second: "2-digit",
-    hour12: true,
-  });
-  console.log(`${formattedTime} [${source}] ${message}`);
-}
 
 // Configure trust proxy for production rate limiting
 if (process.env.NODE_ENV === 'production') {
@@ -105,16 +95,16 @@ process.on('unhandledRejection', (reason, promise) => {
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
   
-  // Stable static serving - completely avoid Vite
-  const staticPath = path.resolve(import.meta.dirname, "../dist/public");
-  log(`Serving static files from: ${staticPath}`);
-  
-  app.use(express.static(staticPath));
-  
-  // Catch-all handler: send back React's index.html file  
-  app.get("*", (_req, res) => {
-    res.sendFile(path.resolve(staticPath, "index.html"));
-  });
+  // Use static serving to avoid Vite instability issues
+  try {
+    serveStatic(app);
+    log("Using static file serving (production build)");
+  } catch (error) {
+    log("Static serving failed, falling back to Vite");
+    if (app.get("env") === "development") {
+      await setupVite(app, server);
+    }
+  }
 
   // ALWAYS serve the app on the port specified in the environment variable PORT
   // Other ports are firewalled. Default to 5000 if not specified.
