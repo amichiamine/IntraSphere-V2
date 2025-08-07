@@ -30,6 +30,9 @@ import Trainings from "./features/training/trainings";
 import { ForumPage } from "./features/messaging/forum";
 import { ForumTopicPage } from "./features/messaging/forum-topic";
 import { ForumNewTopicPage } from "./features/messaging/forum-new-topic";
+import { AnalyticsAdminPage } from "./features/admin/analytics-admin";
+import { EventsManagementPage } from "./features/events/events-management";
+import { AdvancedContentPage } from "./features/content/advanced-content";
 import NotFound from "./pages/not-found";
 
 function Router() {
@@ -99,6 +102,9 @@ function Router() {
           <Route path="/create-announcement" component={CreateAnnouncement} />
           <Route path="/create-content" component={CreateContent} />
           <Route path="/training-admin" component={TrainingAdmin} />
+          <Route path="/analytics" component={AnalyticsAdminPage} />
+          <Route path="/events" component={EventsManagementPage} />
+          <Route path="/advanced-content" component={AdvancedContentPage} />
         </>
       )}
       
