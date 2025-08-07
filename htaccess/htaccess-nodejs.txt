@@ -1,0 +1,246 @@
+# IntraSphere - Configuration .htaccess Node.js
+# Emplacement : public_html/.htaccess
+# Type : Hébergement Node.js sur cPanel
+# Version : 2.1 - Août 2025
+
+# ========================================
+# REDIRECTION VERS APPLICATION NODE.JS
+# ========================================
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Option 1: Redirection vers port spécifique assigné par cPanel
+    # Adaptez le port selon votre configuration cPanel Node.js
+    # RewriteRule ^(.*)$ http://localhost:3000/$1 [P,L]
+    
+    # Option 2: Redirection vers sous-domaine ou URL spécifique
+    # RewriteRule ^(.*)$ https://votre-app.votre-domaine.com/$1 [R=301,L]
+    
+    # Option 3: Proxy vers application locale (recommandé)
+    # Cette configuration nécessite mod_proxy activé
+    ProxyPreserveHost On
+    ProxyPass / http://localhost:3000/
+    ProxyPassReverse / http://localhost:3000/
+    
+    # Gestion des WebSockets (si votre app les utilise)
+    RewriteCond %{HTTP:Upgrade} =websocket [NC]
+    RewriteRule ^(.*)$ ws://localhost:3000/$1 [P,L]
+    
+    # Alternative si mod_proxy non disponible
+    # RewriteCond %{REQUEST_FILENAME} !-f
+    # RewriteCond %{REQUEST_FILENAME} !-d
+    # RewriteRule ^(.*)$ http://localhost:3000/$1 [P,L]
+</IfModule>
+
+# ========================================
+# CONFIGURATION PROXY (si mod_proxy disponible)
+# ========================================
+
+<IfModule mod_proxy.c>
+    ProxyRequests Off
+    ProxyPreserveHost On
+    
+    # Proxy principal vers l'application Node.js
+    ProxyPass / http://localhost:3000/
+    ProxyPassReverse / http://localhost:3000/
+    
+    # Configuration pour les API
+    ProxyPass /api/ http://localhost:3000/api/
+    ProxyPassReverse /api/ http://localhost:3000/api/
+    
+    # Configuration pour les assets statiques
+    ProxyPass /static/ http://localhost:3000/static/
+    ProxyPassReverse /static/ http://localhost:3000/static/
+    
+    # Configuration pour les uploads
+    ProxyPass /uploads/ http://localhost:3000/uploads/
+    ProxyPassReverse /uploads/ http://localhost:3000/uploads/
+</IfModule>
+
+# ========================================
+# HEADERS POUR LE PROXY
+# ========================================
+
+<IfModule mod_headers.c>
+    # Headers pour la compatibilité avec Node.js
+    Header always set Access-Control-Allow-Origin "*"
+    Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+    Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
+    
+    # Préserver les informations client
+    RequestHeader set X-Forwarded-Proto "https"
+    RequestHeader set X-Forwarded-Host "%{HTTP_HOST}s"
+    RequestHeader set X-Real-IP "%{REMOTE_ADDR}s"
+    
+    # Headers de sécurité
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set X-XSS-Protection "1; mode=block"
+    
+    # HSTS si HTTPS disponible
+    # Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+</IfModule>
+
+# ========================================
+# GESTION DES ERREURS
+# ========================================
+
+# En cas d'indisponibilité de l'application Node.js
+ErrorDocument 502 /maintenance.html
+ErrorDocument 503 /maintenance.html
+ErrorDocument 504 /maintenance.html
+
+# ========================================
+# OPTIMISATION DU PROXY
+# ========================================
+
+<IfModule mod_proxy.c>
+    # Délai d'attente pour les requêtes longues
+    ProxyTimeout 300
+    
+    # Configuration des connexions persistantes
+    ProxySet connectiontimeout=5
+    ProxySet retry=300
+    
+    # Pool de connexions
+    ProxySet hcmethod=GET
+    ProxySet hcuri=/health
+</IfModule>
+
+# ========================================
+# CONFIGURATION SPÉCIFIQUE SELON L'HÉBERGEUR
+# ========================================
+
+# Pour les hébergeurs utilisant un reverse proxy interne
+# <IfModule mod_rewrite.c>
+#     RewriteEngine On
+#     RewriteCond %{REQUEST_FILENAME} !-f
+#     RewriteCond %{REQUEST_FILENAME} !-d
+#     RewriteRule ^(.*)$ /app.js [L]
+# </IfModule>
+
+# Pour les configurations avec PM2 ou similaire
+# ProxyPass / http://127.0.0.1:3000/
+# ProxyPassReverse / http://127.0.0.1:3000/
+
+# ========================================
+# ALTERNATIVE SANS MOD_PROXY
+# ========================================
+
+# Si mod_proxy n'est pas disponible, utiliser une redirection
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Redirection transparente (invisible pour l'utilisateur)
+    # RewriteRule ^(.*)$ http://localhost:3000/$1 [P,L]
+    
+    # Redirection visible (l'URL change)
+    # RewriteRule ^(.*)$ https://app.votre-domaine.com/$1 [R=301,L]
+    
+    # Condition pour éviter les boucles infinies
+    RewriteCond %{HTTP_HOST} ^votre-domaine\.com$ [NC]
+    RewriteCond %{SERVER_PORT} !^3000$
+    RewriteRule ^(.*)$ https://votre-domaine.com:3000/$1 [R=301,L]
+</IfModule>
+
+# ========================================
+# SÉCURITÉ SUPPLÉMENTAIRE
+# ========================================
+
+# Protection des fichiers Node.js sensibles
+<Files "package.json">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+<Files "package-lock.json">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+<Files ".env">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+<Files "server.js">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+<Files "app.js">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+<Files "*.ts">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+<Files "node_modules">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+# ========================================
+# CACHE ET COMPRESSION
+# ========================================
+
+# Laisser Node.js gérer la compression et le cache
+# Désactiver le cache Apache pour éviter les conflits
+<IfModule mod_expires.c>
+    ExpiresActive Off
+</IfModule>
+
+<IfModule mod_headers.c>
+    # Pas de cache pour les réponses dynamiques
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+    
+    # Sauf pour les assets statiques si servis par Apache
+    <FilesMatch "\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2)$">
+        Header unset Cache-Control
+        Header unset Pragma
+        Header unset Expires
+        Header set Cache-Control "public, max-age=31536000"
+    </FilesMatch>
+</IfModule>
+
+# ========================================
+# CONFIGURATION SPÉCIALE POUR INTRASPHERE
+# ========================================
+
+# Redirection pour les routes d'authentification
+<IfModule mod_rewrite.c>
+    # S'assurer que les routes API passent bien par Node.js
+    RewriteRule ^api/auth/(.*)$ http://localhost:3000/api/auth/$1 [P,L]
+    RewriteRule ^api/trainings/(.*)$ http://localhost:3000/api/trainings/$1 [P,L]
+    RewriteRule ^api/announcements/(.*)$ http://localhost:3000/api/announcements/$1 [P,L]
+</IfModule>
+
+# ========================================
+# SURVEILLANCE ET DEBUGGING
+# ========================================
+
+# Log spécifique pour le proxy Node.js
+<IfModule mod_log_config.c>
+    LogFormat "%h %l %u %t \"%r\" %>s %O \"%{Referer}i\" \"%{User-Agent}i\" [NODEJS-PROXY]" nodejs_proxy
+    CustomLog /home/username/logs/nodejs_proxy.log nodejs_proxy
+</IfModule>
+
+# ========================================
+# INSTRUCTIONS D'ADAPTATION
+# ========================================
+
+# IMPORTANT: Adaptez les éléments suivants selon votre configuration:
+# 1. Remplacez "localhost:3000" par le port assigné par votre hébergeur
+# 2. Remplacez "votre-domaine.com" par votre vrai domaine
+# 3. Adaptez les chemins de logs selon votre structure
+# 4. Activez HTTPS (lignes commentées) si vous avez un certificat SSL
+# 5. Vérifiez que mod_proxy est disponible chez votre hébergeur
+
+# TESTE: Vérifiez que votre application Node.js répond bien sur le port configuré
+# avant d'activer ces redirections.

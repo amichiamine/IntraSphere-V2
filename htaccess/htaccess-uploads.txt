@@ -1,0 +1,307 @@
+# IntraSphere - Configuration .htaccess Uploads
+# Emplacement : public_html/uploads/.htaccess
+# Type : Hébergement traditionnel (PHP + MySQL)
+# Version : 2.1 - Août 2025
+
+# ========================================
+# SÉCURITÉ MAXIMALE POUR LES UPLOADS
+# ========================================
+
+# Interdire l'exécution de TOUS les scripts
+<Files "*.php">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+<Files "*.php3">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+<Files "*.php4">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+<Files "*.php5">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+<Files "*.phtml">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+<Files "*.pl">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+<Files "*.py">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+<Files "*.cgi">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+<Files "*.sh">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+<Files "*.exe">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+<Files "*.bat">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+<Files "*.com">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+<Files "*.scr">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+<Files "*.vbs">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+<Files "*.js">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+<Files "*.html">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+<Files "*.htm">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+# ========================================
+# TYPES DE FICHIERS AUTORISÉS UNIQUEMENT
+# ========================================
+
+# Images autorisées
+<FilesMatch "\.(jpg|jpeg|png|gif|bmp|webp|svg)$">
+    Order Allow,Deny
+    Allow from all
+    
+    # Headers de sécurité pour les images
+    <IfModule mod_headers.c>
+        Header set X-Content-Type-Options "nosniff"
+        Header set Cache-Control "public, max-age=2592000"
+    </IfModule>
+</FilesMatch>
+
+# Documents autorisés
+<FilesMatch "\.(pdf|doc|docx|xls|xlsx|ppt|pptx|txt|rtf|odt|ods|odp)$">
+    Order Allow,Deny
+    Allow from all
+    
+    # Forcer le téléchargement pour certains types
+    <IfModule mod_headers.c>
+        Header set Content-Disposition "attachment"
+        Header set X-Content-Type-Options "nosniff"
+        Header set Cache-Control "private, max-age=3600"
+    </IfModule>
+</FilesMatch>
+
+# Archives autorisées
+<FilesMatch "\.(zip|rar|7z|tar|gz)$">
+    Order Allow,Deny
+    Allow from all
+    
+    # Forcer le téléchargement des archives
+    <IfModule mod_headers.c>
+        Header set Content-Disposition "attachment"
+        Header set X-Content-Type-Options "nosniff"
+    </IfModule>
+</FilesMatch>
+
+# Médias autorisés (pour les formations multimédia)
+<FilesMatch "\.(mp4|avi|mov|wmv|mp3|wav|ogg|m4a)$">
+    Order Allow,Deny
+    Allow from all
+    
+    # Headers pour les médias
+    <IfModule mod_headers.c>
+        Header set Accept-Ranges "bytes"
+        Header set Cache-Control "public, max-age=86400"
+    </IfModule>
+</FilesMatch>
+
+# ========================================
+# REFUSER TOUT LE RESTE
+# ========================================
+
+# Refuser explicitement tous les autres types de fichiers
+<FilesMatch "^(?!.*\.(jpg|jpeg|png|gif|bmp|webp|svg|pdf|doc|docx|xls|xlsx|ppt|pptx|txt|rtf|odt|ods|odp|zip|rar|7z|tar|gz|mp4|avi|mov|wmv|mp3|wav|ogg|m4a)$).*$">
+    Order Deny,Allow
+    Deny from all
+</FilesMatch>
+
+# ========================================
+# PROTECTION CONTRE LES ATTAQUES
+# ========================================
+
+# Bloquer les fichiers avec double extension
+<FilesMatch "\.(php|phtml|pl|py|jsp|asp|aspx|cgi|sh)\.(jpg|jpeg|png|gif|pdf|txt|doc|docx)$">
+    Order Deny,Allow
+    Deny from all
+</FilesMatch>
+
+# Bloquer les fichiers suspects
+<Files "*.htaccess">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+<Files ".htpasswd">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+<Files "web.config">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+<Files "*.ini">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+<Files "*.conf">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+# ========================================
+# LIMITATION DE TAILLE
+# ========================================
+
+# Limiter la taille des fichiers uploadés
+LimitRequestBody 10485760 # 10MB
+
+# ========================================
+# DÉSACTIVER L'INDEXATION
+# ========================================
+
+# Empêcher la navigation dans le dossier
+Options -Indexes
+
+# Désactiver les suivis de liens symboliques
+Options -FollowSymLinks
+
+# ========================================
+# GESTION DES ERREURS
+# ========================================
+
+# Rediriger les erreurs vers la page principale
+ErrorDocument 403 /index.html
+ErrorDocument 404 /index.html
+
+# ========================================
+# TYPES MIME SÉCURISÉS
+# ========================================
+
+# S'assurer que les types MIME sont correctement définis
+AddType image/jpeg .jpg .jpeg
+AddType image/png .png
+AddType image/gif .gif
+AddType image/webp .webp
+AddType image/svg+xml .svg
+
+AddType application/pdf .pdf
+AddType application/msword .doc
+AddType application/vnd.openxmlformats-officedocument.wordprocessingml.document .docx
+AddType application/vnd.ms-excel .xls
+AddType application/vnd.openxmlformats-officedocument.spreadsheetml.sheet .xlsx
+AddType application/vnd.ms-powerpoint .ppt
+AddType application/vnd.openxmlformats-officedocument.presentationml.presentation .pptx
+
+AddType text/plain .txt
+AddType application/rtf .rtf
+
+AddType application/zip .zip
+AddType application/x-rar-compressed .rar
+AddType application/x-7z-compressed .7z
+
+AddType video/mp4 .mp4
+AddType video/x-msvideo .avi
+AddType video/quicktime .mov
+AddType video/x-ms-wmv .wmv
+
+AddType audio/mpeg .mp3
+AddType audio/wav .wav
+AddType audio/ogg .ogg
+AddType audio/mp4 .m4a
+
+# ========================================
+# PROTECTION CONTRE LE HOTLINKING
+# ========================================
+
+# Empêcher l'utilisation des images depuis d'autres sites
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Autoriser l'accès direct et depuis votre domaine uniquement
+    RewriteCond %{HTTP_REFERER} !^$
+    RewriteCond %{HTTP_REFERER} !^https://votre-domaine\.com/.*$ [NC]
+    RewriteCond %{HTTP_REFERER} !^https://www\.votre-domaine\.com/.*$ [NC]
+    RewriteRule \.(jpg|jpeg|png|gif|pdf|doc|docx)$ - [F,L]
+</IfModule>
+
+# ========================================
+# JOURNALISATION SPÉCIFIQUE
+# ========================================
+
+# Log des accès aux fichiers uploadés
+<IfModule mod_log_config.c>
+    LogFormat "%h %l %u %t \"%r\" %>s %O \"%{Referer}i\" \"%{User-Agent}i\"" uploads_format
+    CustomLog /home/username/logs/uploads_access.log uploads_format
+</IfModule>
+
+# ========================================
+# ORGANISATION PAR SOUS-DOSSIERS
+# ========================================
+
+# Configuration spécifique pour les images de formations
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Organiser les uploads par type et date
+    # RewriteRule ^trainings/([0-9]{4})/([0-9]{2})/(.*)$ trainings/$1/$2/$3 [L]
+    # RewriteRule ^documents/([0-9]{4})/([0-9]{2})/(.*)$ documents/$1/$2/$3 [L]
+    # RewriteRule ^avatars/(.*)$ avatars/$1 [L]
+</IfModule>
+
+# ========================================
+# SURVEILLANCE ET ALERTES
+# ========================================
+
+# Bloquer les tentatives de upload en masse
+<IfModule mod_evasive24.c>
+    DOSHashTableSize    1097
+    DOSPageCount        5
+    DOSPageInterval     2
+    DOSSiteCount        100
+    DOSSiteInterval     2
+    DOSBlockingPeriod   1800
+</IfModule>

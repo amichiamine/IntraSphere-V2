@@ -1,0 +1,336 @@
+# IntraSphere - Configuration .htaccess Configuration
+# Emplacement : intrasphere_config/.htaccess
+# Type : Hébergement traditionnel (PHP + MySQL)
+# Version : 2.1 - Août 2025
+
+# ========================================
+# PROTECTION TOTALE DU DOSSIER
+# ========================================
+
+# Interdire TOUT accès web à ce dossier
+Order Deny,Allow
+Deny from all
+
+# Protection explicite contre tous les types de fichiers
+<Files "*">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+# ========================================
+# PROTECTION SPÉCIFIQUE DES FICHIERS PHP
+# ========================================
+
+# Interdire l'exécution et l'accès aux scripts PHP
+<Files "*.php">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+<Files "*.php3">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+<Files "*.php4">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+<Files "*.php5">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+<Files "*.phtml">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+# ========================================
+# PROTECTION DES FICHIERS DE CONFIGURATION
+# ========================================
+
+# Fichiers de base de données
+<Files "database.php">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+<Files "config.php">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+<Files "settings.php">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+<Files "security.php">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+# Fichiers de configuration système
+<Files "*.ini">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+<Files "*.conf">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+<Files "*.config">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+<Files "*.cfg">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+# Fichiers d'environnement
+<Files ".env">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+<Files ".env.local">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+<Files ".env.production">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+<Files ".env.development">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+# ========================================
+# PROTECTION DES FICHIERS SENSIBLES
+# ========================================
+
+# Fichiers de logs
+<Files "*.log">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+<Files "error_log">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+# Fichiers de sauvegarde
+<Files "*.bak">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+<Files "*.backup">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+<Files "*.old">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+<Files "*~">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+# Fichiers temporaires
+<Files "*.tmp">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+<Files "*.temp">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+# ========================================
+# PROTECTION CONTRE LES OUTILS DE SCAN
+# ========================================
+
+# Bloquer les tentatives d'accès automatisées
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Bloquer les bots de scan de sécurité
+    RewriteCond %{HTTP_USER_AGENT} (nikto|sqlmap|fimap|nessus|openvas|nmap|dirb|dirbuster|gobuster|wpscan) [NC]
+    RewriteRule .* - [F,L]
+    
+    # Bloquer les tentatives d'accès par des outils automatisés
+    RewriteCond %{HTTP_USER_AGENT} (wget|curl|libwww|python|perl|java|go-http-client) [NC]
+    RewriteRule .* - [F,L]
+    
+    # Bloquer les requêtes sans User-Agent
+    RewriteCond %{HTTP_USER_AGENT} ^$ [OR]
+    RewriteCond %{HTTP_USER_AGENT} " " [OR]
+    RewriteCond %{HTTP_USER_AGENT} ^- [OR]
+    RewriteCond %{HTTP_USER_AGENT} ^null
+    RewriteRule .* - [F,L]
+</IfModule>
+
+# ========================================
+# PROTECTION CONTRE LES INJECTIONS
+# ========================================
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Bloquer les tentatives d'injection dans l'URL
+    RewriteCond %{REQUEST_URI} (\<|%3C)([^s]*s)+cript.*(\>|%3E) [NC,OR]
+    RewriteCond %{REQUEST_URI} (\<|%3C)([^i]*i)+frame.*(\>|%3E) [NC,OR]
+    RewriteCond %{REQUEST_URI} (\<|%3C)([^o]*o)+bject.*(\>|%3E) [NC,OR]
+    RewriteCond %{REQUEST_URI} (\<|%3C)([^a]*a)+pplet.*(\>|%3E) [NC,OR]
+    RewriteCond %{REQUEST_URI} (\<|%3C)([^e]*e)+mbed.*(\>|%3E) [NC,OR]
+    RewriteCond %{REQUEST_URI} (\<|%3C)([^f]*f)+orm.*(\>|%3E) [NC,OR]
+    RewriteCond %{REQUEST_URI} (\<|%3C)([^i]*i)+nput.*(\>|%3E) [NC,OR]
+    RewriteCond %{REQUEST_URI} (\<|%3C)([^l]*l)+ink.*(\>|%3E) [NC,OR]
+    RewriteCond %{REQUEST_URI} (\<|%3C)([^m]*m)+eta.*(\>|%3E) [NC,OR]
+    RewriteCond %{REQUEST_URI} base64_(en|de)code.*\( [NC,OR]
+    RewriteCond %{REQUEST_URI} (%0A|%0D|\\r|\\n) [NC,OR]
+    RewriteCond %{REQUEST_URI} union.*select [NC]
+    RewriteRule .* - [F,L]
+    
+    # Bloquer les tentatives d'accès aux fichiers système
+    RewriteCond %{REQUEST_URI} \.\./\.\./\.\./\.\./etc/passwd [NC,OR]
+    RewriteCond %{REQUEST_URI} \.\./\.\./etc/passwd [NC,OR]
+    RewriteCond %{REQUEST_URI} /etc/passwd [NC,OR]
+    RewriteCond %{REQUEST_URI} /proc/self/environ [NC,OR]
+    RewriteCond %{REQUEST_URI} /proc/version [NC,OR]
+    RewriteCond %{REQUEST_URI} /proc/meminfo [NC]
+    RewriteRule .* - [F,L]
+</IfModule>
+
+# ========================================
+# DÉSACTIVER L'EXÉCUTION DE SCRIPTS
+# ========================================
+
+# Désactiver complètement PHP
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>
+
+<IfModule mod_php5.c>
+    php_flag engine off
+</IfModule>
+
+<IfModule mod_php7.c>
+    php_flag engine off
+</IfModule>
+
+<IfModule mod_php8.c>
+    php_flag engine off
+</IfModule>
+
+# Désactiver l'exécution via CGI
+Options -ExecCGI
+
+# Supprimer les handlers pour les scripts
+RemoveHandler .php .php3 .php4 .php5 .phtml .pl .py .cgi .sh
+
+# ========================================
+# DÉSACTIVER L'INDEXATION ET LA NAVIGATION
+# ========================================
+
+# Empêcher la navigation dans le dossier
+Options -Indexes
+
+# Désactiver les suivis de liens symboliques
+Options -FollowSymLinks
+Options -SymLinksIfOwnerMatch
+
+# Désactiver les includes côté serveur
+Options -Includes
+
+# ========================================
+# LOGGING ET SURVEILLANCE
+# ========================================
+
+# Log spécifique pour les tentatives d'accès au dossier config
+<IfModule mod_log_config.c>
+    LogFormat "%h %l %u %t \"%r\" %>s %O \"%{Referer}i\" \"%{User-Agent}i\" [CONFIG_ACCESS_ATTEMPT]" config_security
+    CustomLog /home/username/logs/config_security.log config_security
+</IfModule>
+
+# ========================================
+# ALERTES DE SÉCURITÉ
+# ========================================
+
+# Configuration pour mod_security (si disponible)
+<IfModule mod_security.c>
+    SecFilterEngine On
+    SecFilterScanPOST On
+    SecFilter "delete[[:space:]]+from"
+    SecFilter "insert[[:space:]]+into"
+    SecFilter "select.+from"
+    SecFilter "union.+select"
+    SecFilter "bulk[[:space:]]+insert"
+    SecFilter "drop[[:space:]]+table"
+    SecFilter "update.+set"
+</IfModule>
+
+# ========================================
+# ERREURS PERSONNALISÉES
+# ========================================
+
+# Rediriger toutes les erreurs vers la page principale
+ErrorDocument 400 /
+ErrorDocument 401 /
+ErrorDocument 403 /
+ErrorDocument 404 /
+ErrorDocument 500 /
+
+# ========================================
+# HEADERS DE SÉCURITÉ SUPPLÉMENTAIRES
+# ========================================
+
+<IfModule mod_headers.c>
+    # Supprimer les headers révélateurs
+    Header unset Server
+    Header unset X-Powered-By
+    Header unset X-AspNet-Version
+    Header unset X-AspNetMvc-Version
+    
+    # Headers de sécurité stricts
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "DENY"
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    Header always set Referrer-Policy "no-referrer"
+    Header always set Content-Security-Policy "default-src 'none'"
+</IfModule>
+
+# ========================================
+# PROTECTION SUPPLÉMENTAIRE
+# ========================================
+
+# Bloquer l'accès basé sur l'IP (exemple pour IPs suspectes)
+# <RequireAll>
+#     Require all denied
+#     Require not ip 192.168.1.100
+#     Require not ip 10.0.0.0/8
+# </RequireAll>
+
+# Restriction d'accès par plage horaire (exemple)
+# <IfModule mod_rewrite.c>
+#     RewriteEngine On
+#     RewriteCond %{TIME_HOUR} >22 [OR]
+#     RewriteCond %{TIME_HOUR} <06
+#     RewriteRule .* - [F,L]
+# </IfModule>

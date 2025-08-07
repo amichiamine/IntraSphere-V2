@@ -1,0 +1,9 @@
+# Ce fichier maintient le dossier "Download Manuel" dans Git
+# même si le contenu est exclu par .gitignore
+
+# Le dossier contient les packages volumineux pour téléchargement manuel :
+# - intrasphere-universal-ready.zip (155MB)
+# - universal-ready/ (dossier décompressé)
+
+# Ces fichiers sont exclus de Git pour des raisons de performance
+# mais disponibles pour téléchargement manuel
