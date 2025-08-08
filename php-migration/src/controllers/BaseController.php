@@ -56,19 +56,14 @@ abstract class BaseController {
     }
     
     /**
-     * Vérifier une permission spécifique
+     * Vérifier une permission spécifique avec gestionnaire unifié
      */
     protected function requirePermission(string $permission): array {
         $user = $this->requireAuth();
         
-        // Admin a toutes les permissions
-        if ($user['role'] === 'admin') {
-            return $user;
-        }
-        
-        $permissionModel = new Permission();
-        if (!$permissionModel->hasPermission($user['id'], $permission)) {
-            $this->error('Permission refusée', 403);
+        $validation = PermissionManager::validatePermissionRequest($user, $permission);
+        if (!$validation['valid']) {
+            $this->error($validation['error'], $validation['code']);
         }
         
         return $user;
@@ -218,53 +213,20 @@ abstract class BaseController {
     }
     
     /**
-     * Rate limiting simple
+     * Rate limiting unifié (déprécié - utiliser RateLimiter::middleware())
      */
     protected function checkRateLimit(string $key, int $maxRequests = 60, int $timeWindow = 60): void {
-        $cacheKey = "rate_limit:{$key}";
-        
-        if (!isset($_SESSION[$cacheKey])) {
-            $_SESSION[$cacheKey] = [
-                'count' => 1,
-                'reset_time' => time() + $timeWindow
-            ];
-            return;
+        if (!RateLimiter::checkRateLimit($key, $maxRequests, $timeWindow)) {
+            $retryAfter = RateLimiter::getRetryAfter($key, $timeWindow);
+            $this->error("Trop de requêtes. Réessayez dans {$retryAfter} secondes.", 429);
         }
-        
-        $rateLimit = $_SESSION[$cacheKey];
-        
-        if (time() > $rateLimit['reset_time']) {
-            $_SESSION[$cacheKey] = [
-                'count' => 1,
-                'reset_time' => time() + $timeWindow
-            ];
-            return;
-        }
-        
-        if ($rateLimit['count'] >= $maxRequests) {
-            $this->error('Trop de requêtes', 429);
-        }
-        
-        $_SESSION[$cacheKey]['count']++;
     }
     
     /**
-     * Log d'activité
+     * Log d'activité avec logger unifié
      */
     protected function logActivity(string $action, array $data = []): void {
-        if (!LOG_ENABLED) return;
-        
-        $user = $_SESSION['user'] ?? null;
-        $logEntry = [
-            'timestamp' => date('Y-m-d H:i:s'),
-            'action' => $action,
-            'user_id' => $user['id'] ?? 'anonymous',
-            'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
-            'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'unknown',
-            'data' => $data
-        ];
-        
-        error_log('ACTIVITY: ' . json_encode($logEntry));
+        Logger::activity($action, $data, $_SESSION['user']['id'] ?? null);
     }
 }
 ?>

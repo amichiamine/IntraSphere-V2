@@ -147,7 +147,7 @@ class User extends BaseModel {
     }
     
     /**
-     * Validation des données utilisateur
+     * Validation des données utilisateur avec standards de sécurité harmonisés
      */
     protected function validate(array $data): array {
         $errors = [];
@@ -166,8 +166,12 @@ class User extends BaseModel {
             $errors[] = "L'adresse email n'est pas valide";
         }
         
-        if (isset($data['password']) && strlen($data['password']) < 6) {
-            $errors[] = "Le mot de passe doit faire au moins 6 caractères";
+        // Validation renforcée du mot de passe (harmonisée avec TypeScript)
+        if (isset($data['password'])) {
+            $passwordValidation = PasswordValidator::validatePasswordStrength($data['password']);
+            if (!$passwordValidation['isValid']) {
+                $errors = array_merge($errors, $passwordValidation['errors']);
+            }
         }
         
         return $errors;

@@ -21,8 +21,11 @@ class AuthController extends \BaseController {
         
         $this->validateRequired($data, ['username', 'password']);
         
-        // Rate limiting pour éviter les attaques par force brute
-        $this->checkRateLimit('login_' . ($data['username'] ?? 'unknown'), 5, 300);
+        // Rate limiting unifié pour éviter les attaques par force brute
+        if (!RateLimiter::middleware('login', $data['username'] ?? null)) {
+            $retryAfter = RateLimiter::getRetryAfter('login_' . ($data['username'] ?? $_SERVER['REMOTE_ADDR']));
+            $this->error("Trop de tentatives de connexion. Réessayez dans {$retryAfter} secondes.", 429);
+        }
         
         $user = $this->userModel->authenticate($data['username'], $data['password']);
         
@@ -93,9 +96,10 @@ class AuthController extends \BaseController {
             $this->error('Nom d\'utilisateur déjà utilisé');
         }
         
-        // Valider le mot de passe
-        if (strlen($data['password']) < 6) {
-            $this->error('Le mot de passe doit faire au moins 6 caractères');
+        // Valider le mot de passe avec standards harmonisés
+        $passwordValidation = PasswordValidator::validatePasswordStrength($data['password']);
+        if (!$passwordValidation['isValid']) {
+            $this->error(implode(', ', $passwordValidation['errors']));
         }
         
         // Créer l'utilisateur
@@ -138,9 +142,10 @@ class AuthController extends \BaseController {
             $this->error('Mot de passe actuel incorrect', 400);
         }
         
-        // Valider le nouveau mot de passe
-        if (strlen($data['new_password']) < 6) {
-            $this->error('Le nouveau mot de passe doit faire au moins 6 caractères');
+        // Valider le nouveau mot de passe avec standards harmonisés
+        $passwordValidation = PasswordValidator::validatePasswordStrength($data['new_password']);
+        if (!$passwordValidation['isValid']) {
+            $this->error(implode(', ', $passwordValidation['errors']));
         }
         
         // Changer le mot de passe
@@ -162,8 +167,11 @@ class AuthController extends \BaseController {
         
         $this->validateRequired($data, ['email']);
         
-        // Rate limiting pour éviter le spam
-        $this->checkRateLimit('forgot_password_' . $data['email'], 3, 3600);
+        // Rate limiting unifié pour éviter le spam
+        if (!RateLimiter::middleware('forgot_password', $data['email'])) {
+            $retryAfter = RateLimiter::getRetryAfter('forgot_password_' . $data['email']);
+            $this->error("Trop de demandes de réinitialisation. Réessayez dans {$retryAfter} secondes.", 429);
+        }
         
         // Chercher l'utilisateur par email
         $users = $this->userModel->where(['email' => $data['email']]);

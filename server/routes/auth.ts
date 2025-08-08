@@ -3,6 +3,7 @@ import { storage } from "../data/storage";
 import { AuthService } from "../services/auth";
 import { emailService } from "../services/email";
 import { insertUserSchema } from "@shared/schema";
+import { RateLimiter } from "../utils/rate-limiter";
 
 // Extend Express Request type for session
 declare module 'express-session' {
@@ -14,12 +15,21 @@ declare module 'express-session' {
 
 export function registerAuthRoutes(app: Express): void {
   // Authentication routes
-  app.post("/api/auth/login", async (req, res) => {
+  app.post("/api/auth/login", RateLimiter.middleware('login'), async (req, res) => {
     try {
       const { username, password } = req.body;
       
       if (!username || !password) {
         return res.status(400).json({ message: "Username and password required" });
+      }
+
+      // Validate password strength before checking against database
+      const passwordValidation = AuthService.validatePasswordStrength(password);
+      if (!passwordValidation.isValid) {
+        return res.status(400).json({ 
+          message: "Mot de passe invalide", 
+          errors: passwordValidation.errors 
+        });
       }
 
       const user = await storage.getUserByUsername(username);
@@ -50,8 +60,17 @@ export function registerAuthRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/auth/register", async (req, res) => {
+  app.post("/api/auth/register", RateLimiter.middleware('register'), async (req, res) => {
     try {
+      // Validate password strength first
+      const passwordValidation = AuthService.validatePasswordStrength(req.body.password);
+      if (!passwordValidation.isValid) {
+        return res.status(400).json({ 
+          message: "Mot de passe invalide", 
+          errors: passwordValidation.errors 
+        });
+      }
+
       const result = insertUserSchema.safeParse(req.body);
       if (!result.success) {
         return res.status(400).json({ 
