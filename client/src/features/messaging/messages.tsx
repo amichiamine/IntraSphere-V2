@@ -27,9 +27,19 @@ export default function Messages() {
   // For demo purposes, using user-1 as current user
   const currentUserId = "user-1";
 
-  const { data: messages = [], isLoading: messagesLoading } = useQuery<Message[]>({
-    queryKey: ["/api/messages", currentUserId],
-    queryFn: () => fetch(`/api/messages/${currentUserId}`).then(res => res.json()),
+  const { data: messages = [], isLoading: messagesLoading, error: messagesError } = useQuery<Message[]>({
+    queryKey: ["/api/messages"],
+    queryFn: async () => {
+      const res = await fetch(`/api/messages`);
+      if (!res.ok) {
+        // Return empty array instead of throwing error to prevent crashes
+        console.warn('Failed to fetch messages:', res.status);
+        return [];
+      }
+      const data = await res.json();
+      // Ensure we always return an array
+      return Array.isArray(data) ? data : [];
+    },
   });
 
   const { data: users = [] } = useQuery<User[]>({
@@ -93,7 +103,9 @@ export default function Messages() {
     return users.find(user => user.id === partnerId);
   };
 
-  const unreadCount = messages.filter(msg => !msg.isRead && msg.recipientId === currentUserId).length;
+  // Ensure messages is always an array to prevent filter errors
+  const safeMessages = Array.isArray(messages) ? messages : [];
+  const unreadCount = safeMessages.filter(msg => !msg.isRead && msg.recipientId === currentUserId).length;
 
   return (
     <MainLayout>
@@ -211,13 +223,13 @@ export default function Messages() {
               <div className="overflow-y-auto max-h-[520px]">
                 {messagesLoading ? (
                   <div className="p-4 text-center text-gray-500">Chargement...</div>
-                ) : messages.length === 0 ? (
+                ) : safeMessages.length === 0 ? (
                   <div className="p-4 text-center text-gray-500">
                     <MessageCircle className="w-12 h-12 mx-auto mb-2 opacity-50" />
                     Aucun message
                   </div>
                 ) : (
-                  messages.map((message) => {
+                  safeMessages.map((message) => {
                     const partner = getMessagePartner(message);
                     const isUnread = !message.isRead && message.recipientId === currentUserId;
                     
