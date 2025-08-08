@@ -102,6 +102,27 @@ app.use((req, res, next) => {
     res.status(200).send('<h1>Express Server Working!</h1><p>Server is running correctly on port ' + port + '</p>');
   });
 
+  // Add root route handler before Vite setup in development
+  if (nodeEnv === "development") {
+    app.get('/', (_req, res) => {
+      res.send(`
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IntraSphere</title>
+    <script type="module" src="/@vite/client"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+      `);
+    });
+  }
+
   if (nodeEnv === "development") {
     log("Setting up Vite development server...");
     await setupVite(app, server);

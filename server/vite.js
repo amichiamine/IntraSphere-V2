@@ -7,32 +7,16 @@ export async function setupVite(app, server) {
     serveStatic(app);
   } else {
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: { 
+        middlewareMode: true,
+        host: '0.0.0.0',
+        port: 5000
+      },
       appType: "spa",
       configFile: path.resolve(process.cwd(), "vite.config.ts")
     });
     
     app.use(vite.ssrFixStacktrace);
-    
-    // Simple direct HTML serving for root
-    app.get('/', (req, res) => {
-      res.send(`
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
-    <title>IntraSphere</title>
-    <script type="module" src="/@vite/client"></script>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
-</html>
-      `);
-    });
-    
     app.use(vite.middlewares);
   }
 }
