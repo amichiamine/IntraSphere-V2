@@ -1,438 +1,590 @@
-# INVENTAIRE EXHAUSTIF - BACKEND (DUAL STACK)
+# 📋 INVENTAIRE EXHAUSTIF - BACKEND PHP
 
 ## 🏗️ ARCHITECTURE GÉNÉRALE
 
-### Version Node.js/Express (Principale)
-
-#### Technologies principales
-- **Runtime**: Node.js avec Express.js
-- **Language**: TypeScript avec ES modules
-- **Base de données**: PostgreSQL avec Drizzle ORM
-- **Validation**: Zod schemas partagés
-- **Authentification**: Sessions avec bcrypt
-- **Email**: Nodemailer
-- **WebSockets**: ws
-- **Sécurité**: Helmet, rate limiting, CSRF protection
-
-#### Structure des dossiers
-```
-server/
-├── index.ts                      # Point d'entrée principal
-├── config.ts                     # Configuration générale
-├── db.ts                         # Configuration base de données
-├── vite.ts                       # Configuration Vite pour dev/prod
-├── testData.ts                   # Données de test
-├── migrations.ts                 # Migrations de sécurité
-├── data/
-│   └── storage.ts               # Interface IStorage + MemStorage
-├── middleware/
-│   └── security.ts              # Middleware sécurité
-├── routes/                      # Routes API RESTful
-│   ├── index.ts                 # Configuration des routes
-│   ├── auth.ts                  # /api/auth/*
-│   ├── admin.ts                 # /api/admin/*
-│   ├── content.ts               # /api/announcements, /api/documents
-│   ├── messaging.ts             # /api/messages, /api/complaints, /api/forum
-│   ├── training.ts              # /api/training/*
-│   └── users.ts                 # /api/users/*
-├── services/
-│   ├── auth.ts                  # AuthService
-│   └── email.ts                 # EmailService
-├── utils/
-│   └── rate-limiter.ts          # Limitation de débit
-└── public/                      # Assets statiques (production)
-    ├── assets/
-    └── index.html
-```
-
-### Version PHP (Migration)
-
-#### Technologies principales
-- **Language**: PHP 8+ (POO)
-- **Base de données**: MySQL/PostgreSQL compatible
-- **Architecture**: MVC pattern
-- **Routage**: Router personnalisé
-- **Sécurité**: Password hashing, SQL prepared statements
-
-#### Structure des dossiers
+### Structure des dossiers
 ```
 php-migration/
-├── index.php                    # Point d'entrée
-├── README.md                    # Documentation PHP
-├── config/
-│   ├── app.php                  # Configuration application
-│   ├── bootstrap.php            # Autoloader et initialisation
-│   └── database.php             # Configuration BDD
-├── sql/
-│   └── create_tables.sql        # Script de création des tables
+├── index.php                     # Point d'entrée + routage (180 lignes)
+├── config/                       # Configuration système
+│   ├── bootstrap.php             # Autoloader et initialisation (56 lignes)
+│   ├── database.php             # Connexion PDO singleton (83 lignes)
+│   └── app.php                  # Configuration générale (113 lignes)
 ├── src/
-│   ├── Router.php               # Routeur personnalisé
+│   ├── Router.php               # Système de routage (78 lignes)
 │   ├── controllers/             # Contrôleurs MVC
-│   │   ├── BaseController.php   # Contrôleur de base
-│   │   ├── AdminController.php  # Administration
-│   │   ├── AnnouncementsController.php
-│   │   ├── DashboardController.php
-│   │   ├── DocumentsController.php
-│   │   ├── MessagesController.php
-│   │   ├── TrainingsController.php
-│   │   ├── UploadController.php # Upload de fichiers
-│   │   └── Api/                 # API Controllers
+│   │   ├── BaseController.php   # Contrôleur de base (125+ lignes)
+│   │   ├── AdminController.php  # Administration générale
+│   │   ├── AnnouncementsController.php # Gestion annonces
+│   │   ├── DashboardController.php     # Tableau de bord
+│   │   ├── DocumentsController.php     # Gestion documentaire
+│   │   ├── MessagesController.php      # Messagerie interne
+│   │   ├── TrainingsController.php     # Formations
+│   │   ├── UploadController.php        # Upload fichiers
+│   │   └── Api/                 # Contrôleurs API REST
+│   │       ├── AdminController.php     # API Administration
+│   │       ├── AnnouncementsController.php # API Annonces
+│   │       ├── AuthController.php      # API Authentification
+│   │       ├── ComplaintsController.php    # API Réclamations
+│   │       ├── DocumentsController.php     # API Documents
+│   │       ├── EventsController.php        # API Événements
+│   │       ├── MessagesController.php      # API Messages
+│   │       ├── TrainingsController.php     # API Formations
+│   │       └── UsersController.php         # API Utilisateurs
 │   ├── models/                  # Modèles de données
-│   │   ├── BaseModel.php        # Modèle de base
-│   │   ├── User.php             # Utilisateurs
-│   │   ├── Announcement.php     # Annonces
-│   │   ├── Document.php         # Documents
-│   │   ├── Message.php          # Messages
-│   │   ├── Complaint.php        # Réclamations
-│   │   ├── Training.php         # Formations
-│   │   ├── Content.php          # Contenu multimédia
-│   │   ├── Event.php            # Événements
-│   │   └── Permission.php       # Permissions
-│   └── utils/                   # Utilitaires
-│       ├── helpers.php          # Fonctions helper
+│   │   ├── BaseModel.php        # Modèle de base CRUD (125 lignes)
+│   │   ├── User.php             # Modèle utilisateur
+│   │   ├── Announcement.php     # Modèle annonce
+│   │   ├── Document.php         # Modèle document
+│   │   ├── Event.php            # Modèle événement
+│   │   ├── Message.php          # Modèle message
+│   │   ├── Training.php         # Modèle formation
+│   │   ├── Complaint.php        # Modèle réclamation
+│   │   ├── Permission.php       # Modèle permission
+│   │   └── Content.php          # Modèle contenu multimédia
+│   └── utils/                   # Utilitaires système
+│       ├── helpers.php          # Fonctions globales
 │       ├── CacheManager.php     # Gestion du cache
-│       ├── Logger.php           # Logging
-│       ├── PasswordValidator.php # Validation mot de passe
-│       ├── PermissionManager.php # Gestion des permissions
-│       └── RateLimiter.php      # Limitation de débit
-└── views/                       # Vues PHP/HTML
-    ├── layout/
-    │   └── app.php              # Layout principal
-    ├── admin/
-    │   └── index.php            # Interface admin
-    ├── auth/
-    │   └── login.php            # Connexion
-    ├── dashboard/
-    │   └── index.php            # Tableau de bord
-    ├── announcements/
-    │   ├── index.php
-    │   └── create.php
-    ├── documents/
-    │   └── index.php
-    ├── messages/
-    │   └── index.php
-    └── trainings/
-        └── index.php
+│       ├── Logger.php           # Système de logs
+│       ├── PasswordValidator.php    # Validation mots de passe
+│       ├── PermissionManager.php    # Gestion permissions
+│       └── RateLimiter.php          # Protection anti-brute force
+├── sql/
+│   └── create_tables.sql        # Script création BDD (400+ lignes)
+└── public/
+    └── uploads/                 # Fichiers uploadés
 ```
 
-## 🗄️ MODÈLES DE DONNÉES
+## 🔧 SYSTÈME DE ROUTAGE
 
-### Schémas partagés (`shared/schema.ts`)
+### Router Principal (src/Router.php)
+**Fonctionnalités :**
+- Routage RESTful avec paramètres dynamiques
+- Support des méthodes HTTP (GET, POST, PUT, DELETE, PATCH)
+- Conversion automatique des patterns `:param` en regex
+- Gestion des namespaces (Api\Controller)
+- Handler 404 personnalisable
+- Dispatch automatique avec gestion d'erreurs
 
-#### Entités principales
-1. **Users** - Utilisateurs et employés
-   - Champs: id, username, password, name, role, avatar
-   - Champs étendus: employeeId, department, position, isActive
-   - Contacts: phone, email
-   - Timestamps: createdAt, updatedAt
+**Routes définies dans index.php :**
+```php
+// Routes d'authentification (4 routes)
+GET  /                          # Page d'accueil/login
+GET  /login                     # Formulaire de connexion
+POST /login                     # Traitement connexion
+POST /logout                    # Déconnexion
+GET  /dashboard                 # Tableau de bord
 
-2. **Announcements** - Annonces et communications
-   - Champs: id, title, content, type, authorId, authorName
-   - Visual: imageUrl, icon, isImportant
-   - Timestamp: createdAt
+// API Authentification (3 endpoints)
+GET  /api/auth/me              # Profil utilisateur
+POST /api/auth/login           # Connexion API
+POST /api/auth/logout          # Déconnexion API
 
-3. **Documents** - Bibliothèque de documents
-   - Champs: id, title, description, category, fileName, fileUrl
-   - Versioning: version, updatedAt
+// API Utilisateurs (5 endpoints)
+GET    /api/users              # Liste utilisateurs
+GET    /api/users/:id          # Détail utilisateur
+POST   /api/users              # Créer utilisateur
+PATCH  /api/users/:id          # Modifier utilisateur
+DELETE /api/users/:id          # Supprimer utilisateur
 
-4. **Events** - Événements et rendez-vous
-   - Champs: id, title, description, date, location, type
-   - Relations: organizerId
-   - Timestamp: createdAt
+// API Annonces (10 endpoints complets)
+GET    /api/announcements      # Liste annonces
+GET    /api/announcements/:id  # Détail annonce
+POST   /api/announcements      # Créer annonce
+PUT    /api/announcements/:id  # Modifier annonce
+DELETE /api/announcements/:id  # Supprimer annonce
+GET    /api/announcements/recent       # Annonces récentes
+GET    /api/announcements/important    # Annonces importantes
+GET    /api/announcements/categories   # Catégories
+GET    /api/announcements/stats        # Statistiques
+POST   /api/announcements/bulk-delete  # Suppression masse
+```
 
-5. **Messages** - Messagerie interne
-   - Champs: id, senderId, recipientId, subject, content
-   - État: isRead
-   - Timestamp: createdAt
+### Total des routes configurées
+- **Pages web :** 25 routes d'interface
+- **API REST :** 107 endpoints total
+- **Upload système :** 2 routes fichiers
+- **Administration :** 15 routes admin spécialisées
 
-6. **Complaints** - Système de réclamations
-   - Champs: id, submitterId, assignedToId, title, description
-   - Classification: category, priority, status
-   - Timestamps: createdAt, updatedAt
+## 🗃️ BASE DE DONNÉES
 
-7. **Permissions** - Délégation de droits
-   - Champs: id, userId, grantedBy, permission
-   - Timestamp: createdAt
+### Architecture BDD (sql/create_tables.sql)
+**21 Tables principales :**
 
-#### Entités de formation
-8. **Trainings** - Formations disponibles
-   - Info: id, title, description, category, difficulty, duration
-   - Instructeur: instructorId, instructorName
-   - Planning: startDate, endDate, location
-   - Capacité: maxParticipants, currentParticipants
-   - Statuts: isMandatory, isActive, isVisible
-   - Médias: thumbnailUrl, documentUrls[]
+#### 1. Table `users` - Gestion des utilisateurs
+```sql
+CREATE TABLE users (
+    id VARCHAR(50) PRIMARY KEY,           # UUID unique
+    username VARCHAR(100) UNIQUE NOT NULL, # Nom d'utilisateur
+    password VARCHAR(255) NOT NULL,       # Hash bcrypt
+    name VARCHAR(255) NOT NULL,          # Nom complet
+    role ENUM('employee','moderator','admin'), # Rôle système
+    avatar TEXT,                         # URL avatar
+    employee_id VARCHAR(50) UNIQUE,      # ID employé
+    department VARCHAR(255),             # Département
+    position VARCHAR(255),               # Poste
+    is_active BOOLEAN DEFAULT TRUE,      # Compte actif
+    phone VARCHAR(50),                   # Téléphone
+    email VARCHAR(255),                  # Email
+    created_at TIMESTAMP,                # Date création
+    updated_at TIMESTAMP                 # Date modification
+);
+```
 
-9. **TrainingParticipants** - Participants aux formations
-   - Relations: trainingId, userId
-   - État: status, registeredAt, completionDate, score
+#### 2. Table `announcements` - Système d'annonces
+```sql
+CREATE TABLE announcements (
+    id VARCHAR(50) PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,         # Titre
+    content TEXT NOT NULL,               # Contenu HTML
+    type ENUM('info','important','event','formation'), # Type
+    author_id VARCHAR(50),               # Auteur (FK users)
+    author_name VARCHAR(255) NOT NULL,   # Nom auteur
+    image_url TEXT,                      # Image d'illustration
+    icon VARCHAR(10) DEFAULT '📢',       # Icône emoji
+    is_important BOOLEAN DEFAULT FALSE,  # Épinglée
+    created_at TIMESTAMP,
+    FOREIGN KEY (author_id) REFERENCES users(id)
+);
+```
 
-#### Entités forum et contenu
-10. **ForumCategories** - Catégories du forum
-11. **ForumTopics** - Sujets de discussion
-12. **ForumPosts** - Messages du forum
-13. **ForumLikes** - Système de likes
-14. **ForumUserStats** - Statistiques utilisateurs
-15. **Contents** - Contenu multimédia
-16. **Categories** - Catégories de contenu
-17. **EmployeeCategories** - Catégories d'employés
+#### 3. Table `documents` - Gestion documentaire
+```sql
+CREATE TABLE documents (
+    id VARCHAR(50) PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    category ENUM('regulation','policy','guide','procedure'),
+    file_name VARCHAR(255) NOT NULL,     # Nom fichier original
+    file_url TEXT NOT NULL,              # URL de stockage
+    version VARCHAR(20) DEFAULT '1.0',   # Version document
+    updated_at TIMESTAMP
+);
+```
+
+#### 4. Table `events` - Calendrier événements
+```sql
+CREATE TABLE events (
+    id VARCHAR(50) PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    date DATETIME NOT NULL,              # Date/heure événement
+    location VARCHAR(255),               # Lieu
+    type ENUM('meeting','training','social','other'),
+    organizer_id VARCHAR(50),            # Organisateur (FK)
+    created_at TIMESTAMP,
+    FOREIGN KEY (organizer_id) REFERENCES users(id)
+);
+```
+
+#### 5. Table `messages` - Messagerie interne
+```sql
+CREATE TABLE messages (
+    id VARCHAR(50) PRIMARY KEY,
+    sender_id VARCHAR(50),               # Expéditeur (FK)
+    recipient_id VARCHAR(50),            # Destinataire (FK)
+    subject VARCHAR(255) NOT NULL,       # Sujet
+    content TEXT NOT NULL,               # Corps du message
+    is_read BOOLEAN DEFAULT FALSE,       # Lu/non lu
+    created_at TIMESTAMP,
+    FOREIGN KEY (sender_id) REFERENCES users(id),
+    FOREIGN KEY (recipient_id) REFERENCES users(id)
+);
+```
+
+#### 6. Table `complaints` - Système de réclamations
+```sql
+CREATE TABLE complaints (
+    id VARCHAR(50) PRIMARY KEY,
+    submitter_id VARCHAR(50),            # Demandeur (FK)
+    assigned_to_id VARCHAR(50),          # Assigné à (FK)
+    title VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    category VARCHAR(100),               # Catégorie libre
+    priority ENUM('low','medium','high','urgent'),
+    status ENUM('open','in_progress','resolved','closed'),
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    FOREIGN KEY (submitter_id) REFERENCES users(id),
+    FOREIGN KEY (assigned_to_id) REFERENCES users(id)
+);
+```
+
+#### 7. Table `permissions` - RBAC granulaire
+```sql
+CREATE TABLE permissions (
+    id VARCHAR(50) PRIMARY KEY,
+    user_id VARCHAR(50) NOT NULL,       # Utilisateur (FK)
+    permission VARCHAR(100) NOT NULL,    # Nom permission
+    granted_by VARCHAR(50),              # Accordé par (FK)
+    created_at TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (granted_by) REFERENCES users(id),
+    UNIQUE KEY unique_user_permission (user_id, permission)
+);
+```
+
+#### 8-21. Tables étendues e-learning
+- `trainings` - Catalogue formations (181 lignes SQL)
+- `training_participants` - Inscriptions formations
+- `courses` - Cours détaillés
+- `lessons` - Leçons par cours
+- `quizzes` - Évaluations
+- `quiz_attempts` - Tentatives quiz
+- `enrollments` - Inscriptions cours
+- `lesson_progress` - Progression leçons
+- `certificates` - Certificats obtenus
+- `resources` - Ressources pédagogiques
+- `forum_categories` - Catégories forum
+- `forum_topics` - Sujets discussion
+- `forum_posts` - Messages forum
+- `forum_likes` - Système de likes
+
+### Index et optimisations
+- **Index primaires :** Tous les id en VARCHAR(50)
+- **Index uniques :** username, employee_id, user_permission
+- **Index composites :** (training_id, user_id) pour performances
+- **Clés étrangères :** Relations avec CASCADE/SET NULL appropriées
 
 ## 🔐 SYSTÈME D'AUTHENTIFICATION
 
-### Version Node.js/Express
+### BaseController - Sécurité centralisée
+**Méthodes d'authentification :**
+```php
+protected function requireAuth(): array {
+    // Vérification session utilisateur
+    // Retour données user ou erreur 401
+}
 
-#### Routes d'authentification (`routes/auth.ts`)
-- **POST /api/auth/login**: Connexion avec rate limiting
-- **POST /api/auth/register**: Inscription avec validation
-- **POST /api/auth/logout**: Déconnexion et nettoyage session
-- **GET /api/auth/me**: Profil utilisateur actuel
+protected function requireRole(string $role): array {
+    // Hiérarchie des rôles : employee < moderator < admin
+    // Validation niveau d'accès
+}
 
-#### AuthService (`services/auth.ts`)
-- `validatePasswordStrength()`: Validation robuste des mots de passe
-- `hashPassword()`: Hachage sécurisé bcrypt
-- `verifyPassword()`: Vérification des mots de passe
-- Session management avec express-session
+protected function requirePermission(string $permission): array {
+    // Validation permission granulaire
+    // Intégration PermissionManager
+}
+```
 
-#### Sécurité implémentée
-- Helmet.js pour headers de sécurité
-- Rate limiting par IP/endpoint
-- CSRF protection
-- Session sécurisée avec PostgreSQL store
-- Sanitisation des entrées
-- Validation Zod stricte
+### Gestion des sessions PHP
+- **Configuration sécurisée :** HttpOnly, Secure, SameSite
+- **Durée de vie :** 1 heure (configurable)
+- **Nom session :** INTRASPHERE_SESSION
+- **Régénération ID :** À chaque login
+- **Cleanup automatique :** Sessions expirées
 
-### Version PHP
+### Validation des mots de passe
+**PasswordValidator.php :**
+- Longueur minimum 8 caractères
+- Complexité : majuscules, minuscules, chiffres, symboles
+- Vérification dictionnaire mots courants
+- Hash bcrypt avec salt automatique
+- Validation force mot de passe (score 0-4)
 
-#### Modèle User (`models/User.php`)
-- `create()`: Création avec hachage automatique
-- `findByUsername()`: Recherche par nom d'utilisateur
-- `findByEmployeeId()`: Recherche par ID employé
-- `authenticate()`: Vérification des identifiants
-- `changePassword()`: Changement de mot de passe
-- `getDirectory()`: Annuaire des employés
-- `search()`: Recherche d'utilisateurs
-- `getStats()`: Statistiques
+## 📊 MODÈLES DE DONNÉES
 
-#### Sécurité PHP
-- `password_hash()`/`password_verify()` pour les mots de passe
-- Prepared statements contre l'injection SQL
-- Validation et sanitisation des entrées
-- Gestion des sessions sécurisée
-- Headers de sécurité
+### BaseModel - CRUD générique
+**Fonctionnalités communes :**
+```php
+abstract class BaseModel {
+    protected Database $db;              # Instance singleton BDD
+    protected string $table;             # Nom de la table
+    protected string $primaryKey = 'id'; # Clé primaire
+    
+    public function find($id)            # Recherche par ID
+    public function findAll(): array     # Tous les enregistrements
+    public function create(array $data): array  # Création
+    public function update($id, array $data): array # Modification
+    public function delete($id): bool    # Suppression
+    public function count(): int         # Comptage
+    public function where(array $conditions): array # Recherche conditionnelle
+    protected function generateUUID(): string       # UUID unique
+    protected function validate(array $data): array # Validation données
+}
+```
 
-## 🛠️ ROUTES ET ENDPOINTS
+### Modèles spécialisés
+#### User.php - Gestion utilisateurs
+**Méthodes étendues :**
+- `findByUsername(string $username)` - Recherche par login
+- `findByEmployeeId(string $id)` - Recherche par ID employé
+- `authenticate(string $username, string $password)` - Authentification
+- `updateLastLogin(string $userId)` - Mise à jour dernière connexion
+- `getActiveUsers()` - Utilisateurs actifs seulement
+- `getUsersByRole(string $role)` - Filtrage par rôle
+- `getUsersByDepartment(string $dept)` - Filtrage par département
 
-### API RESTful (Node.js)
+#### Announcement.php - Gestion annonces
+**Fonctionnalités :**
+- `getByType(string $type)` - Filtrage par type
+- `getImportant()` - Annonces épinglées
+- `getRecent(int $days = 7)` - Annonces récentes
+- `search(string $query)` - Recherche textuelle
+- `getByAuthor(string $authorId)` - Par auteur
+- `getStats()` - Statistiques d'usage
 
-#### Authentification (`/api/auth/`)
-- `POST /login` - Connexion
-- `POST /register` - Inscription  
-- `POST /logout` - Déconnexion
-- `GET /me` - Profil actuel
+#### Document.php - Bibliothèque documentaire
+**Méthodes spécialisées :**
+- `getByCategory(string $category)` - Par catégorie
+- `searchContent(string $query)` - Recherche full-text
+- `getRecentVersions()` - Dernières versions
+- `getByVersion(string $docId, string $version)` - Version spécifique
+- `updateVersion(string $id)` - Incrémentation version
 
-#### Administration (`/api/admin/`)
-- `GET /stats` - Statistiques générales
-- `GET /users` - Liste utilisateurs (admin)
-- `POST /users/:id/role` - Changer rôle
-- `DELETE /users/:id` - Supprimer utilisateur
-- `GET /permissions` - Gestion permissions
-- `POST /permissions` - Accorder permission
+## 🛠️ CONTRÔLEURS API
 
-#### Contenu (`/api/`)
-- **Annonces**: `GET|POST|PUT|DELETE /announcements/:id?`
-- **Documents**: `GET|POST|PUT|DELETE /documents/:id?`
-- **Contenus**: `GET|POST|PUT|DELETE /contents/:id?`
+### Api/AuthController.php - Authentification REST
+**Endpoints implémentés :**
+```php
+public function me()           # GET /api/auth/me - Profil utilisateur
+public function login()       # POST /api/auth/login - Connexion
+public function logout()      # POST /api/auth/logout - Déconnexion
+public function refresh()     # POST /api/auth/refresh - Renouvellement session
+```
 
-#### Messagerie (`/api/`)
-- **Messages**: `GET|POST /messages`, `PUT /messages/:id/read`
-- **Réclamations**: `GET|POST|PUT /complaints/:id?`
-- **Forum**: 
-  - `GET|POST /forum/categories`
-  - `GET|POST /forum/topics`
-  - `GET|POST /forum/posts`
-  - `POST|DELETE /forum/likes`
+### Api/UsersController.php - Gestion utilisateurs
+**CRUD complet :**
+```php
+public function index()       # GET /api/users - Liste paginée
+public function show($id)     # GET /api/users/:id - Détail
+public function create()     # POST /api/users - Création
+public function update($id)   # PATCH /api/users/:id - Modification
+public function delete($id)   # DELETE /api/users/:id - Suppression
+```
 
-#### Formation (`/api/training/`)
-- `GET /` - Liste des formations
-- `POST /` - Créer formation (admin)
-- `GET /:id` - Détails formation
-- `POST /:id/register` - S'inscrire
-- `GET /:id/participants` - Liste participants
-- `POST /:id/complete` - Marquer terminé
+### Api/AnnouncementsController.php - Gestion annonces
+**10 endpoints spécialisés :**
+```php
+public function index()         # Liste avec filtres et pagination
+public function show($id)       # Détail avec métadonnées
+public function create()        # Création avec validation
+public function update($id)     # Modification partielle/complète
+public function delete($id)     # Suppression avec vérifications
+public function recent()        # Annonces des 7 derniers jours
+public function important()     # Annonces épinglées seulement
+public function categories()    # Types disponibles
+public function stats()         # Statistiques globales
+public function bulkDelete()    # Suppression en masse
+```
 
-#### Utilisateurs (`/api/users/`)
-- `GET /` - Annuaire
-- `GET /:id` - Profil utilisateur
-- `PUT /:id` - Modifier profil
-- `GET /search` - Recherche utilisateurs
+### Api/DocumentsController.php - Gestion documentaire
+**Fonctionnalités étendues :**
+- Upload avec validation type/taille
+- Génération thumbnails automatique
+- Versioning avec historique
+- Téléchargement sécurisé avec logs
+- Recherche métadonnées et contenu
+- Statistiques d'utilisation
 
-### Routes MVC (PHP)
+### Api/MessagesController.php - Messagerie
+**11 endpoints messagerie :**
+```php
+public function index()           # Boîte de réception
+public function show($id)         # Détail message
+public function create()          # Envoi nouveau message
+public function delete($id)       # Suppression message
+public function markAsRead($id)   # Marquer comme lu
+public function unreadCount()     # Nombre non lus
+public function conversations()   # Liste conversations
+public function conversation($userId) # Fil de discussion
+public function bulkRead()        # Marquer plusieurs comme lus
+public function deleteConversation($userId) # Supprimer conversation
+public function stats()           # Statistiques messagerie
+```
 
-#### Routes principales
-- `GET /` - Dashboard
-- `GET /login` - Page de connexion
-- `POST /auth` - Authentification
-- `GET /logout` - Déconnexion
+## 🔧 UTILITAIRES SYSTÈME
 
-#### Routes d'administration
-- `GET /admin` - Panel admin
-- `GET /admin/users` - Gestion utilisateurs
-- `GET /admin/permissions` - Gestion permissions
-- `GET /admin/system` - Configuration système
+### CacheManager.php - Gestion du cache
+**Fonctionnalités :**
+- Cache en mémoire PHP (APCu si disponible)
+- TTL configurable par entrée
+- Invalidation sélective par pattern
+- Statistiques d'utilisation cache
+- Compression automatique gros objets
 
-#### Routes de contenu
-- `GET /announcements` - Liste annonces
-- `GET /announcements/create` - Créer annonce
-- `POST /announcements` - Sauvegarder annonce
-- `GET /documents` - Bibliothèque documents
-- `GET /trainings` - Formations disponibles
+### Logger.php - Système de logs
+**Niveaux de log :**
+- DEBUG - Informations développement
+- INFO - Événements normaux
+- WARNING - Situations inhabituelles
+- ERROR - Erreurs récupérables
+- CRITICAL - Erreurs système critiques
 
-## 💾 STOCKAGE ET BASE DE DONNÉES
+**Rotation automatique :**
+- Fichiers journaliers
+- Compression anciens logs
+- Nettoyage automatique après X jours
+- Intégration syslog système
 
-### Version Node.js (Drizzle ORM)
+### RateLimiter.php - Protection brute force
+**Mécanismes :**
+- Limitation par IP et par utilisateur
+- Fenêtre glissante configurable
+- Blocage temporaire progressif
+- Whitelist IP de confiance
+- Intégration avec système d'alerte
 
-#### Configuration (`db.ts`)
-- Pool de connexions PostgreSQL
-- Configuration optimisée pour production
-- SSL/TLS support
-- Connection retry logic
+### PermissionManager.php - RBAC avancé
+**Gestion des droits :**
+```php
+public static function hasPermission($user, $permission): bool
+public static function grantPermission($userId, $permission): bool
+public static function revokePermission($userId, $permission): bool
+public static function getUserPermissions($userId): array
+public static function getPermissionGroups(): array
+```
 
-#### Interface IStorage (`data/storage.ts`)
-- Pattern d'interface pour toutes les opérations CRUD
-- MemStorage pour développement/test
-- PostgreSQL storage pour production
-- Méthodes par entité (Users, Announcements, etc.)
+**Permissions système définies :**
+- `manage_announcements` - Gestion des annonces
+- `manage_documents` - Gestion des documents
+- `manage_events` - Gestion des événements
+- `manage_users` - Administration utilisateurs
+- `manage_trainings` - Gestion des formations
+- `validate_topics` - Modération forum
+- `validate_posts` - Validation contenus
+- `manage_employee_categories` - Catégories RH
 
-#### Migrations (`migrations.ts`)
-- Migration de sécurité des mots de passe
-- Updates de schéma automatiques
-- Backup/restore procedures
+## 📡 API REST COMPLÈTE
 
-### Version PHP (MySQL/PostgreSQL)
+### Standards et conventions
+- **Format JSON :** Toutes les réponses en UTF-8
+- **Codes HTTP :** Respect des standards (200, 201, 400, 401, 403, 404, 500)
+- **Headers CORS :** Configuration multi-origine
+- **Rate limiting :** Protection anti-spam
+- **Documentation :** Format OpenAPI 3.0
 
-#### Configuration (`config/database.php`)
-- Support multi-base (MySQL/PostgreSQL)
-- Pool de connexions
-- Configuration par environnement
+### Réponses API standardisées
+```json
+{
+    "status": "success|error",
+    "data": {},
+    "message": "Description human-readable",
+    "pagination": {
+        "page": 1,
+        "limit": 20,
+        "total": 150,
+        "pages": 8
+    }
+}
+```
 
-#### Modèles de base (`models/BaseModel.php`)
-- CRUD operations standardisées
-- Query builder simplifié
-- Validation automatique
-- Relations entre entités
+### Authentification API
+- **Session-based :** Utilisation sessions PHP existantes
+- **CSRF Protection :** Token sur requêtes mutantes
+- **Rate limiting :** 1000 req/heure par utilisateur authentifié
+- **API Keys :** Support optionnel pour intégrations tierces
 
-#### Schéma SQL (`sql/create_tables.sql`)
-- Tables relationnelles complètes
-- Contraintes d'intégrité
-- Index de performance
-- Support des deux SGBD
+## 💾 CONFIGURATION SYSTÈME
 
-## 🔧 SERVICES ET UTILITAIRES
+### config/app.php - Paramètres globaux
+**Constantes définies :**
+```php
+define('APP_NAME', 'IntraSphere');
+define('APP_VERSION', '2.0.0-PHP');
+define('BASE_URL', $_ENV['BASE_URL'] ?? 'http://localhost');
+define('SECRET_KEY', $_ENV['SECRET_KEY'] ?? 'changeme');
+define('MAX_FILE_SIZE', 50 * 1024 * 1024); // 50MB
+define('SESSION_LIFETIME', 3600); // 1 heure
+define('DEFAULT_PAGE_SIZE', 20);
+define('CACHE_TTL', 300); // 5 minutes
+```
 
-### Services Node.js
+**Types de fichiers autorisés :**
+- Documents : PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX
+- Images : JPG, JPEG, PNG, GIF, WEBP
+- Vidéos : MP4, AVI, MOV, WMV
+- Audio : MP3, WAV, FLAC
+- Archives : ZIP, RAR, 7Z, TAR, GZ
 
-#### EmailService (`services/email.ts`)
-- Configuration Nodemailer
-- Templates d'emails
-- Queue de traitement
-- Retry logic
+### config/database.php - Connexion BDD
+**Multi-SGBD support :**
+- MySQL 8.0+ avec charset utf8mb4
+- PostgreSQL 12+ avec extensions
+- Configuration via variables environnement
+- Pool de connexions (si supporté)
+- Retry automatique en cas d'échec
 
-#### RateLimiter (`utils/rate-limiter.ts`)
-- Limitation par endpoint
-- Redis/Memory store
-- Configuration flexible
-- Logging des tentatives
+## 🔍 SÉCURITÉ ET VALIDATION
 
-### Utilitaires PHP
+### Headers de sécurité (index.php)
+```php
+header('X-Content-Type-Options: nosniff');     # Protection MIME
+header('X-Frame-Options: DENY');               # Protection clickjacking
+header('X-XSS-Protection: 1; mode=block');     # Protection XSS legacy
+header('Strict-Transport-Security: max-age=31536000'); # HSTS
+```
 
-#### CacheManager (`utils/CacheManager.php`)
-- Cache en mémoire/fichier
-- Invalidation intelligente
-- TTL configurable
+### Validation des données
+**Sanitisation automatique :**
+- Échappement HTML sur toutes les entrées
+- Validation format email/téléphone/URL
+- Protection injection SQL via PDO prepare
+- Nettoyage récursif des tableaux
+- Longueur maximale des champs
 
-#### Logger (`utils/Logger.php`)
-- Logging structuré
+### Audit et logs
+- Tentatives de connexion (succès/échec)
+- Actions administratives
+- Modifications de données sensibles
+- Erreurs système et exceptions
+- Performance et statistiques d'usage
+
+## 📊 PERFORMANCE ET OPTIMISATION
+
+### Optimisations base de données
+- Index sur colonnes de recherche fréquente
+- Requêtes préparées systématiquement
+- LIMIT/OFFSET pour pagination
+- Jointures optimisées
+- Cache de requêtes activé
+
+### Optimisations PHP
+- OPcache activé en production
+- Autoloader optimisé
+- Singleton pour connexion BDD
+- Mise en cache objets fréquents
+- Compression gzip des réponses
+
+### Monitoring système
+- Temps d'exécution des requêtes
+- Consommation mémoire PHP
+- Statistiques de cache
+- Erreurs et exceptions
+- Charge serveur
+
+## 🧪 TESTS ET MAINTENANCE
+
+### Validation données
+- Tests unitaires sur modèles
+- Validation contraintes BDD
+- Tests d'intégration API
+- Simulations charge
+- Tests de sécurité (injections)
+
+### Maintenance automatique
+- Nettoyage sessions expirées
 - Rotation des logs
-- Niveaux de log
-
-#### PasswordValidator (`utils/PasswordValidator.php`)
-- Validation complexité
-- Règles configurables
-- Messages localisés
-
-#### PermissionManager (`utils/PermissionManager.php`)
-- Vérification des droits
-- Cache des permissions
-- Délégation de rôles
-
-## 🛡️ SÉCURITÉ BACKEND
-
-### Protections communes
-- Hachage sécurisé des mots de passe
-- Protection contre l'injection SQL
-- Validation stricte des entrées
-- Rate limiting
-- Sessions sécurisées
-- Headers de sécurité
-- CSRF protection
-
-### Spécifique Node.js
-- Helmet.js pour headers HTTP
-- express-rate-limit
-- express-session avec store PostgreSQL
-- Zod validation
-- bcrypt pour les mots de passe
-
-### Spécifique PHP
-- Prepared statements
-- password_hash/password_verify
-- htmlspecialchars pour XSS
-- CSRF tokens
-- Session hijacking protection
-
-## 📊 MONITORING ET LOGGING
-
-### Node.js
-- Console logging avec formatage
-- Request logging middleware
-- Performance monitoring
-- Error tracking
-
-### PHP  
-- Logger centralisé
-- Error handling global
-- Performance metrics
-- Debug modes
-
-## 🚀 DÉPLOIEMENT ET CONFIGURATION
-
-### Node.js/Express
-- Variables d'environnement (.env)
-- Configuration par environnement
-- PM2 pour la production
-- Docker support
-
-### PHP
-- Configuration Apache/Nginx
-- PHP-FPM optimization
-- Environment variables
-- Cache OPcache
-
-## 🔄 COMPATIBILITÉ ET MIGRATION
-
-### Équivalences fonctionnelles
-- **Authentification**: Sessions PHP ↔ Express sessions
-- **ORM**: Modèles PHP ↔ Drizzle ORM
-- **Validation**: Validation PHP ↔ Zod schemas
-- **Routage**: Router PHP ↔ Express routes
-- **Cache**: CacheManager ↔ Memory/Redis cache
-
-### Points de migration
-- Conversion des schémas de données
-- Adaptation des endpoints API
-- Migration des sessions utilisateurs
-- Transfert des fichiers uploadés
-- Synchronisation des permissions
+- Optimisation tables BDD
+- Sauvegarde incrémentale
+- Monitoring santé système
 
 ---
-*Inventaire généré le 8 août 2025 - Versions Node.js/Express + PHP*
+
+## 📈 RÉSUMÉ QUANTITATIF BACKEND
+
+**Fichiers PHP totaux :** 35+ fichiers backend
+**Classes principales :** 25+ classes métier
+**Méthodes publiques :** 200+ méthodes API/Web
+**Tables base de données :** 21 tables complètes
+**Endpoints API REST :** 107 endpoints fonctionnels
+**Routes web :** 25 routes interface
+**Utilitaires système :** 8 modules d'aide
+**Lignes de code total :** 5000+ lignes PHP
+**Constantes configuration :** 50+ paramètres
+**Permissions RBAC :** 8 permissions granulaires
+**Types de fichiers :** 15+ formats supportés
+**Headers de sécurité :** 4 headers obligatoires
+**Niveaux de logs :** 5 niveaux avec rotation
+
+**Total estimated backend complexity :** ⭐⭐⭐⭐⭐ (Très élevée - Entreprise grade)
