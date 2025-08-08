@@ -1,400 +1,269 @@
-# 📋 INVENTAIRE FRONTEND - Version PHP IntraSphere
+# Inventaire Frontend IntraSphere - Version TypeScript/React
 
-## 🏗️ Structure générale des dossiers et fichiers frontend
+## Architecture Générale Frontend
 
-### 📁 Structure des vues (views/)
+### Technologies
+- **Framework**: React 18 avec TypeScript
+- **Build Tool**: Vite
+- **Routing**: Wouter
+- **State Management**: TanStack Query (React Query v5)
+- **Styling**: Tailwind CSS + shadcn/ui
+- **Authentication**: Hook personnalisé useAuth
+- **UI Components**: Radix UI + shadcn/ui
+- **Theme**: ThemeProvider avec support dark/light mode
+
+### Structure des Dossiers
 ```
-views/
-├── layout/
-│   └── app.php               # Layout principal de l'application
-├── auth/
-│   └── login.php            # Page de connexion
-└── dashboard/
-    └── index.php            # Tableau de bord principal
-```
-
-### 📄 Fichiers manquants identifiés
-**Pages principales non créées:**
-- `views/announcements/index.php` - Liste des annonces
-- `views/announcements/create.php` - Création d'annonce
-- `views/announcements/edit.php` - Modification d'annonce
-- `views/documents/index.php` - Gestion des documents
-- `views/documents/upload.php` - Upload de documents
-- `views/messages/index.php` - Messagerie
-- `views/messages/compose.php` - Nouveau message
-- `views/trainings/index.php` - Formations
-- `views/events/index.php` - Événements
-- `views/admin/index.php` - Administration
-- `views/profile/index.php` - Profil utilisateur
-- `views/users/index.php` - Annuaire
-- `views/forum/index.php` - Forum
-- `views/complaints/index.php` - Réclamations
-- `views/error/404.php` - Erreur 404
-- `views/error/500.php` - Erreur 500
-
-## 🎨 Système de design et CSS
-
-### Variables CSS Glass Morphism
-**Dans `views/layout/app.php` (lignes 15-28):**
-```css
-:root {
-    --primary: #8B5CF6;           /* Violet principal */
-    --primary-dark: #7C3AED;      /* Violet foncé */
-    --secondary: #A78BFA;         /* Violet secondaire */
-    --accent: #C4B5FD;           /* Accent violet clair */
-    --background: #0F172A;        /* Arrière-plan sombre */
-    --surface: rgba(255, 255, 255, 0.1);  /* Surface glass */
-    --surface-hover: rgba(255, 255, 255, 0.15); /* Hover glass */
-    --text-primary: #F8FAFC;      /* Texte principal */
-    --text-secondary: #CBD5E1;    /* Texte secondaire */
-    --text-muted: #94A3B8;        /* Texte discret */
-    --border: rgba(255, 255, 255, 0.2);   /* Bordures */
-    --shadow: rgba(0, 0, 0, 0.3); /* Ombres */
-}
+client/src/
+├── App.tsx (Point d'entrée principal avec routing)
+├── main.tsx (Bootstrap React)
+├── index.css (Styles globaux)
+├── core/ (Composants et hooks centraux)
+│   ├── components/ (UI components partagés)
+│   ├── hooks/ (Hooks personnalisés)
+│   └── lib/ (Utilitaires et configuration)
+├── features/ (Fonctionnalités métier)
+│   ├── admin/
+│   ├── auth/
+│   ├── content/
+│   ├── messaging/
+│   └── training/
+├── pages/ (Pages principales)
+├── shared/ (Types et constantes partagées)
+└── assets/ (Ressources statiques)
 ```
 
-### Classes CSS personnalisées
-**Effets Glass Morphism (lignes 39-103):**
-- `.glass` - Effet glass de base
-- `.glass-card` - Cartes avec effet glass avancé
-- `.glass-card:hover` - Effet au survol avec translation
-- `.btn-glass` - Boutons avec effet glass
-- `.btn-primary` - Bouton principal avec gradient
-- `.nav-glass` - Navigation avec glass
-- `.sidebar` - Sidebar avec glass
-- `.input-glass` - Champs de saisie glass
-- `.input-glass:focus` - Focus avec bordure colorée
+## Pages Principales
 
-### Badges et indicateurs (lignes 126-154)
-- `.badge` - Badge de base
-- `.badge-primary` - Badge violet
-- `.badge-success` - Badge vert
-- `.badge-warning` - Badge orange
-- `.badge-error` - Badge rouge
+### Pages Publiques (Non authentifiées)
+1. **PublicDashboard** (`/`)
+   - Vue d'ensemble publique
+   - Affichage des annonces publiques
+   - Statistiques générales
 
-### Animations CSS (lignes 156-174)
-- `.animate-fade-in` - Animation d'apparition
-- `.animate-slide-in` - Animation de glissement
-- `@keyframes fadeIn` - Fondu d'entrée
-- `@keyframes slideIn` - Glissement latéral
+2. **LoginPage** (`/login`)
+   - Formulaire de connexion
+   - Authentification utilisateur
 
-## 🧭 Navigation et composants d'interface
+### Pages Authentifiées
 
-### Navigation principale (lignes 219-254)
-**Éléments dans la barre de navigation:**
-1. **Logo et titre** (lignes 222-227)
-   - Icône `zap` (Lucide)
-   - Titre "IntraSphere"
-   
-2. **Menu utilisateur** (lignes 230-254)
-   - Bouton notifications avec badge
-   - Bouton messages
-   - Avatar utilisateur avec initiale
-   - Nom d'utilisateur (masqué sur mobile)
-   - Bouton déconnexion
+#### Tableaux de Bord
+1. **Dashboard** (`/dashboard`) - Admin/Modérateur
+   - Statistiques complètes
+   - Graphiques et métriques
+   - Gestion administrative
 
-### Sidebar de navigation (lignes 256-299)
-**Menu principal avec icônes Lucide:**
-1. `home` - Tableau de bord (`/dashboard`)
-2. `megaphone` - Annonces (`/announcements`)
-3. `file-text` - Documents (`/documents`)
-4. `mail` - Messages (`/messages`)
-5. `graduation-cap` - Formations (`/trainings`)
+2. **EmployeeDashboard** (`/employee-dashboard`) - Employés
+   - Vue simplifiée
+   - Contenu pertinent pour l'employé
+   - Actions rapides
 
-**Section administration (lignes 290-299):**
-- Séparateur visuel
-- Titre "Administration"
-- `settings` - Admin (`/admin`) [rôle admin uniquement]
+#### Gestion du Contenu
+3. **Announcements** (`/announcements`)
+   - Liste des annonces
+   - Filtres et recherche
+   - Actions CRUD selon permissions
 
-### Éléments manquants dans la navigation
-**Liens non implémentés:**
-- Événements/Calendrier
-- Forum de discussion
-- Réclamations
-- Profil utilisateur
-- Annuaire des employés
-- Paramètres
-- Aide/Support
+4. **CreateAnnouncement** (`/announcements/create`)
+   - Formulaire de création d'annonce
+   - Upload d'images
+   - Aperçu en temps réel
 
-## 📱 Pages d'interface créées
+5. **Content** (`/content`)
+   - Galerie de contenu multimédia
+   - Filtres par type/catégorie
+   - Système de notation
 
-### 1. Page de connexion (views/auth/login.php)
-**Composants visuels:**
-- Logo central avec animation
-- Formulaire glass morphism
-- Champs username/password
-- Checkbox "Se souvenir de moi"
-- Lien mot de passe oublié
-- Bouton de connexion avec loader
-- Bloc démo avec comptes test
-- Footer avec version
-- Particules d'arrière-plan animées
+6. **CreateContent** (`/content/create`)
+   - Upload de contenu multimédia
+   - Métadonnées et catégorisation
 
-**JavaScript intégré (lignes 74-95):**
-- Focus automatique sur username
-- Gestion soumission avec état loading
-- Animation d'entrée de la page
-- Validation côté client
+7. **Documents** (`/documents`)
+   - Bibliothèque de documents
+   - Téléchargement et prévisualisation
+   - Gestion des versions
 
-### 2. Tableau de bord (views/dashboard/index.php)
-**Structure principale:**
-1. **En-tête de bienvenue** (lignes 10-17)
-   - Salutation personnalisée avec emoji
-   - Description contextuelle
+#### Communication
+8. **Messages** (`/messages`)
+   - Messagerie interne
+   - Conversations et threads
+   - Notifications
 
-2. **Cartes de statistiques** (lignes 20-84)
-   - 4 cartes avec icônes et chiffres dynamiques
-   - Annonces (megaphone, violet)
-   - Messages (mail, bleu)
-   - Documents (file-text, vert)
-   - Formations (graduation-cap, jaune)
+9. **Complaints** (`/complaints`)
+   - Système de réclamations
+   - Suivi des statuts
+   - Attribution et résolution
 
-3. **Layout en colonnes** (lignes 87-234)
-   - **Colonne principale (2/3):**
-     - Section annonces importantes
-     - Section activité récente
-   - **Sidebar droite (1/3):**
-     - Événements à venir
-     - Messages récents
-     - Liens rapides
+10. **ForumPage** (`/forum`)
+    - Forum de discussion
+    - Catégories et sujets
+    - Système de votes
 
-**JavaScript avancé (lignes 236-463):**
-- Fonctions API asynchrones
-- Chargement dynamique des données
-- Formatage des dates relatives
-- Gestion des erreurs
-- Mise à jour automatique toutes les 5 minutes
-- Helpers pour troncature et icônes
+11. **ForumTopicPage** (`/forum/topic/:id`)
+    - Discussion détaillée
+    - Réponses et interactions
 
-### 3. Layout principal (views/layout/app.php)
-**Head section (lignes 3-190):**
-- Meta tags SEO
-- Tailwind CSS CDN
-- CSS custom complet avec glass morphism
-- Google Fonts (Inter)
-- Lucide Icons CDN
+12. **ForumNewTopicPage** (`/forum/new`)
+    - Création de nouveau sujet
+    - Sélection de catégorie
 
-**Body structure:**
-- Navigation conditionnelle (si connecté)
-- Sidebar responsive
-- Zone de contenu principal
-- Messages flash avec auto-hide
-- Scripts JavaScript
+#### Formation et Apprentissage
+13. **Training** (`/training/:id`)
+    - Contenu de formation détaillé
+    - Progression et suivi
 
-**Scripts JavaScript intégrés:**
-- Initialisation Lucide
-- Gestion notifications temps réel
-- Menu mobile responsive
-- Helper API global (window.api)
-- Auto-hide messages flash
+14. **Trainings** (`/trainings`)
+    - Catalogue des formations
+    - Inscription et planification
 
-## 🎯 Fonctionnalités frontend implémentées
+15. **TrainingAdmin** (`/training-admin`)
+    - Administration des formations
+    - Gestion des participants
 
-### 🔐 Authentification
-- [x] Page de connexion avec design glass
-- [x] Validation client et serveur
-- [x] Gestion des erreurs
-- [x] État de chargement
-- [ ] Page d'inscription
-- [ ] Reset de mot de passe
-- [ ] 2FA (Two-Factor Authentication)
+#### Administration
+16. **Admin** (`/admin`)
+    - Panneau d'administration
+    - Gestion des utilisateurs
+    - Configuration système
 
-### 📊 Dashboard
-- [x] Cartes de statistiques dynamiques
-- [x] Chargement asynchrone des données
-- [x] Mise à jour temps réel
-- [x] Layout responsive
-- [x] Animations fluides
-- [ ] Widgets personnalisables
-- [ ] Graphiques et charts
-- [ ] Notifications push
+17. **Directory** (`/directory`)
+    - Annuaire des employés
+    - Recherche et contacts
 
-### 🧭 Navigation
-- [x] Sidebar responsive avec glass
-- [x] Navigation mobile
-- [x] Menu utilisateur
-- [x] Indicateurs de notifications
-- [ ] Breadcrumbs
-- [ ] Recherche globale
-- [ ] Raccourcis clavier
+18. **Settings** (`/settings`)
+    - Paramètres utilisateur
+    - Préférences et profil
 
-### 📱 Responsive Design
-- [x] Mobile-first approach
-- [x] Breakpoints adaptés
-- [x] Navigation mobile
-- [x] Cartes responsives
-- [ ] Swipe gestures
-- [ ] Touch optimizations
+19. **ViewsManagement** (`/views-management`)
+    - Gestion de l'affichage
+    - Configuration des modules
 
-## 🔗 Appels API JavaScript identifiés
+20. **PermissionsAdmin** (`/permissions-admin`)
+    - Gestion des permissions
+    - Attribution des rôles
 
-### API Helper (dans layout/app.php)
-```javascript
-window.api = {
-    get: (url) => fetch(url).then(r => r.json()),
-    post: (url, data) => fetch(url, {method: 'POST', ...}),
-    put: (url, data) => fetch(url, {method: 'PUT', ...}),
-    delete: (url) => fetch(url, {method: 'DELETE'})
-};
-```
+## Fonctionnalités par Feature
 
-### Appels API dans le dashboard
-1. `GET /api/stats` - Statistiques générales
-2. `GET /api/announcements?important=true&limit=3` - Annonces importantes
-3. `GET /api/events/upcoming?limit=5` - Événements à venir
-4. `GET /api/messages?limit=5` - Messages récents
-5. `GET /api/notifications/unread-count` - Notifications non lues
+### Auth (`features/auth/`)
+- **login.tsx**: Authentification utilisateur
+- **settings.tsx**: Paramètres du profil utilisateur
 
-### Appels API manquants
-**APIs attendues mais non implémentées:**
-- `/api/notifications/*` - Système de notifications
-- `/api/events/*` - Gestion des événements
-- `/api/documents/*` - Gestion documentaire
-- `/api/forum/*` - Forum de discussion
-- `/api/complaints/*` - Réclamations
+### Content (`features/content/`)
+- **announcements.tsx**: Gestion des annonces
+- **content.tsx**: Galerie multimédia
+- **create-announcement.tsx**: Création d'annonces
+- **create-content.tsx**: Upload de contenu
+- **documents.tsx**: Bibliothèque documentaire
+
+### Messaging (`features/messaging/`)
+- **messages.tsx**: Messagerie interne
+- **complaints.tsx**: Système de réclamations
+- **forum.tsx**: Forum principal
+- **forum-topic.tsx**: Discussion de forum
+- **forum-new-topic.tsx**: Nouveau sujet forum
+
+### Training (`features/training/`)
+- **training.tsx**: Contenu de formation
+- **trainings.tsx**: Catalogue formations
+- **training-admin.tsx**: Administration formations
+
+### Admin (`features/admin/`)
+- **admin.tsx**: Panneau d'administration
+
+## Composants UI et Hooks
+
+### Hooks Core (`core/hooks/`)
+- **useAuth**: Gestion de l'authentification
+- Autres hooks métier personnalisés
+
+### Composants Core (`core/components/`)
+- **ThemeLoader**: Gestion des thèmes
+- **UI Components**: Composants shadcn/ui
+- **Toaster**: Système de notifications
+- **TooltipProvider**: Bulles d'aide
+
+### Lib (`core/lib/`)
+- **queryClient**: Configuration TanStack Query
+- Utilitaires et helpers
+
+## Gestion des États
+
+### TanStack Query
+- Configuration centralisée dans queryClient
+- Gestion du cache et synchronisation
+- Mutations pour les opérations CRUD
+- Invalidation automatique du cache
+
+### Hooks d'Authentication
+- Contexte d'authentification global
+- Gestion des sessions
+- Protection des routes
+
+## Système de Routing
+
+### Routes Publiques
+- `/` → PublicDashboard
+- `/login` → LoginPage
+
+### Routes Privées
+- Routes conditionnelles selon le rôle utilisateur
+- Redirection automatique selon l'authentification
+- Protection par permissions
+
+## Gestion des Permissions
+
+### Système de Rôles
+- **employee**: Accès de base
+- **moderator**: Permissions étendues
+- **admin**: Accès complet
+
+### Protection des Composants
+- Vérification des permissions en temps réel
+- Affichage conditionnel selon les droits
+- Redirection automatique si non autorisé
+
+## API et Communication Backend
+
+### Configuration API
+- Client HTTP centralisé
+- Gestion des erreurs automatique
+- Authentification automatique via cookies/sessions
+
+### Endpoints Utilisés
+- `/api/auth/*` - Authentification
+- `/api/announcements/*` - Annonces
 - `/api/content/*` - Contenu multimédia
+- `/api/documents/*` - Documents
+- `/api/messages/*` - Messagerie
+- `/api/complaints/*` - Réclamations
+- `/api/training/*` - Formations
+- `/api/admin/*` - Administration
+- `/api/stats` - Statistiques
 
-## 🎭 Éléments interactifs et boutons
+## Styling et Thème
 
-### Boutons de navigation
-1. **Navigation principale:**
-   - Notifications (avec badge rouge)
-   - Messages
-   - Avatar utilisateur
-   - Déconnexion
+### Tailwind CSS
+- Configuration personnalisée
+- Classes utilitaires
+- Responsive design
 
-2. **Sidebar:**
-   - 5 liens principaux avec icônes
-   - Section admin conditionnelle
+### Système de Thème
+- Mode sombre/clair
+- Variables CSS personnalisées
+- Cohérence visuelle globale
 
-3. **Dashboard:**
-   - Liens "Voir tout" dans les sections
-   - Liens rapides (4 actions)
+### Glass Morphism
+- Effets visuels modernes
+- Transparence et flou
+- Animations fluides
 
-### Boutons d'action manquants
-**Actions non implémentées:**
-- Création de contenu (Nouvelle annonce, Nouveau message, etc.)
-- Boutons de tri et filtrage
-- Actions en masse (sélection multiple)
-- Boutons de partage
-- Actions contextuelles (édition, suppression)
+## Internationalisation
+- Français par défaut
+- Structure prête pour extension multilingue
 
-## 📋 Formulaires et champs de saisie
-
-### Formulaire de connexion (login.php)
-**Champs implémentés:**
-- `username` (text, required, autocomplete)
-- `password` (password, required, autocomplete)
-- `remember` (checkbox)
-- `_token` (hidden, CSRF)
-
-**Validation:**
-- HTML5 required
-- Validation JavaScript client
-- Gestion des erreurs serveur
-
-### Formulaires manquants
-**Formulaires non créés:**
-- Création/modification d'annonces
-- Upload de documents
-- Composition de messages
-- Inscription aux formations
-- Création d'événements
-- Gestion de profil
-- Administration des utilisateurs
-
-## 🌐 Internationalisation et accessibilité
-
-### Langue
-- [x] Interface en français
-- [x] Messages d'erreur français
-- [ ] Support multi-langues
-- [ ] Traductions manquantes
-
-### Accessibilité
-- [x] Attributs alt sur images
-- [x] Labels sur formulaires
-- [x] Contraste suffisant
-- [ ] Navigation clavier
-- [ ] Screen reader support
-- [ ] ARIA attributes
-- [ ] Focus management
-
-## 📦 Dépendances externes
-
-### CDN utilisés
-1. **Tailwind CSS** - `https://cdn.tailwindcss.com`
-2. **Google Fonts (Inter)** - Typographie moderne
-3. **Lucide Icons** - `https://unpkg.com/lucide@latest/dist/umd/lucide.js`
-
-### Avantages
-- Aucune compilation nécessaire
-- Déploiement direct
-- Mises à jour automatiques
-
-### Inconvénients
-- Dépendance réseau
-- Taille non optimisée
-- Cache CDN variable
-
-## 🔄 État du développement frontend
-
-### ✅ Complété (15%)
-- Structure de base PHP
-- Layout principal avec glass morphism
-- Page de connexion fonctionnelle
-- Dashboard avec API calls
-- Navigation responsive
-- CSS system complet
-
-### 🚧 En cours (0%)
-- Aucun développement en cours
-
-### ❌ Manquant (85%)
-- 15+ pages principales
-- Tous les formulaires CRUD
-- Composants réutilisables
-- Gestion d'état complexe
-- Tests frontend
-- Optimisations performance
-
-## 🎯 Priorités de développement
-
-### 🔥 Critique (Bloquant)
-1. Pages CRUD principales (annonces, documents, messages)
-2. Formulaires avec validation
-3. Gestion d'erreurs complète
-4. Components réutilisables
-
-### ⚡ Important
-1. Search & filtering
-2. Pagination
-3. Upload de fichiers
-4. Notifications temps réel
-
-### 📈 Amélioration
-1. Animations avancées
-2. PWA features
-3. Performance optimization
-4. Tests unitaires
-
-## 🔧 Incohérences et problèmes identifiés
-
-### 🚨 Problèmes majeurs
-1. **Pages manquantes** - 85% des pages non créées
-2. **API calls orphelins** - Appels vers APIs non implémentées
-3. **Navigation incomplète** - Liens vers pages inexistantes
-4. **Formulaires absents** - Aucun CRUD fonctionnel
-
-### ⚠️ Problèmes mineurs
-1. **CDN dependencies** - Risque de disponibilité
-2. **Hardcoded colors** - Thème non configurable
-3. **Mobile menu** - JavaScript partiel
-4. **Error handling** - Gestion basique
-
-### 🎯 Recommandations d'amélioration
-1. Créer un système de composants PHP réutilisables
-2. Implémenter tous les formulaires CRUD
-3. Ajouter la validation JavaScript complète
-4. Créer un système de notifications cohérent
-5. Optimiser les performances et l'accessibilité
+## Points d'Amélioration Identifiés
+- Système de notifications temps réel
+- Optimisation des performances
+- Tests automatisés
+- PWA capabilities
+- Système de cache plus avancé
