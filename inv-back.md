@@ -1,696 +1,1022 @@
-# INVENTAIRE EXHAUSTIF - BACKEND
+# INVENTAIRE EXHAUSTIF BACKEND - IntraSphere
 
-## Vue d'ensemble de l'architecture Backend
-- **Runtime**: Node.js avec TypeScript
-- **Framework**: Express.js
-- **ORM**: Drizzle ORM
-- **Base de données**: PostgreSQL (avec fallback en mémoire)
-- **Validation**: Zod
-- **Authentification**: Sessions Express avec bcrypt
-- **Communication temps réel**: WebSocket (ws)
-- **Sécurité**: Helmet, CORS, rate limiting
+## 📋 APERÇU GÉNÉRAL
 
-## Structure des dossiers Backend
+**Architecture Backend**: Node.js + Express.js + TypeScript
+**Base de données**: PostgreSQL avec Drizzle ORM
+**Authentification**: Sessions + bcrypt + Passport.js (prêt)
+**Communication temps réel**: WebSocket (ws)
+**Validation**: Zod schemas partagés
+**Sécurité**: Helmet, rate limiting, sanitization
 
-### `/server` - Racine Backend
+---
+
+## 🏗️ STRUCTURE DES DOSSIERS
+
 ```
 server/
-├── index.ts                      # Point d'entrée principal du serveur
-├── config.ts                     # Configuration environnement
-├── db.ts                         # Configuration base de données
-├── migrations.ts                 # Migrations et setup initial
-├── testData.ts                   # Données de test et seed
-├── vite.ts                       # Intégration Vite development
-├── data/                         # Couche de données
-│   └── storage.ts               # Interface storage et implémentation
-├── middleware/                   # Middlewares Express
-│   └── security.ts             # Sécurité et authentification
-├── routes/                       # Routes et endpoints API
-│   └── api.ts                   # Toutes les routes API
-└── services/                     # Services métier
-    ├── auth.ts                  # Service d'authentification
-    ├── email.ts                 # Service email/SMTP
-    └── websocket.ts             # Gestionnaire WebSocket
+├── index.ts                    # Point d'entrée principal du serveur
+├── config.ts                   # Configuration générale
+├── db.ts                       # Configuration base de données
+├── migrations.ts               # Migrations et initialisations
+├── testData.ts                 # Données de test et développement
+├── vite.ts                     # Configuration Vite pour développement
+│
+├── data/
+│   └── storage.ts              # Interface et implémentation storage
+│
+├── middleware/
+│   └── security.ts             # Middleware de sécurité
+│
+├── routes/
+│   └── api.ts                  # Routes API principales
+│
+├── services/
+│   ├── auth.ts                 # Service d'authentification
+│   ├── email.ts                # Service d'envoi d'emails
+│   └── websocket.ts            # Service WebSocket temps réel
+│
+├── utils/
+│   ├── process-monitor.ts      # Monitoring des processus
+│   └── vite-stabilizer.ts      # Stabilisation Vite HMR
+│
+└── public/                     # Assets statiques (build)
+    ├── assets/
+    └── index.html
 ```
 
-### `/shared` - Schémas partagés
-```
-shared/
-└── schema.ts                     # Schémas Drizzle et types TypeScript
-```
+---
 
-### `/config` - Configuration
-```
-config/
-├── components.json              # Configuration shadcn/ui
-├── drizzle.config.ts           # Configuration Drizzle ORM
-├── postcss.config.js           # Configuration PostCSS
-└── tailwind.config.ts          # Configuration TailwindCSS
-```
+## 🗄️ SCHÉMA DE BASE DE DONNÉES
 
-## Modèle de Données (Drizzle Schema)
+### Tables Principales (21 tables)
 
-### Tables Principales
-
-#### `users` - Utilisateurs
-```typescript
-{
-  id: varchar (UUID, primary key)
-  username: text (unique, not null)
-  password: text (not null, hashed avec bcrypt)
-  name: text (not null)
-  role: text (employee|admin|moderator, default: employee)
-  avatar: text (URL optionnelle)
-  employeeId: varchar (unique, pour communication interne)
-  department: varchar
-  position: varchar
-  isActive: boolean (default: true)
-  phone: varchar
-  email: varchar
-  createdAt: timestamp (auto)
-  updatedAt: timestamp (auto)
-}
+#### **Users** (`users`)
+```sql
+- id: varchar (PK, UUID)
+- username: text (UNIQUE, NOT NULL)
+- password: text (NOT NULL) -- bcrypt hash
+- name: text (NOT NULL)
+- role: text (DEFAULT 'employee') -- employee, admin, moderator
+- avatar: text
+- employeeId: varchar (UNIQUE) -- ID interne
+- department: varchar
+- position: varchar
+- isActive: boolean (DEFAULT true)
+- phone: varchar
+- email: varchar
+- createdAt: timestamp (DEFAULT NOW())
+- updatedAt: timestamp (DEFAULT NOW())
 ```
 
-#### `announcements` - Annonces
-```typescript
-{
-  id: varchar (UUID, primary key)
-  title: text (not null)
-  content: text (not null)
-  type: text (info|important|event|formation, default: info)
-  authorId: varchar (foreign key users.id)
-  authorName: text (not null)
-  imageUrl: text (optionnel)
-  icon: text (default: 📢)
-  createdAt: timestamp (not null, auto)
-  isImportant: boolean (default: false)
-}
+#### **Announcements** (`announcements`)
+```sql
+- id: varchar (PK, UUID)
+- title: text (NOT NULL)
+- content: text (NOT NULL)
+- type: text (DEFAULT 'info') -- info, important, event, formation
+- authorId: varchar → users.id
+- authorName: text (NOT NULL)
+- imageUrl: text
+- icon: text (DEFAULT '📢')
+- createdAt: timestamp (NOT NULL)
+- isImportant: boolean (DEFAULT false)
 ```
 
-#### `documents` - Documents
-```typescript
-{
-  id: varchar (UUID, primary key)
-  title: text (not null)
-  description: text
-  category: text (regulation|policy|guide|procedure, not null)
-  fileName: text (not null)
-  fileUrl: text (not null)
-  updatedAt: timestamp (not null, auto)
-  version: text (default: 1.0)
-}
+#### **Documents** (`documents`)
+```sql
+- id: varchar (PK, UUID)
+- title: text (NOT NULL)
+- description: text
+- category: text (NOT NULL) -- regulation, policy, guide, procedure
+- fileName: text (NOT NULL)
+- fileUrl: text (NOT NULL)
+- updatedAt: timestamp (NOT NULL)
+- version: text (DEFAULT '1.0')
 ```
 
-#### `events` - Événements
-```typescript
-{
-  id: varchar (UUID, primary key)
-  title: text (not null)
-  description: text
-  date: timestamp (not null)
-  location: text
-  type: text (meeting|training|social|other, default: meeting)
-  organizerId: varchar (foreign key users.id)
-  createdAt: timestamp (auto)
-}
+#### **Events** (`events`)
+```sql
+- id: varchar (PK, UUID)
+- title: text (NOT NULL)
+- description: text
+- date: timestamp (NOT NULL)
+- location: text
+- type: text (DEFAULT 'meeting') -- meeting, training, social, other
+- organizerId: varchar → users.id
+- createdAt: timestamp
 ```
 
-#### `messages` - Messagerie interne
-```typescript
-{
-  id: varchar (UUID, primary key)
-  senderId: varchar (foreign key users.id, not null)
-  recipientId: varchar (foreign key users.id, not null)
-  subject: text (not null)
-  content: text (not null)
-  isRead: boolean (default: false)
-  createdAt: timestamp (auto)
-}
+#### **Messages** (`messages`)
+```sql
+- id: varchar (PK, UUID)
+- fromUserId: varchar → users.id (NOT NULL)
+- toUserId: varchar → users.id (NOT NULL)
+- subject: text (NOT NULL)
+- content: text (NOT NULL)
+- isRead: boolean (DEFAULT false)
+- createdAt: timestamp
+- parentMessageId: varchar → messages.id -- Pour threads
 ```
 
-#### `complaints` - Réclamations
-```typescript
-{
-  id: varchar (UUID, primary key)
-  submitterId: varchar (foreign key users.id, not null)
-  assignedToId: varchar (foreign key users.id)
-  title: text (not null)
-  description: text (not null)
-  category: text (hr|it|facilities|other, not null)
-  priority: text (low|medium|high|urgent, default: medium)
-  status: text (open|in_progress|resolved|closed, default: open)
-  createdAt: timestamp (auto)
-  updatedAt: timestamp (auto)
-}
+#### **Complaints** (`complaints`)
+```sql
+- id: varchar (PK, UUID)
+- reporterId: varchar → users.id
+- subject: text (NOT NULL)
+- description: text (NOT NULL)
+- category: text (NOT NULL) -- harassment, discrimination, safety, other
+- status: text (DEFAULT 'open') -- open, in_progress, resolved, closed
+- priority: text (DEFAULT 'medium') -- low, medium, high, urgent
+- assignedTo: varchar → users.id
+- isAnonymous: boolean (DEFAULT false)
+- createdAt: timestamp
+- updatedAt: timestamp
 ```
 
-#### `permissions` - Délégation de permissions
-```typescript
-{
-  id: varchar (UUID, primary key)
-  userId: varchar (foreign key users.id, not null)
-  grantedBy: varchar (foreign key users.id, not null)
-  permission: text (not null)
-  // Permissions possibles:
-  // - manage_announcements
-  // - manage_documents
-  // - manage_events
-  // - manage_users
-  // - validate_topics
-  // - validate_posts
-  // - manage_employee_categories
-  // - manage_trainings
-  createdAt: timestamp (auto)
-}
+#### **Permissions** (`permissions`)
+```sql
+- id: varchar (PK, UUID)
+- userId: varchar → users.id (NOT NULL)
+- permission: text (NOT NULL) -- Nom de la permission
+- resource: text -- Ressource concernée (optionnel)
+- grantedBy: varchar → users.id (NOT NULL)
+- createdAt: timestamp
 ```
 
-### Tables de Formation
-
-#### `trainings` - Formations
-```typescript
-{
-  id: varchar (UUID, primary key)
-  title: text (not null)
-  description: text
-  category: text (technical|management|safety|compliance|other, not null)
-  difficulty: text (beginner|intermediate|advanced, default: beginner)
-  duration: integer (en minutes, not null)
-  instructorId: varchar (foreign key users.id)
-  instructorName: text (not null)
-  startDate: timestamp
-  endDate: timestamp
-  location: text
-  maxParticipants: integer
-  currentParticipants: integer (default: 0)
-  isMandatory: boolean (default: false)
-  isActive: boolean (default: true)
-  isVisible: boolean (default: true)
-  thumbnailUrl: text
-  documentUrls: text[] (array, default: [])
-  createdAt: timestamp (not null, auto)
-  updatedAt: timestamp (auto)
-}
+#### **Contents** (`contents`)
+```sql
+- id: varchar (PK, UUID)
+- title: text (NOT NULL)
+- content: text (NOT NULL)
+- type: text (DEFAULT 'article') -- article, news, tutorial, faq
+- categoryId: varchar → categories.id
+- authorId: varchar → users.id
+- authorName: text
+- imageUrl: text
+- tags: text[] -- Tableau de tags
+- isPublished: boolean (DEFAULT false)
+- publishedAt: timestamp
+- createdAt: timestamp
+- updatedAt: timestamp
 ```
 
-#### `trainingParticipants` - Participants formations
-```typescript
-{
-  id: varchar (UUID, primary key)
-  trainingId: varchar (foreign key trainings.id, cascade delete, not null)
-  userId: varchar (foreign key users.id, cascade delete, not null)
-  registeredAt: timestamp (auto)
-  status: text (registered|completed|cancelled, default: registered)
-  completionDate: timestamp
-  score: integer (0-100)
-  feedback: text
-}
+#### **Categories** (`categories`)
+```sql
+- id: varchar (PK, UUID)
+- name: text (NOT NULL)
+- description: text
+- type: text (NOT NULL) -- content, document, training
+- parentId: varchar → categories.id -- Hiérarchie
+- icon: text
+- color: text
+- isActive: boolean (DEFAULT true)
+- createdAt: timestamp
 ```
 
-### Tables E-Learning
-
-#### `courses` - Cours/modules
-```typescript
-{
-  id: varchar (UUID, primary key)
-  title: text (not null)
-  description: text
-  category: text (technical|compliance|soft-skills|leadership, not null)
-  difficulty: text (beginner|intermediate|advanced, default: beginner)
-  duration: integer (en minutes)
-  thumbnailUrl: text
-  authorId: varchar (foreign key users.id)
-  authorName: text (not null)
-  isPublished: boolean (default: false)
-  isMandatory: boolean (default: false)
-  prerequisites: text (JSON array course IDs)
-  tags: text (JSON array tags)
-  createdAt: timestamp (auto)
-  updatedAt: timestamp (auto)
-}
+#### **EmployeeCategories** (`employee_categories`)
+```sql
+- id: varchar (PK, UUID)
+- name: text (NOT NULL)
+- description: text
+- permissions: text[] -- Permissions par défaut
+- isActive: boolean (DEFAULT true)
+- createdAt: timestamp
 ```
 
-#### `lessons` - Leçons/chapitres
-```typescript
-{
-  id: varchar (UUID, primary key)
-  courseId: varchar (foreign key courses.id, not null)
-  title: text (not null)
-  description: text
-  content: text (HTML content, not null)
-  order: integer (default: 0)
-  duration: integer (en minutes)
-  videoUrl: text
-  documentUrl: text
-  isRequired: boolean (default: true)
-  createdAt: timestamp (auto)
-  updatedAt: timestamp (auto)
-}
+#### **SystemSettings** (`system_settings`)
+```sql
+- id: varchar (PK)
+- showAnnouncements: boolean (DEFAULT true)
+- showContent: boolean (DEFAULT true)
+- showDocuments: boolean (DEFAULT true)
+- showForum: boolean (DEFAULT true)
+- showMessages: boolean (DEFAULT true)
+- showComplaints: boolean (DEFAULT true)
+- showTraining: boolean (DEFAULT true)
+- updatedAt: timestamp
 ```
 
-#### `quizzes` - Quiz et évaluations
-```typescript
-{
-  id: varchar (UUID, primary key)
-  courseId: varchar (foreign key courses.id)
-  lessonId: varchar (foreign key lessons.id)
-  title: text (not null)
-  description: text
-  questions: text (JSON array questions, not null)
-  passingScore: integer (pourcentage, default: 70)
-  timeLimit: integer (en minutes)
-  allowRetries: boolean (default: true)
-  maxAttempts: integer (default: 3)
-  isRequired: boolean (default: false)
-  createdAt: timestamp (auto)
-  updatedAt: timestamp (auto)
-}
+### Formation & E-Learning (8 tables)
+
+#### **Trainings** (`trainings`)
+```sql
+- id: varchar (PK, UUID)
+- title: text (NOT NULL)
+- description: text
+- type: text (DEFAULT 'online') -- online, classroom, hybrid
+- duration: integer -- En minutes
+- maxParticipants: integer
+- instructorId: varchar → users.id
+- startDate: timestamp
+- endDate: timestamp
+- isActive: boolean (DEFAULT true)
+- createdAt: timestamp
 ```
 
-#### `enrollments` - Inscriptions et progression
-```typescript
-{
-  id: varchar (UUID, primary key)
-  userId: varchar (foreign key users.id, not null)
-  courseId: varchar (foreign key courses.id, not null)
-  enrolledAt: timestamp (auto)
-  startedAt: timestamp
-  completedAt: timestamp
-  progress: integer (pourcentage, default: 0)
-  status: text (enrolled|in-progress|completed|failed, default: enrolled)
-  certificateUrl: text
-  timeSpent: integer (en minutes, default: 0)
-  score: integer (pourcentage moyen)
-  courseTitle: text (dénormalisé pour analytics)
-}
+#### **TrainingParticipants** (`training_participants`)
+```sql
+- id: varchar (PK, UUID)
+- trainingId: varchar → trainings.id (NOT NULL)
+- userId: varchar → users.id (NOT NULL)
+- status: text (DEFAULT 'enrolled') -- enrolled, completed, cancelled
+- progress: integer (DEFAULT 0) -- Pourcentage
+- score: real -- Note finale
+- certificateIssued: boolean (DEFAULT false)
+- enrolledAt: timestamp
+- completedAt: timestamp
 ```
 
-#### `lessonProgress` - Progression leçons
-```typescript
-{
-  id: varchar (UUID, primary key)
-  userId: varchar (foreign key users.id, not null)
-  lessonId: varchar (foreign key lessons.id, not null)
-  courseId: varchar (foreign key courses.id, not null)
-  isCompleted: boolean (default: false)
-  timeSpent: integer (en minutes, default: 0)
-  completedAt: timestamp
-  createdAt: timestamp (auto)
-}
+#### **Courses** (`courses`)
+```sql
+- id: varchar (PK, UUID)
+- title: text (NOT NULL)
+- description: text
+- category: text (NOT NULL)
+- difficulty: text (DEFAULT 'beginner') -- beginner, intermediate, advanced
+- estimatedDuration: integer -- En heures
+- instructorId: varchar → users.id
+- thumbnailUrl: text
+- isPublished: boolean (DEFAULT false)
+- tags: text[]
+- createdAt: timestamp
+- updatedAt: timestamp
 ```
 
-#### `quizAttempts` - Tentatives de quiz
-```typescript
-{
-  id: varchar (UUID, primary key)
-  userId: varchar (foreign key users.id, not null)
-  quizId: varchar (foreign key quizzes.id, not null)
-  answers: text (JSON answers)
-  score: integer (pourcentage)
-  passed: boolean
-  startedAt: timestamp (auto)
-  completedAt: timestamp
-  timeSpent: integer (en minutes)
-}
+#### **Lessons** (`lessons`)
+```sql
+- id: varchar (PK, UUID)
+- courseId: varchar → courses.id (NOT NULL)
+- title: text (NOT NULL)
+- content: text (NOT NULL)
+- type: text (DEFAULT 'text') -- text, video, interactive
+- duration: integer -- En minutes
+- orderIndex: integer (NOT NULL)
+- resources: text[] -- URLs des ressources
+- isRequired: boolean (DEFAULT true)
+- createdAt: timestamp
 ```
 
-#### `certificates` - Certificats
-```typescript
-{
-  id: varchar (UUID, primary key)
-  userId: varchar (foreign key users.id, not null)
-  courseId: varchar (foreign key courses.id, not null)
-  certificateUrl: text (not null)
-  issuedAt: timestamp (auto)
-  expiresAt: timestamp
-  metadata: text (JSON metadata)
-}
+#### **Quizzes** (`quizzes`)
+```sql
+- id: varchar (PK, UUID)
+- courseId: varchar → courses.id (NOT NULL)
+- title: text (NOT NULL)
+- description: text
+- questions: jsonb (NOT NULL) -- Questions et réponses
+- passingScore: integer (DEFAULT 70) -- Score minimum
+- timeLimit: integer -- En minutes (optionnel)
+- maxAttempts: integer (DEFAULT 3)
+- isActive: boolean (DEFAULT true)
+- createdAt: timestamp
 ```
 
-### Tables de Contenu
-
-#### `contents` - Contenu multimédia
-```typescript
-{
-  id: varchar (UUID, primary key)
-  title: text (not null)
-  type: text (video|image|document|audio, not null)
-  category: text (not null)
-  description: text
-  fileUrl: text (not null)
-  thumbnailUrl: text
-  duration: text
-  viewCount: integer (default: 0)
-  rating: integer (default: 0)
-  tags: text[] (array)
-  isPopular: boolean (default: false)
-  isFeatured: boolean (default: false)
-  createdAt: timestamp (not null, auto)
-  updatedAt: timestamp (not null, auto)
-}
+#### **Enrollments** (`enrollments`)
+```sql
+- id: varchar (PK, UUID)
+- userId: varchar → users.id (NOT NULL)
+- courseId: varchar → courses.id (NOT NULL)
+- status: text (DEFAULT 'active') -- active, completed, dropped
+- progress: integer (DEFAULT 0) -- Pourcentage
+- startedAt: timestamp
+- completedAt: timestamp
+- lastAccessedAt: timestamp
 ```
 
-#### `categories` - Catégories
-```typescript
-{
-  id: varchar (UUID, primary key)
-  name: text (unique, not null)
-  description: text
-  icon: text (default: 📁)
-  color: text (default: #3B82F6)
-  isVisible: boolean (default: true)
-  sortOrder: integer (default: 0)
-  createdAt: timestamp (not null, auto)
-}
+#### **LessonProgress** (`lesson_progress`)
+```sql
+- id: varchar (PK, UUID)
+- userId: varchar → users.id (NOT NULL)
+- lessonId: varchar → lessons.id (NOT NULL)
+- courseId: varchar → courses.id (NOT NULL)
+- isCompleted: boolean (DEFAULT false)
+- timeSpent: integer (DEFAULT 0) -- En secondes
+- completedAt: timestamp
 ```
 
-#### `employeeCategories` - Catégories employés
-```typescript
-{
-  id: varchar (UUID, primary key)
-  name: text (unique, not null)
-  description: text
-  color: text (default: #10B981)
-  permissions: text[] (array codes permissions, default: [])
-  isActive: boolean (default: true)
-  createdAt: timestamp (not null, auto)
-}
+#### **QuizAttempts** (`quiz_attempts`)
+```sql
+- id: varchar (PK, UUID)
+- userId: varchar → users.id (NOT NULL)
+- quizId: varchar → quizzes.id (NOT NULL)
+- score: integer (NOT NULL)
+- answers: jsonb (NOT NULL) -- Réponses données
+- isPassed: boolean (NOT NULL)
+- completedAt: timestamp (NOT NULL)
 ```
 
-#### `resources` - Ressources e-learning
-```typescript
-{
-  id: varchar (UUID, primary key)
-  title: text (not null)
-  description: text
-  type: text (document|video|link|tool, not null)
-  category: text (not null)
-  url: text (not null)
-  downloadUrl: text
-  thumbnailUrl: text
-  tags: text[] (array)
-  isPublic: boolean (default: true)
-  requiredRole: text
-  createdAt: timestamp (not null, auto)
-  updatedAt: timestamp (auto)
-}
+#### **Certificates** (`certificates`)
+```sql
+- id: varchar (PK, UUID)
+- userId: varchar → users.id (NOT NULL)
+- courseId: varchar → courses.id (NOT NULL)
+- title: text (NOT NULL)
+- description: text
+- issuedAt: timestamp (NOT NULL)
+- expiresAt: timestamp -- Optionnel
 ```
 
-### Tables Forum
-
-#### `forumCategories` - Catégories forum
-```typescript
-{
-  id: varchar (UUID, primary key)
-  name: text (unique, not null)
-  description: text
-  icon: text (default: 💬)
-  color: text (default: #3B82F6)
-  isVisible: boolean (default: true)
-  sortOrder: integer (default: 0)
-  moderatorIds: text[] (array user IDs)
-  permissions: text[] (array permissions)
-  createdAt: timestamp (auto)
-}
+#### **Resources** (`resources`)
+```sql
+- id: varchar (PK, UUID)
+- title: text (NOT NULL)
+- description: text
+- type: text (NOT NULL) -- document, video, link, tool
+- url: text (NOT NULL)
+- category: text (NOT NULL)
+- tags: text[]
+- isPublic: boolean (DEFAULT true)
+- uploadedBy: varchar → users.id
+- createdAt: timestamp
 ```
 
-#### `forumTopics` - Sujets forum
-```typescript
-{
-  id: varchar (UUID, primary key)
-  categoryId: varchar (foreign key forumCategories.id, not null)
-  authorId: varchar (foreign key users.id, not null)
-  title: text (not null)
-  description: text
-  isSticky: boolean (default: false)
-  isLocked: boolean (default: false)
-  tags: text[] (array)
-  viewCount: integer (default: 0)
-  postCount: integer (default: 0)
-  lastPostAt: timestamp
-  lastPostAuthor: text
-  createdAt: timestamp (auto)
-  updatedAt: timestamp (auto)
-}
+### Forum System (5 tables)
+
+#### **ForumCategories** (`forum_categories`)
+```sql
+- id: varchar (PK, UUID)
+- name: text (NOT NULL)
+- description: text
+- icon: text
+- color: text
+- isActive: boolean (DEFAULT true)
+- topicsCount: integer (DEFAULT 0)
+- postsCount: integer (DEFAULT 0)
+- lastActivityAt: timestamp
+- createdAt: timestamp
 ```
 
-#### `forumPosts` - Posts forum
-```typescript
-{
-  id: varchar (UUID, primary key)
-  topicId: varchar (foreign key forumTopics.id, not null)
-  authorId: varchar (foreign key users.id, not null)
-  content: text (not null)
-  isEdited: boolean (default: false)
-  editedAt: timestamp
-  likeCount: integer (default: 0)
-  isDeleted: boolean (default: false)
-  deletedAt: timestamp
-  deletedBy: varchar (foreign key users.id)
-  createdAt: timestamp (auto)
-}
+#### **ForumTopics** (`forum_topics`)
+```sql
+- id: varchar (PK, UUID)
+- categoryId: varchar → forum_categories.id (NOT NULL)
+- title: text (NOT NULL)
+- authorId: varchar → users.id (NOT NULL)
+- authorName: text (NOT NULL)
+- isSticky: boolean (DEFAULT false)
+- isLocked: boolean (DEFAULT false)
+- postsCount: integer (DEFAULT 0)
+- viewsCount: integer (DEFAULT 0)
+- lastPostAt: timestamp
+- lastPostAuthor: text
+- createdAt: timestamp
 ```
 
-#### `forumLikes` - Likes/réactions forum
-```typescript
-{
-  id: varchar (UUID, primary key)
-  postId: varchar (foreign key forumPosts.id, not null)
-  userId: varchar (foreign key users.id, not null)
-  reactionType: text (like|love|laugh|angry, default: like)
-  createdAt: timestamp (auto)
-}
+#### **ForumPosts** (`forum_posts`)
+```sql
+- id: varchar (PK, UUID)
+- topicId: varchar → forum_topics.id (NOT NULL)
+- authorId: varchar → users.id (NOT NULL)
+- authorName: text (NOT NULL)
+- content: text (NOT NULL)
+- isDeleted: boolean (DEFAULT false)
+- deletedBy: varchar → users.id
+- deletedAt: timestamp
+- likesCount: integer (DEFAULT 0)
+- createdAt: timestamp
+- updatedAt: timestamp
 ```
 
-#### `forumUserStats` - Statistiques utilisateur forum
-```typescript
-{
-  id: varchar (UUID, primary key)
-  userId: varchar (foreign key users.id, unique, not null)
-  postCount: integer (default: 0)
-  topicCount: integer (default: 0)
-  likeCount: integer (default: 0)
-  reputation: integer (default: 0)
-  joinedAt: timestamp (auto)
-  lastActiveAt: timestamp (auto)
-}
+#### **ForumLikes** (`forum_likes`)
+```sql
+- id: varchar (PK, UUID)
+- postId: varchar → forum_posts.id (NOT NULL)
+- userId: varchar → users.id (NOT NULL)
+- createdAt: timestamp
+-- UNIQUE(postId, userId)
 ```
 
-### Tables Configuration
-
-#### `systemSettings` - Paramètres système
-```typescript
-{
-  id: varchar (primary key, default: "settings")
-  showAnnouncements: boolean (default: true)
-  showContent: boolean (default: true)
-  showDocuments: boolean (default: true)
-  showForum: boolean (default: true)
-  showMessages: boolean (default: true)
-  showComplaints: boolean (default: true)
-  showTraining: boolean (default: true)
-  updatedAt: timestamp (auto)
-}
+#### **ForumUserStats** (`forum_user_stats`)
+```sql
+- id: varchar (PK, UUID)
+- userId: varchar → users.id (NOT NULL, UNIQUE)
+- postsCount: integer (DEFAULT 0)
+- topicsCount: integer (DEFAULT 0)
+- likesReceived: integer (DEFAULT 0)
+- likesGiven: integer (DEFAULT 0)
+- lastActivityAt: timestamp
+- reputation: integer (DEFAULT 0)
 ```
 
-## API Routes et Endpoints
+---
 
-### Routes d'Authentification (`/api/auth/*`)
-- **POST** `/api/auth/login` - Connexion utilisateur
-- **POST** `/api/auth/register` - Inscription utilisateur
-- **GET** `/api/auth/me` - Informations utilisateur connecté
-- **POST** `/api/auth/logout` - Déconnexion
+## 🔧 INTERFACE DE STOCKAGE (IStorage)
 
-### Routes de Contenu
-- **GET** `/api/announcements` - Liste des annonces
-- **GET** `/api/announcements/:id` - Annonce spécifique
-- **POST** `/api/announcements` - Créer annonce
-- **PATCH** `/api/announcements/:id` - Modifier annonce
-- **DELETE** `/api/announcements/:id` - Supprimer annonce
+### Méthodes Users (6 méthodes)
+- `getUser(id: string): Promise<User | undefined>`
+- `getUserByUsername(username: string): Promise<User | undefined>`
+- `getUserByEmployeeId(employeeId: string): Promise<User | undefined>`
+- `createUser(user: InsertUser): Promise<User>`
+- `updateUser(id: string, user: Partial<User>): Promise<User>`
+- `getUsers(): Promise<User[]>`
 
-- **GET** `/api/documents` - Liste des documents
-- **GET** `/api/documents/:id` - Document spécifique
-- **POST** `/api/documents` - Créer document
-- **PATCH** `/api/documents/:id` - Modifier document
-- **DELETE** `/api/documents/:id` - Supprimer document
+### Méthodes Announcements (5 méthodes)
+- `getAnnouncements(): Promise<Announcement[]>`
+- `getAnnouncementById(id: string): Promise<Announcement | undefined>`
+- `createAnnouncement(announcement: InsertAnnouncement): Promise<Announcement>`
+- `updateAnnouncement(id: string, announcement: Partial<Announcement>): Promise<Announcement>`
+- `deleteAnnouncement(id: string): Promise<void>`
 
-- **GET** `/api/events` - Liste des événements
-- **GET** `/api/events/:id` - Événement spécifique
-- **POST** `/api/events` - Créer événement
-- **PATCH** `/api/events/:id` - Modifier événement
-- **DELETE** `/api/events/:id` - Supprimer événement
+### Méthodes Documents (5 méthodes)
+- `getDocuments(): Promise<Document[]>`
+- `getDocumentById(id: string): Promise<Document | undefined>`
+- `createDocument(document: InsertDocument): Promise<Document>`
+- `updateDocument(id: string, document: Partial<Document>): Promise<Document>`
+- `deleteDocument(id: string): Promise<void>`
 
-- **GET** `/api/contents` - Liste du contenu multimédia
-- **GET** `/api/contents/:id` - Contenu spécifique
-- **POST** `/api/contents` - Créer contenu
-- **PATCH** `/api/contents/:id` - Modifier contenu
-- **DELETE** `/api/contents/:id` - Supprimer contenu
+### Méthodes Events (5 méthodes)
+- `getEvents(): Promise<Event[]>`
+- `getEventById(id: string): Promise<Event | undefined>`
+- `createEvent(event: InsertEvent): Promise<Event>`
+- `updateEvent(id: string, event: Partial<Event>): Promise<Event>`
+- `deleteEvent(id: string): Promise<void>`
 
-### Routes Utilisateurs et Communication
-- **GET** `/api/users` - Liste des utilisateurs (admin)
-- **POST** `/api/users` - Créer utilisateur (admin)
-- **PATCH** `/api/users/:id` - Modifier utilisateur
-- **DELETE** `/api/users/:id` - Désactiver utilisateur (soft delete)
+### Méthodes Messages (4 méthodes)
+- `getMessages(userId: string): Promise<Message[]>`
+- `getMessageById(id: string): Promise<Message | undefined>`
+- `createMessage(message: InsertMessage): Promise<Message>`
+- `markMessageAsRead(id: string): Promise<void>`
 
-- **GET** `/api/messages/:userId` - Messages d'un utilisateur
-- **POST** `/api/messages` - Envoyer message
-- **PATCH** `/api/messages/:id/read` - Marquer comme lu
+### Méthodes Complaints (5 méthodes)
+- `getComplaints(): Promise<Complaint[]>`
+- `getComplaintById(id: string): Promise<Complaint | undefined>`
+- `getComplaintsByUser(userId: string): Promise<Complaint[]>`
+- `createComplaint(complaint: InsertComplaint): Promise<Complaint>`
+- `updateComplaint(id: string, complaint: Partial<Complaint>): Promise<Complaint>`
 
-- **GET** `/api/complaints` - Liste des réclamations
-- **POST** `/api/complaints` - Créer réclamation
-- **PATCH** `/api/complaints/:id` - Modifier réclamation
+### Méthodes Permissions (4 méthodes)
+- `getPermissions(userId: string): Promise<Permission[]>`
+- `createPermission(permission: InsertPermission): Promise<Permission>`
+- `revokePermission(id: string): Promise<void>`
+- `hasPermission(userId: string, permission: string): Promise<boolean>`
 
-### Routes de Formation
-- **GET** `/api/trainings` - Liste des formations
-- **GET** `/api/trainings/:id` - Formation spécifique
-- **POST** `/api/trainings` - Créer formation
-- **PATCH** `/api/trainings/:id` - Modifier formation
-- **DELETE** `/api/trainings/:id` - Supprimer formation
+### Méthodes Contents (5 méthodes)
+- `getContents(): Promise<Content[]>`
+- `getContentById(id: string): Promise<Content | undefined>`
+- `createContent(content: InsertContent): Promise<Content>`
+- `updateContent(id: string, content: Partial<Content>): Promise<Content>`
+- `deleteContent(id: string): Promise<void>`
 
-- **GET** `/api/training-participants/:trainingId` - Participants formation
-- **POST** `/api/training-participants` - Inscrire à formation
-- **PATCH** `/api/training-participants/:id` - Modifier participation
-- **DELETE** `/api/training-participants/:trainingId/:userId` - Désinscrire
+### Méthodes Categories (5 méthodes)
+- `getCategories(): Promise<Category[]>`
+- `getCategoryById(id: string): Promise<Category | undefined>`
+- `createCategory(category: InsertCategory): Promise<Category>`
+- `updateCategory(id: string, category: Partial<Category>): Promise<Category>`
+- `deleteCategory(id: string): Promise<void>`
 
-### Routes E-Learning
-- **GET** `/api/courses` - Liste des cours
-- **GET** `/api/courses/:id` - Cours spécifique
-- **POST** `/api/courses` - Créer cours
-- **PATCH** `/api/courses/:id` - Modifier cours
-- **DELETE** `/api/courses/:id` - Supprimer cours
+### Méthodes EmployeeCategories (5 méthodes)
+- `getEmployeeCategories(): Promise<EmployeeCategory[]>`
+- `getEmployeeCategoryById(id: string): Promise<EmployeeCategory | undefined>`
+- `createEmployeeCategory(category: InsertEmployeeCategory): Promise<EmployeeCategory>`
+- `updateEmployeeCategory(id: string, category: Partial<EmployeeCategory>): Promise<EmployeeCategory>`
+- `deleteEmployeeCategory(id: string): Promise<void>`
 
-- **GET** `/api/courses/:id/lessons` - Leçons d'un cours
-- **POST** `/api/lessons` - Créer leçon
-- **PATCH** `/api/lessons/:id` - Modifier leçon
-- **DELETE** `/api/lessons/:id` - Supprimer leçon
+### Méthodes SystemSettings (2 méthodes)
+- `getSystemSettings(): Promise<SystemSettings>`
+- `updateSystemSettings(settings: Partial<SystemSettings>): Promise<SystemSettings>`
 
-- **GET** `/api/my-enrollments` - Inscriptions utilisateur
-- **POST** `/api/enroll/:courseId` - S'inscrire à un cours
-- **PATCH** `/api/enrollments/:id` - Mettre à jour progression
+### Méthodes Trainings (5 méthodes)
+- `getTrainings(): Promise<Training[]>`
+- `getTrainingById(id: string): Promise<Training | undefined>`
+- `createTraining(training: InsertTraining): Promise<Training>`
+- `updateTraining(id: string, training: Partial<Training>): Promise<Training>`
+- `deleteTraining(id: string): Promise<void>`
 
-- **GET** `/api/my-certificates` - Certificats utilisateur
-- **POST** `/api/certificates` - Générer certificat
+### Méthodes TrainingParticipants (5 méthodes)
+- `getTrainingParticipants(trainingId: string): Promise<TrainingParticipant[]>`
+- `getUserTrainingParticipations(userId: string): Promise<TrainingParticipant[]>`
+- `addTrainingParticipant(participant: InsertTrainingParticipant): Promise<TrainingParticipant>`
+- `updateTrainingParticipant(id: string, participant: Partial<TrainingParticipant>): Promise<TrainingParticipant>`
+- `removeTrainingParticipant(trainingId: string, userId: string): Promise<void>`
 
-- **GET** `/api/resources` - Ressources e-learning
-- **POST** `/api/resources` - Créer ressource
-- **PATCH** `/api/resources/:id` - Modifier ressource
-- **DELETE** `/api/resources/:id` - Supprimer ressource
+### E-Learning Methods (30 méthodes)
 
-### Routes Forum
-- **GET** `/api/forum/categories` - Catégories forum
-- **POST** `/api/forum/categories` - Créer catégorie
-- **PATCH** `/api/forum/categories/:id` - Modifier catégorie
-- **DELETE** `/api/forum/categories/:id` - Supprimer catégorie
+#### Courses (5 méthodes)
+- `getCourses(): Promise<Course[]>`
+- `getCourseById(id: string): Promise<Course | undefined>`
+- `createCourse(course: InsertCourse): Promise<Course>`
+- `updateCourse(id: string, course: Partial<Course>): Promise<Course>`
+- `deleteCourse(id: string): Promise<void>`
 
-- **GET** `/api/forum/topics` - Sujets forum (avec filtre catégorie)
-- **GET** `/api/forum/topics/:id` - Sujet spécifique
-- **POST** `/api/forum/topics` - Créer sujet
-- **PATCH** `/api/forum/topics/:id` - Modifier sujet
-- **DELETE** `/api/forum/topics/:id` - Supprimer sujet
+#### Lessons (6 méthodes)
+- `getLessons(courseId: string): Promise<Lesson[]>`
+- `getLessonById(id: string): Promise<Lesson | undefined>`
+- `createLesson(lesson: InsertLesson): Promise<Lesson>`
+- `updateLesson(id: string, lesson: Partial<Lesson>): Promise<Lesson>`
+- `deleteLesson(id: string): Promise<void>`
+- `getCourseLessons(courseId: string): Promise<Lesson[]>`
 
-- **GET** `/api/forum/posts/:topicId` - Posts d'un sujet
-- **POST** `/api/forum/posts` - Créer post
-- **PATCH** `/api/forum/posts/:id` - Modifier post
-- **DELETE** `/api/forum/posts/:id` - Supprimer post
+#### Quizzes (5 méthodes)
+- `getQuizzes(courseId: string): Promise<Quiz[]>`
+- `getQuizById(id: string): Promise<Quiz | undefined>`
+- `createQuiz(quiz: InsertQuiz): Promise<Quiz>`
+- `updateQuiz(id: string, quiz: Partial<Quiz>): Promise<Quiz>`
+- `deleteQuiz(id: string): Promise<void>`
 
-- **POST** `/api/forum/posts/:postId/like` - Liker un post
-- **GET** `/api/forum/stats/me` - Statistiques utilisateur forum
+#### Enrollments & Progress (6 méthodes)
+- `getUserEnrollments(userId: string): Promise<Enrollment[]>`
+- `getEnrollmentById(id: string): Promise<Enrollment | undefined>`
+- `enrollUser(userId: string, courseId: string): Promise<Enrollment>`
+- `updateEnrollmentProgress(id: string, progress: Partial<Enrollment>): Promise<Enrollment>`
+- `getUserLessonProgress(userId: string, courseId: string): Promise<LessonProgress[]>`
+- `updateLessonProgress(userId: string, lessonId: string, courseId: string, completed: boolean): Promise<LessonProgress>`
 
-### Routes Administration
-- **GET** `/api/stats` - Statistiques globales
-- **GET** `/api/permissions/:userId` - Permissions utilisateur
-- **POST** `/api/permissions` - Accorder permission
-- **DELETE** `/api/permissions/:id` - Révoquer permission
+#### Quiz Attempts (2 méthodes)
+- `getUserQuizAttempts(userId: string, quizId: string): Promise<QuizAttempt[]>`
+- `createQuizAttempt(attempt: Omit<QuizAttempt, 'id' | 'completedAt'>): Promise<QuizAttempt>`
 
-- **GET** `/api/categories` - Catégories de contenu
-- **POST** `/api/categories` - Créer catégorie
-- **PATCH** `/api/categories/:id` - Modifier catégorie
-- **DELETE** `/api/categories/:id` - Supprimer catégorie
+#### Certificates (2 méthodes)
+- `getUserCertificates(userId: string): Promise<Certificate[]>`
+- `createCertificate(certificate: Omit<Certificate, 'id' | 'issuedAt'>): Promise<Certificate>`
 
-- **GET** `/api/employee-categories` - Catégories employés
-- **POST** `/api/employee-categories` - Créer catégorie employé
-- **PATCH** `/api/employee-categories/:id` - Modifier catégorie
-- **DELETE** `/api/employee-categories/:id` - Supprimer catégorie
+#### Resources (5 méthodes)
+- `getResources(): Promise<Resource[]>`
+- `getResourceById(id: string): Promise<Resource | undefined>`
+- `createResource(resource: InsertResource): Promise<Resource>`
+- `updateResource(id: string, resource: Partial<Resource>): Promise<Resource>`
+- `deleteResource(id: string): Promise<void>`
 
-- **GET** `/api/system-settings` - Paramètres système
-- **PATCH** `/api/system-settings` - Modifier paramètres
+### Forum System Methods (15 méthodes)
 
-### Routes Recherche et Recommandations
-- **GET** `/api/search/users?q=...` - Rechercher utilisateurs
-- **GET** `/api/search/content?q=...` - Rechercher contenu
-- **GET** `/api/search/documents?q=...` - Rechercher documents
-- **GET** `/api/search/announcements?q=...` - Rechercher annonces
-- **GET** `/api/training-recommendations` - Recommandations formation
+#### Forum Categories (5 méthodes)
+- `getForumCategories(): Promise<ForumCategory[]>`
+- `getForumCategoryById(id: string): Promise<ForumCategory | undefined>`
+- `createForumCategory(category: InsertForumCategory): Promise<ForumCategory>`
+- `updateForumCategory(id: string, category: Partial<ForumCategory>): Promise<ForumCategory>`
+- `deleteForumCategory(id: string): Promise<void>`
 
-## Services Backend
+#### Forum Topics (5 méthodes)
+- `getForumTopics(categoryId?: string): Promise<ForumTopic[]>`
+- `getForumTopicById(id: string): Promise<ForumTopic | undefined>`
+- `createForumTopic(topic: InsertForumTopic): Promise<ForumTopic>`
+- `updateForumTopic(id: string, topic: Partial<ForumTopic>): Promise<ForumTopic>`
+- `deleteForumTopic(id: string): Promise<void>`
 
-### Service d'Authentification (`AuthService`)
-**Fonctionnalités :**
-- Hash de mots de passe avec bcrypt (12 rounds)
-- Vérification de mots de passe
-- Validation de force de mot de passe
+#### Forum Posts (5 méthodes)
+- `getForumPosts(topicId: string): Promise<ForumPost[]>`
+- `getForumPostById(id: string): Promise<ForumPost | undefined>`
+- `createForumPost(post: InsertForumPost): Promise<ForumPost>`
+- `updateForumPost(id: string, post: Partial<ForumPost>): Promise<ForumPost>`
+- `deleteForumPost(id: string, deletedBy: string): Promise<void>`
 
-**Méthodes :**
-```typescript
-static async hashPassword(password: string): Promise<string>
-static async verifyPassword(password: string, hash: string): Promise<boolean>
-static validatePasswordStrength(password: string): { isValid: boolean; errors: string[] }
-```
+### Méthodes Search (4 méthodes)
+- `searchUsers(query: string): Promise<User[]>`
+- `searchContent(query: string): Promise<Content[]>`
+- `searchDocuments(query: string): Promise<Document[]>`
+- `searchAnnouncements(query: string): Promise<Announcement[]>`
 
-### Service Email (`emailService`)
-**Fonctionnalités :**
-- Configuration SMTP
-- Envoi d'emails de bienvenue
-- Notifications par email
-- Templates HTML
+### Méthodes Analytics & Stats (5 méthodes)
+- `getStats(): Promise<StatsObject>`
+- `getAllTrainingParticipants(): Promise<TrainingParticipant[]>`
+- `markLessonComplete(userId: string, courseId: string, lessonId: string): Promise<void>`
+- `getTrainingRecommendations(userId: string): Promise<Course[]>`
+- `getForumUserStats(userId: string): Promise<ForumUserStats | undefined>`
 
-**Configuration :**
-- Support SMTP standard
-- Authentification utilisateur/mot de passe
-- TLS/SSL
-- Templates personnalisables
+### Méthodes Utilitaires (2 méthodes)
+- `resetToTestData(): Promise<void>`
+- `updateForumUserStats(userId: string, stats: Partial<ForumUserStats>): Promise<ForumUserStats>`
 
-### Gestionnaire WebSocket (`WebSocketManager`)
-**Fonctionnalités :**
-- Gestion de connexions multiples
-- Système de canaux/channels
-- Heartbeat pour détecter déconnexions
-- Broadcast de messages
+**Total Méthodes Interface**: 140+ méthodes
 
-**Events supportés :**
-- `AUTHENTICATE`: Authentification client
-- `JOIN_CHANNEL`: Rejoindre un canal
-- `LEAVE_CHANNEL`: Quitter un canal
-- `CHAT_MESSAGE`: Message de chat
-- `USER_TYPING`: Indicateur de frappe
-- `MARK_NOTIFICATION_READ`: Marquer notification lue
+---
 
-**Méthodes principales :**
-```typescript
-sendToClient(ws: WebSocketClient, message: WebSocketMessage): void
-sendToUser(userId: string, message: WebSocketMessage): void
-broadcastToChannel(channelId: string, message: WebSocketMessage, exclude?: string): void
-joinChannel(ws: WebSocketClient, channelId: string): void
-leaveChannel(ws: WebSocketClient, channelId: string): void
-```
+## 🚀 ROUTES API (60+ endpoints)
 
-## Storage Interface et Implémentation
+### 🔐 Authentication Routes (`/api/auth/*`)
 
-### Interface de Storage (`IStorage`)
-**Types d'opérations :**
-- CRUD complet pour toutes les entités
-- Recherche et filtrage
-- Statistiques et analytics
-- Gestion des relations
+#### **POST /api/auth/login**
+- **Validation**: Username + password requis
+- **Sécurité**: bcrypt pour vérification mot de passe
+- **Session**: Création session utilisateur
+- **Réponse**: User sans password
+- **Statuts**: 200 (success), 401 (invalid), 400 (missing)
 
-### Implémentation Mémoire (`MemStorage`)
-**Caractéristiques :**
-- Stockage en Map pour performance
-- Données de test préchargées
-- Simulation des relations
-- Méthodes de reset pour tests
+#### **POST /api/auth/register**
+- **Validation**: Schema insertUserSchema
+- **Vérification**: Username unique
+- **Hash**: bcrypt pour mot de passe
+- **Email**: Envoi email de bienvenue
+- **Rôle**: 'employee' par défaut
+- **Statuts**: 201 (created), 409 (exists), 400 (invalid)
 
-**Collections principales :**
+#### **GET /api/auth/me**
+- **Auth**: Session requise
+- **Validation**: Utilisateur actif
+- **Réponse**: Profil utilisateur courant
+- **Statuts**: 200 (success), 401 (not auth)
+
+#### **POST /api/auth/logout**
+- **Action**: Destruction session
+- **Réponse**: Message de confirmation
+- **Statuts**: 200 (success)
+
+### 📊 Statistics Routes (`/api/stats`)
+
+#### **GET /api/stats**
+- **Fonction**: Métriques dashboard
+- **Données**: 
+  - Total users, announcements, documents, events
+  - Messages, complaints counts
+  - New announcements, updated documents
+  - Connected users, pending complaints
+- **Format**: JSON avec métriques
+- **Statuts**: 200 (success), 500 (error)
+
+### 📢 Announcements Routes (`/api/announcements/*`)
+
+#### **GET /api/announcements**
+- **Fonction**: Liste toutes les annonces
+- **Tri**: Par date création (descendant)
+- **Statuts**: 200 (success), 500 (error)
+
+#### **GET /api/announcements/:id**
+- **Fonction**: Annonce spécifique par ID
+- **Statuts**: 200 (found), 404 (not found), 500 (error)
+
+#### **POST /api/announcements**
+- **Auth**: Requise (admin/moderator)
+- **Validation**: Schema insertAnnouncementSchema
+- **Fonction**: Création nouvelle annonce
+- **Statuts**: 201 (created), 400 (invalid), 500 (error)
+
+#### **PATCH /api/announcements/:id**
+- **Auth**: Requise (admin/moderator)
+- **Fonction**: Modification annonce
+- **Statuts**: 200 (updated), 404 (not found), 500 (error)
+
+#### **DELETE /api/announcements/:id**
+- **Auth**: Requise (admin/moderator)
+- **Fonction**: Suppression annonce
+- **Statuts**: 200 (deleted), 404 (not found), 500 (error)
+
+### 📄 Documents Routes (`/api/documents/*`)
+
+#### **GET /api/documents**
+- **Fonction**: Liste tous les documents
+- **Tri**: Par date mise à jour
+- **Statuts**: 200 (success), 500 (error)
+
+#### **GET /api/documents/:id**
+- **Fonction**: Document spécifique
+- **Statuts**: 200 (found), 404 (not found), 500 (error)
+
+#### **POST /api/documents**
+- **Auth**: Requise (admin/moderator)
+- **Validation**: Schema insertDocumentSchema
+- **Fonction**: Upload nouveau document
+- **Statuts**: 201 (created), 400 (invalid), 500 (error)
+
+#### **PATCH /api/documents/:id**
+- **Auth**: Requise (admin/moderator)
+- **Fonction**: Modification document
+- **Auto**: Version increment
+- **Statuts**: 200 (updated), 404 (not found), 500 (error)
+
+#### **DELETE /api/documents/:id**
+- **Auth**: Requise (admin/moderator)
+- **Fonction**: Suppression document
+- **Statuts**: 200 (deleted), 404 (not found), 500 (error)
+
+### 📅 Events Routes (`/api/events/*`)
+
+#### **GET /api/events**
+- **Fonction**: Liste tous les événements
+- **Tri**: Par date événement
+- **Statuts**: 200 (success), 500 (error)
+
+#### **GET /api/events/:id**
+- **Fonction**: Événement spécifique
+- **Statuts**: 200 (found), 404 (not found), 500 (error)
+
+#### **POST /api/events**
+- **Auth**: Requise (admin/moderator)
+- **Validation**: Schema insertEventSchema
+- **Fonction**: Création nouvel événement
+- **Statuts**: 201 (created), 400 (invalid), 500 (error)
+
+#### **PATCH /api/events/:id**
+- **Auth**: Requise (admin/moderator)
+- **Fonction**: Modification événement
+- **Statuts**: 200 (updated), 404 (not found), 500 (error)
+
+#### **DELETE /api/events/:id**
+- **Auth**: Requise (admin/moderator)
+- **Fonction**: Suppression événement
+- **Statuts**: 200 (deleted), 404 (not found), 500 (error)
+
+### 👥 Users Routes (`/api/users/*`)
+
+#### **GET /api/users**
+- **Auth**: Requise
+- **Fonction**: Liste utilisateurs (annuaire)
+- **Filtrage**: Utilisateurs actifs uniquement
+- **Statuts**: 200 (success), 500 (error)
+
+#### **POST /api/users**
+- **Auth**: Requise (admin uniquement)
+- **Validation**: Schema insertUserSchema
+- **Hash**: Mot de passe bcrypt
+- **Fonction**: Création compte utilisateur
+- **Statuts**: 201 (created), 400 (invalid), 409 (exists), 500 (error)
+
+#### **PATCH /api/users/:id**
+- **Auth**: Requise (admin ou self)
+- **Validation**: Propriétaire ou admin
+- **Hash**: Mot de passe si modifié
+- **Fonction**: Modification profil
+- **Statuts**: 200 (updated), 403 (forbidden), 500 (error)
+
+#### **GET /api/users/:id**
+- **Auth**: Requise
+- **Fonction**: Profil utilisateur spécifique
+- **Statuts**: 200 (found), 404 (not found), 500 (error)
+
+### 💬 Messages Routes (`/api/messages/*`)
+
+#### **GET /api/messages**
+- **Auth**: Requise
+- **Fonction**: Messages de l'utilisateur connecté
+- **Filtrage**: Reçus et envoyés
+- **Tri**: Par date (récent en premier)
+- **Statuts**: 200 (success), 500 (error)
+
+#### **POST /api/messages**
+- **Auth**: Requise
+- **Validation**: Schema insertMessageSchema
+- **Fonction**: Envoi nouveau message
+- **Notification**: WebSocket temps réel
+- **Statuts**: 201 (sent), 400 (invalid), 500 (error)
+
+#### **PATCH /api/messages/:id/read**
+- **Auth**: Requise
+- **Validation**: Destinataire uniquement
+- **Fonction**: Marquer comme lu
+- **Statuts**: 200 (marked), 403 (forbidden), 404 (not found)
+
+### 📝 Complaints Routes (`/api/complaints/*`)
+
+#### **GET /api/complaints**
+- **Auth**: Requise
+- **Permissions**: Admin voit tout, user ses propres
+- **Tri**: Par date création
+- **Statuts**: 200 (success), 500 (error)
+
+#### **POST /api/complaints**
+- **Auth**: Requise
+- **Validation**: Schema insertComplaintSchema
+- **Anonymat**: Option anonyme supportée
+- **Statut**: 'open' par défaut
+- **Statuts**: 201 (created), 400 (invalid), 500 (error)
+
+#### **PATCH /api/complaints/:id**
+- **Auth**: Requise (admin/moderator)
+- **Fonction**: Mise à jour statut/assignation
+- **Workflow**: open → in_progress → resolved → closed
+- **Statuts**: 200 (updated), 403 (forbidden), 404 (not found)
+
+### 📚 Content Routes (`/api/contents/*`)
+
+#### **GET /api/contents**
+- **Fonction**: Liste contenus publiés
+- **Filtrage**: Contenu publié uniquement
+- **Tri**: Par date publication
+- **Statuts**: 200 (success), 500 (error)
+
+#### **POST /api/contents**
+- **Auth**: Requise (admin/moderator)
+- **Validation**: Schema insertContentSchema
+- **Auto**: AuthorId et authorName
+- **Statuts**: 201 (created), 400 (invalid), 500 (error)
+
+#### **PATCH /api/contents/:id**
+- **Auth**: Requise (admin/moderator)
+- **Fonction**: Modification contenu
+- **Auto**: UpdatedAt timestamp
+- **Statuts**: 200 (updated), 404 (not found), 500 (error)
+
+### 🎓 Training Routes (`/api/trainings/*`)
+
+#### **GET /api/trainings**
+- **Fonction**: Liste formations disponibles
+- **Filtrage**: Formations actives
+- **Statuts**: 200 (success), 500 (error)
+
+#### **POST /api/trainings**
+- **Auth**: Requise (admin/moderator)
+- **Validation**: Schema insertTrainingSchema
+- **Fonction**: Création formation
+- **Statuts**: 201 (created), 400 (invalid), 500 (error)
+
+#### **GET /api/trainings/:id/participants**
+- **Auth**: Requise
+- **Fonction**: Participants à une formation
+- **Statuts**: 200 (success), 404 (not found), 500 (error)
+
+#### **POST /api/trainings/:id/participants**
+- **Auth**: Requise
+- **Validation**: Places disponibles
+- **Fonction**: Inscription formation
+- **Statuts**: 201 (enrolled), 400 (full), 409 (already enrolled)
+
+### 🎓 E-Learning Routes (`/api/courses/*`, `/api/lessons/*`, etc.)
+
+#### **GET /api/courses**
+- **Fonction**: Catalogue cours e-learning
+- **Filtrage**: Cours publiés
+- **Statuts**: 200 (success), 500 (error)
+
+#### **POST /api/courses**
+- **Auth**: Requise (admin/moderator)
+- **Validation**: Schema insertCourseSchema
+- **Fonction**: Création cours
+- **Statuts**: 201 (created), 400 (invalid), 500 (error)
+
+#### **GET /api/courses/:id/lessons**
+- **Fonction**: Leçons d'un cours
+- **Tri**: Par orderIndex
+- **Statuts**: 200 (success), 404 (course not found)
+
+#### **POST /api/courses/:id/enroll**
+- **Auth**: Requise
+- **Validation**: Cours existant et publié
+- **Fonction**: Inscription au cours
+- **Statuts**: 201 (enrolled), 409 (already enrolled)
+
+### 💬 Forum Routes (`/api/forum/*`)
+
+#### **GET /api/forum/categories**
+- **Fonction**: Catégories forum actives
+- **Stats**: Nombre topics et posts
+- **Statuts**: 200 (success), 500 (error)
+
+#### **GET /api/forum/topics**
+- **Params**: categoryId optionnel
+- **Fonction**: Topics par catégorie ou tous
+- **Tri**: Par dernière activité
+- **Statuts**: 200 (success), 500 (error)
+
+#### **POST /api/forum/topics**
+- **Auth**: Requise
+- **Validation**: Schema insertForumTopicSchema
+- **Auto**: AuthorId et authorName
+- **Statuts**: 201 (created), 400 (invalid), 500 (error)
+
+#### **GET /api/forum/topics/:id/posts**
+- **Fonction**: Posts d'un topic
+- **Tri**: Par date création
+- **Pagination**: Support prévu
+- **Statuts**: 200 (success), 404 (topic not found)
+
+#### **POST /api/forum/topics/:id/posts**
+- **Auth**: Requise
+- **Validation**: Topic existant et non verrouillé
+- **Auto**: AuthorId et authorName
+- **Statuts**: 201 (posted), 400 (locked), 404 (not found)
+
+### 🔍 Search Routes (`/api/search/*`)
+
+#### **GET /api/search/global**
+- **Params**: q (query), type (optionnel)
+- **Fonction**: Recherche multi-entités
+- **Types**: users, content, documents, announcements
+- **Statuts**: 200 (results), 400 (missing query)
+
+### ⚙️ Admin Routes (`/api/admin/*`)
+
+#### **GET /api/admin/settings**
+- **Auth**: Requise (admin uniquement)
+- **Fonction**: Configuration système
+- **Statuts**: 200 (settings), 403 (forbidden)
+
+#### **PATCH /api/admin/settings**
+- **Auth**: Requise (admin uniquement)
+- **Validation**: Schema settings
+- **Fonction**: Mise à jour configuration
+- **Statuts**: 200 (updated), 403 (forbidden)
+
+#### **POST /api/admin/reset-test-data**
+- **Auth**: Requise (admin uniquement)
+- **Fonction**: Réinitialisation données test
+- **Usage**: Développement uniquement
+- **Statuts**: 200 (reset), 403 (forbidden)
+
+---
+
+## 🔒 MIDDLEWARE DE SÉCURITÉ
+
+### **Security Configuration** (`middleware/security.ts`)
+
+#### **Helmet Configuration**
+- **CSP**: Content Security Policy
+- **HSTS**: HTTP Strict Transport Security
+- **X-Frame-Options**: DENY
+- **X-Content-Type-Options**: nosniff
+- **Referrer-Policy**: same-origin
+
+#### **Rate Limiting**
+- **Global**: 100 req/15min par IP
+- **Auth routes**: 5 req/15min par IP
+- **API routes**: 50 req/15min par IP
+- **Headers**: X-RateLimit-* pour info client
+
+#### **Input Sanitization**
+- **HTML**: Échappement automatique
+- **SQL**: Protection injection (via ORM)
+- **XSS**: Nettoyage input utilisateur
+- **Path traversal**: Validation chemins
+
+#### **Session Security**
+- **Secret**: Généré aléatoirement
+- **Secure**: HTTPS uniquement en production
+- **HttpOnly**: Protection XSS
+- **SameSite**: Protection CSRF
+- **MaxAge**: 24h par défaut
+
+### **Authentication Middleware**
+
+#### **requireAuth**
+- **Validation**: Session userId présente
+- **Réponse**: 401 si non authentifié
+- **Usage**: Routes protégées
+
+#### **requireRole(roles: string[])**
+- **Validation**: Rôle utilisateur dans liste
+- **Lookup**: Récupération user par session
+- **Réponse**: 403 si permissions insuffisantes
+- **Injection**: req.user pour routes suivantes
+
+---
+
+## 🔧 SERVICES
+
+### **AuthService** (`services/auth.ts`)
+
+#### **hashPassword(password: string): Promise<string>**
+- **Algorithm**: bcrypt avec salt 12
+- **Sécurité**: Résistant rainbow tables
+- **Performance**: ~250ms par hash
+
+#### **verifyPassword(password: string, hash: string): Promise<boolean>**
+- **Validation**: Comparaison bcrypt sécurisée
+- **Timing**: Constant-time pour éviter timing attacks
+
+### **EmailService** (`services/email.ts`)
+
+#### **Configuration**
+- **Provider**: Nodemailer
+- **SMTP**: Configurable via env vars
+- **Templates**: HTML + text fallback
+
+#### **sendWelcomeEmail(email: string, name: string): Promise<void>**
+- **Template**: Email de bienvenue personnalisé
+- **Contenu**: Informations compte + liens utiles
+- **Fallback**: Graceful failure si service indisponible
+
+#### **sendNotification(email: string, subject: string, content: string): Promise<void>**
+- **Usage**: Notifications importantes
+- **Format**: HTML avec fallback text
+- **Queue**: Prévu pour volume important
+
+### **WebSocketService** (`services/websocket.ts`)
+
+#### **Configuration**
+- **Library**: ws (WebSocket library)
+- **Path**: /ws
+- **Heartbeat**: Ping/pong automatique
+
+#### **Events Supportés**
+- **user_joined**: Connexion utilisateur
+- **user_left**: Déconnexion utilisateur
+- **new_message**: Nouveau message privé
+- **new_announcement**: Nouvelle annonce
+- **new_forum_post**: Nouveau post forum
+- **notification**: Notification générique
+
+#### **Broadcasting**
+- **All users**: Diffusion générale
+- **Specific user**: Message privé
+- **Role-based**: Par rôle utilisateur
+- **Room-based**: Par groupe/département
+
+#### **Connection Management**
+- **Auth**: Validation session WebSocket
+- **Heartbeat**: Keep-alive automatique
+- **Cleanup**: Nettoyage connexions fermées
+- **Reconnection**: Support reconnexion automatique
+
+---
+
+## 🗄️ IMPLÉMENTATION STORAGE
+
+### **MemStorage Class** (`data/storage.ts`)
+
+#### **Stockage In-Memory**
+- **Maps**: Structures optimisées pour performance
+- **Persistence**: Données perdues au redémarrage
+- **Avantages**: Rapidité, simplicité développement
+- **Inconvénients**: Non persistent, limite mémoire
+
+#### **Collections Principales**
 ```typescript
 private users: Map<string, User>
 private announcements: Map<string, Announcement>
@@ -701,185 +1027,298 @@ private complaints: Map<string, Complaint>
 private permissions: Map<string, Permission>
 private contents: Map<string, Content>
 private categories: Map<string, Category>
+private employeeCategories: Map<string, EmployeeCategory>
 private trainings: Map<string, Training>
+private trainingParticipants: Map<string, TrainingParticipant>
 private courses: Map<string, Course>
+private lessons: Map<string, Lesson>
+private quizzes: Map<string, Quiz>
+private enrollments: Map<string, Enrollment>
+private lessonProgress: Map<string, LessonProgress>
+private quizAttempts: Map<string, QuizAttempt>
+private certificates: Map<string, Certificate>
+private resources: Map<string, Resource>
 private forumCategories: Map<string, ForumCategory>
-// ... autres collections
+private forumTopics: Map<string, ForumTopic>
+private forumPosts: Map<string, ForumPost>
+private forumLikes: Map<string, ForumLike>
+private forumUserStats: Map<string, ForumUserStats>
 ```
 
-## Middleware et Sécurité
+#### **Données d'Initialisation**
+- **Users**: 3 utilisateurs de test (admin, moderator, employee)
+- **Announcements**: 5 annonces d'exemple
+- **Documents**: 8 documents de procédures
+- **Events**: 4 événements planifiés
+- **Categories**: Structure hiérarchique
+- **Forum**: Catégories et topics de démo
+- **Courses**: 3 cours e-learning complets
 
-### Middleware de Sécurité (`security.ts`)
-**Fonctionnalités :**
-- Configuration Helmet pour sécurité HTTP
-- CORS configuré pour frontend
-- Rate limiting par IP
-- Sessions Express sécurisées
+#### **Méthodes de Recherche**
+- **Users**: Par username, employeeId, département
+- **Content**: Full-text search dans title/content
+- **Documents**: Par catégorie, title, description
+- **Announcements**: Par type, importance, contenu
 
-### Middleware d'Authentification
-**Fonctions :**
-- `requireAuth`: Vérification session active
-- `requireRole(roles[])`: Vérification rôle utilisateur
-- Extension des types Express pour session
+#### **Analytics & Stats**
+- **Compteurs**: Automatiques pour entités
+- **Agrégations**: Calculs temps réel
+- **Métriques**: Dashboard et reporting
+- **Tendances**: Données historiques (simulées)
 
-## Configuration (`config.ts`)
+---
 
-### Variables d'Environnement
-```typescript
-interface AppConfig {
-  port: number                    // PORT (default: 5000)
-  nodeEnv: string                // NODE_ENV (development|production|test)
-  sessionSecret: string          // SESSION_SECRET
-  bcryptSaltRounds: number       // BCRYPT_SALT_ROUNDS (default: 12)
-  databaseUrl?: string           // DATABASE_URL
-  smtp: {                        // Configuration SMTP
-    enabled: boolean             // SMTP_ENABLED
-    host?: string               // SMTP_HOST
-    port?: number               // SMTP_PORT
-    secure?: boolean            // SMTP_SECURE
-    user?: string               // SMTP_USER
-    pass?: string               // SMTP_PASS
-    from?: string               // EMAIL_FROM
-  }
-  upload: {                      // Configuration upload
-    maxFileSize: number         // MAX_FILE_SIZE (default: 10MB)
-    allowedTypes: string[]      // ALLOWED_FILE_TYPES
-    storageType: string         // STORAGE_TYPE (local|cloud)
-    storagePath: string         // STORAGE_PATH
-  }
-  features: {                    // Feature flags
-    registration: boolean       // ENABLE_REGISTRATION
-    emailNotifications: boolean // ENABLE_EMAIL_NOTIFICATIONS
-    fileUpload: boolean         // ENABLE_FILE_UPLOAD
-    forum: boolean              // ENABLE_FORUM
-    training: boolean           // ENABLE_TRAINING
-  }
-}
-```
+## ⚙️ CONFIGURATION
 
-### Validation de Configuration
-- Vérifications de sécurité pour production
-- Warnings pour configurations manquantes
-- Validation SMTP
-- Erreurs bloquantes en production
+### **Database Configuration** (`db.ts`)
+- **Provider**: PostgreSQL via Drizzle ORM
+- **Connection**: Pool de connexions
+- **Migrations**: Automatiques au démarrage
+- **Environment**: DATABASE_URL configuré
 
-## Base de Données et Migrations
+### **Server Configuration** (`config.ts`)
+- **Port**: 5000 par défaut, configurable
+- **Host**: 0.0.0.0 (accessible externe)
+- **Environment**: NODE_ENV pour mode
+- **Security**: Headers et CORS configurés
 
-### Configuration Drizzle
-- Support PostgreSQL natif
-- Fallback en mémoire pour développement
-- Pool de connexions
-- Migrations automatiques
+### **Process Monitoring** (`utils/process-monitor.ts`)
+- **Port cleanup**: Libération port au démarrage
+- **Health checks**: Monitoring continu
+- **Memory**: Surveillance utilisation
+- **Restart**: Redémarrage automatique si besoin
 
-### Système de Migrations (`migrations.ts`)
-**Fonctionnalités :**
-- Migration des mots de passe vers bcrypt
-- Setup initial des données
-- Migration incrémentale
-- Rollback support
+### **Vite Integration** (`vite.ts`)
+- **Development**: Serveur Vite intégré
+- **HMR**: Hot module replacement
+- **Proxy**: API routes proxifiées
+- **Build**: Assets statiques en production
 
-### Données de Test (`testData.ts`)
-**Contenu :**
-- 3 utilisateurs par défaut (admin, moderator, employee)
-- Annonces d'exemple
-- Documents de test
-- Événements
-- Messages et réclamations
-- Formations et cours
-- Catégories forum
+---
 
-## Performances et Optimisation
+## 🔄 MIGRATIONS ET DONNÉES
 
-### Stratégies Implémentées
-- Connection pooling PostgreSQL
-- Cache en mémoire pour storage
-- Requêtes optimisées avec indexes
-- Pagination automatique
-- Lazy loading des relations
+### **Migration System** (`migrations.ts`)
 
-### Monitoring et Logs
-- Logs structurés par service
-- Monitoring WebSocket connexions
-- Tracking des performances API
-- Error tracking détaillé
+#### **Password Migration**
+- **Fonction**: Migration bcrypt pour users existants
+- **Détection**: Mots de passe non hashés
+- **Process**: Hash automatique au démarrage
+- **Logging**: Progression et erreurs
 
-## Points d'Intégration Frontend
+#### **Schema Evolution**
+- **Drizzle**: Migration automatique schema
+- **Versioning**: Suivi versions database
+- **Rollback**: Possible avec backup
 
-### Session Management
-- Sessions Express avec store sécurisé
-- Cookies httpOnly et secure
-- Expiration automatique
-- Cross-tab synchronization
+### **Test Data** (`testData.ts`)
+- **Users**: Comptes pré-configurés
+- **Content**: Données d'exemple complètes
+- **Relations**: Liens entre entités
+- **Reset**: Fonction réinitialisation
 
-### API Response Format
-```typescript
-// Success responses
-{ data: T }
+---
 
-// Error responses  
-{ 
-  message: string, 
-  errors?: ValidationError[] 
-}
+## 📦 DÉPENDANCES PRINCIPALES
 
-// Statistics responses
-{
-  totalUsers: number,
-  totalAnnouncements: number,
-  // ... autres métriques
-}
-```
+### **Core Runtime**
+- **express**: 4.21.2 (Serveur HTTP)
+- **typescript**: 5.6.3 (Langage)
+- **tsx**: 4.19.1 (Exécution TS)
 
-### WebSocket Integration
-- Path: `/ws`
-- Query params: `userId` pour authentification
-- JSON message format standardisé
-- Automatic reconnection support
+### **Database & ORM**
+- **drizzle-orm**: 0.39.1 (ORM principal)
+- **drizzle-zod**: 0.7.0 (Validation schemas)
+- **@neondatabase/serverless**: 0.10.4 (PostgreSQL)
 
-## Sécurité et Authentification
+### **Authentication & Security**
+- **bcrypt**: 6.0.0 (Hash mots de passe)
+- **express-session**: 1.18.2 (Sessions)
+- **passport**: 0.7.0 (Auth strategies)
+- **passport-local**: 1.0.0 (Local auth)
+- **helmet**: 8.1.0 (Headers sécurité)
+- **express-rate-limit**: 8.0.1 (Rate limiting)
 
-### Authentification
-- Sessions Express avec store PostgreSQL
-- Mots de passe hashés avec bcrypt (12 rounds)
-- Protection CSRF
-- Rate limiting par endpoint
+### **Communication**
+- **ws**: 8.18.0 (WebSocket serveur)
+- **nodemailer**: 7.0.5 (Envoi emails)
 
-### Autorisation
-- Système de rôles (employee, moderator, admin)
-- Permissions granulaires par module
-- Validation côté serveur pour toutes les opérations
-- Contrôle d'accès par route
+### **Validation & Utils**
+- **zod**: 3.24.2 (Schema validation)
+- **zod-validation-error**: 3.4.0 (Error handling)
 
-### Sécurité Données
-- Validation Zod pour tous les inputs
-- Sanitization des données
-- Protection injection SQL (ORM)
-- HTTPS en production
+### **Development**
+- **drizzle-kit**: 0.30.4 (CLI migrations)
+- **esbuild**: 0.25.0 (Build tool)
 
-## État Actuel et Limitations
+---
 
-### Points Forts
-- API RESTful complète et cohérente
-- Architecture modulaire et extensible
-- Sécurité robuste
-- Support temps réel avec WebSocket
-- Système de permissions flexible
-- Configuration environment-based
+## 🔧 UTILITAIRES
 
-### Améliorations Possibles
-- Cache Redis pour scalabilité
-- Queue system pour traitement asynchrone
-- Monitoring APM (Application Performance Monitoring)
-- API rate limiting plus granulaire
-- Backup automatique base de données
-- Health checks détaillés
-- Documentation OpenAPI/Swagger
-- Tests d'intégration automatisés
+### **Process Monitor** (`utils/process-monitor.ts`)
 
-### Compatibilité et Déploiement
-- Node.js 18+
-- PostgreSQL 12+
-- Compatible Docker
-- Support cloud providers
-- Variables d'environnement standardisées
-- Prêt pour CI/CD
+#### **ensurePortAvailable(port: number): Promise<void>**
+- **Fonction**: Vérification port disponible
+- **Cleanup**: Fermeture processus existants
+- **Timeout**: Attente libération port
+
+#### **ServerMonitor Class**
+- **Health checks**: Monitoring continu serveur
+- **Memory tracking**: Surveillance mémoire
+- **Performance**: Métriques performance
+- **Alerts**: Notifications problèmes
+
+### **Vite Stabilizer** (`utils/vite-stabilizer.ts`)
+- **HMR**: Stabilisation hot reload
+- **Reconnection**: Gestion reconnexions
+- **Error filtering**: Suppression erreurs dev
+- **WebSocket**: Optimisation connexions
+
+---
+
+## 🌐 INTÉGRATIONS EXTERNES
+
+### **Google Cloud Storage** (Préparé)
+- **Library**: @google-cloud/storage 7.16.0
+- **Usage**: Upload fichiers et documents
+- **Authentication**: Service account
+- **Buckets**: Séparation par environnement
+
+### **LibreTranslate** (Intégré)
+- **Library**: libretranslate 1.0.1
+- **Usage**: Traduction automatique contenu
+- **Languages**: Multi-langue support
+- **Fallback**: Service local ou externe
+
+### **Google Auth** (Préparé)
+- **Library**: google-auth-library 10.2.1
+- **Usage**: SSO Google Workspace
+- **OAuth**: OpenID Connect
+- **Integration**: Avec system permissions
+
+---
+
+## 📊 MÉTRIQUES ET MONITORING
+
+### **Application Metrics**
+- **Response time**: Temps réponse API
+- **Request count**: Nombre requêtes par endpoint
+- **Error rate**: Taux d'erreur par route
+- **Active users**: Utilisateurs connectés
+
+### **Database Metrics** (Préparé)
+- **Query time**: Performance requêtes
+- **Connection pool**: Utilisation connexions
+- **Data size**: Taille données par table
+- **Growth rate**: Évolution données
+
+### **System Metrics**
+- **Memory usage**: RAM utilisée
+- **CPU usage**: Charge processeur
+- **Disk space**: Espace disque
+- **Network**: Bande passante
+
+---
+
+## 🔐 SÉCURITÉ
+
+### **Input Validation**
+- **Zod schemas**: Validation stricte
+- **Sanitization**: Nettoyage inputs
+- **Type safety**: TypeScript strict
+- **SQL injection**: Protection ORM
+
+### **Authentication Security**
+- **bcrypt**: Hash passwords (salt 12)
+- **Session management**: Secure cookies
+- **Rate limiting**: Protection brute force
+- **Account lockout**: Prévu pour échecs
+
+### **API Security**
+- **CORS**: Configuration restrictive
+- **Headers**: Security headers (Helmet)
+- **Content-Type**: Validation strict
+- **File upload**: Validation types/tailles
+
+### **Data Protection**
+- **Encryption**: Données sensibles
+- **Access control**: Permissions granulaires
+- **Audit logs**: Traçabilité actions
+- **Backup**: Stratégie sauvegarde
+
+---
+
+## 🚀 PERFORMANCES
+
+### **Caching Strategy**
+- **In-memory**: Données fréquentes
+- **Query optimization**: Index database
+- **CDN ready**: Assets statiques
+- **Compression**: Gzip responses
+
+### **Scalability**
+- **Stateless**: Sessions externalisables
+- **Database**: Pool connexions
+- **Load balancing**: Ready pour cluster
+- **Microservices**: Architecture modulaire
+
+---
+
+## 🔄 CI/CD ET DÉPLOIEMENT
+
+### **Build Process**
+- **TypeScript**: Compilation production
+- **Bundle**: Optimisation assets
+- **Minification**: Code compressé
+- **Tree shaking**: Élimination dead code
+
+### **Environment Management**
+- **Development**: Local avec HMR
+- **Staging**: Test complet
+- **Production**: Optimisé performance
+- **Configuration**: Variables env
+
+### **Health Checks**
+- **Endpoint**: /health avec métriques
+- **Database**: Connexion test
+- **External services**: Disponibilité
+- **Response format**: JSON standardisé
+
+---
+
+## 📝 LOGGING ET DEBUGGING
+
+### **Request Logging**
+- **Format**: Structured JSON logs
+- **Metrics**: Duration, status, response size
+- **Filtering**: Exclude static assets
+- **Levels**: Error, warn, info, debug
+
+### **Error Handling**
+- **Global handler**: Catch all errors
+- **Status codes**: Standardisés
+- **Error format**: Consistent JSON
+- **Stack traces**: Development uniquement
+
+### **Debug Tools**
+- **Development**: Source maps
+- **Performance**: Timing logs
+- **Memory**: Usage tracking
+- **Profiling**: Ready pour production
+
+---
+
+## 📋 RÉSUMÉ TECHNIQUE
+
+**Total Tables**: 21 tables PostgreSQL
+**Total API Endpoints**: 60+ routes RESTful
+**Total Interface Methods**: 140+ méthodes typées
+**Authentication**: Session-based avec bcrypt
+**Real-time**: WebSocket intégré
+**Security**: Headers + Rate limiting + Validation
+**Storage**: Interface-based (MemStorage/PostgreSQL)
+**Validation**: Zod schemas partagés
+**Performance**: Optimisé avec monitoring
+**Scalability**: Architecture modulaire et stateless
+
+Cette architecture backend offre une base solide, sécurisée et scalable pour IntraSphere, avec toutes les fonctionnalités d'une application d'entreprise moderne, incluant un système de formation e-learning complet, un forum communautaire, et des outils d'administration avancés.
