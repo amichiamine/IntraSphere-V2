@@ -1,733 +1,519 @@
-# INVENTAIRE EXHAUSTIF BACKEND - IntraSphere
-**Date d'analyse**: 8 août 2025 (Mise à jour post-corrections)  
-**Structure**: Option R3 (routes/ + services/ + middleware/ + data/)  
-**Total fichiers analysés**: 11 fichiers TypeScript Node.js  
-**Status**: Trust proxy configuré, rate limiting opérationnel, API fonctionnelle
+# INVENTAIRE BACKEND - INTRASPHERE
 
-## 🏗️ ARCHITECTURE BACKEND
+## 📁 STRUCTURE GENERALE DU BACKEND
 
-### Structure des Dossiers
+### Répertoire racine server/
 ```
 server/
-├── 📁 routes/              → Endpoints API REST
-│   └── api.ts             → Routes principales (1800+ lignes)
-├── 📁 services/           → Logique métier
-│   ├── auth.ts            → Service d'authentification
-│   └── email.ts           → Service d'email
-├── 📁 middleware/         → Middlewares Express
-│   └── security.ts        → Sécurité et rate limiting
-├── 📁 data/              → Couche de persistance
-│   └── storage.ts         → Interface et implémentation MemStorage
-├── 📁 public/            → Fichiers statiques (build Vite)
-│   ├── assets/           → JS/CSS compilés
-│   └── index.html        → SPA entry point
-├── config.ts             → Configuration serveur
-├── db.ts                 → Connexion base de données
-├── index.ts              → Point d'entrée principal
-├── migrations.ts         → Migrations de données
-├── testData.ts           → Données de test/dev
-└── vite.ts               → Serveur Vite intégré
+├── index.ts           # Point d'entrée principal du serveur
+├── config.ts          # Configuration du serveur
+├── db.ts              # Configuration base de données PostgreSQL
+├── vite.ts            # Configuration Vite pour le serveur
+├── migrations.ts      # Migrations et setup initial
+├── testData.ts        # Données de test
+├── data/              # Couche de données et stockage
+├── routes/            # Routes API REST
+├── services/          # Services métier
+├── middleware/        # Middleware Express
+└── public/            # Fichiers publics statiques
 ```
 
-## 🛠️ CONFIGURATION ET DÉMARRAGE
-
-### **index.ts** - Point d'Entrée Principal (100 lignes)
-- **Express server** sur port 5000
-- **Middleware stack** :
-  - Rate limiting avec express-rate-limit
-  - CORS pour développement
-  - Session management avec express-session + connect-pg-simple
-  - Body parsing (JSON, URL-encoded)
-  - Compression gzip
-  - Helmet pour sécurité
-- **Routes** : API `/api/*` + Vite fallback
-- **Gestion d'erreurs** : Catch global + logging
-- **Migrations** automatiques au démarrage
-
-### **config.ts** - Configuration Serveur
-- **Variables d'environnement** :
-  - `DATABASE_URL` : Connexion PostgreSQL
-  - `SESSION_SECRET` : Clé sessions
-  - `NODE_ENV` : development/production
-- **Ports** : 5000 backend, 3000 Vite dev
-- **Sessions** : Durée, cookies sécurisés
-
-### **db.ts** - Base de Données
-- **Drizzle ORM** avec PostgreSQL
-- **Configuration** : Pool de connexions
-- **Migration** : Automatic schema sync
-- **Connexion** via `@neondatabase/serverless`
-
-### **vite.ts** - Intégration Vite (50 lignes)
-- **Serveur Vite** intégré pour développement
-- **Proxy** : API requests vers Express
-- **Hot reload** : Rechargement automatique
-- **Build** : Production assets dans public/
-
-## 🔐 SÉCURITÉ ET MIDDLEWARE
-
-### **middleware/security.ts** - Sécurité (150 lignes)
-- **Rate limiting** :
-  - `/api/auth/login` : 5 tentatives/15min
-  - `/api/auth/register` : 3 tentatives/hour
-  - API générale : 100 req/15min
-- **Headers sécurisés** avec Helmet :
-  - Content Security Policy
-  - HSTS
-  - X-Frame-Options
-  - X-Content-Type-Options
-- **Validation** des entrées
-- **Logging** des requêtes
-
-### **services/auth.ts** - Authentification (200 lignes)
-- **Hachage des mots de passe** avec bcrypt (10 rounds)
-- **Méthodes** :
-  - `hashPassword(password)` : Hachage sécurisé
-  - `verifyPassword(password, hash)` : Vérification
-  - `generateSessionToken()` : Tokens de session
-- **Validation** : Force des mots de passe
-- **Sécurité** : Protection timing attacks
-
-### **services/email.ts** - Service Email (100 lignes)
-- **Configuration** : SMTP avec nodemailer
-- **Templates** : Email HTML/text
-- **Types d'emails** :
-  - Confirmation d'inscription
-  - Réinitialisation mot de passe
-  - Notifications système
-- **Queue** : Envoi asynchrone
-- **Retry** : Gestion des échecs
-
-## 📊 STOCKAGE ET PERSISTANCE
-
-### **data/storage.ts** - Interface Storage (2000+ lignes)
-#### Interface IStorage - Contrat API (75 méthodes)
-
-**👥 Gestion Utilisateurs (11 méthodes)**
-- `getUser(id)`, `getUserByUsername()`, `getUserByEmployeeId()`
-- `createUser()`, `updateUser()`, `getUsers()`
-
-**📢 Gestion Annonces (5 méthodes)**
-- `getAnnouncements()`, `getAnnouncementById()`
-- `createAnnouncement()`, `updateAnnouncement()`, `deleteAnnouncement()`
-
-**📄 Gestion Documents (5 méthodes)**
-- `getDocuments()`, `getDocumentById()`
-- `createDocument()`, `updateDocument()`, `deleteDocument()`
-
-**📅 Gestion Événements (5 méthodes)**
-- `getEvents()`, `getEventById()`
-- `createEvent()`, `updateEvent()`, `deleteEvent()`
-
-**💬 Gestion Messages (4 méthodes)**
-- `getMessages()`, `getMessageById()`
-- `createMessage()`, `markMessageAsRead()`
-
-**🎫 Gestion Réclamations (5 méthodes)**
-- `getComplaints()`, `getComplaintById()`, `getComplaintsByUser()`
-- `createComplaint()`, `updateComplaint()`
-
-**🛡️ Gestion Permissions (4 méthodes)**
-- `getPermissions()`, `createPermission()`
-- `revokePermission()`, `hasPermission()`
-
-**📰 Gestion Contenu (5 méthodes)**
-- `getContents()`, `getContentById()`
-- `createContent()`, `updateContent()`, `deleteContent()`
-
-**🏷️ Gestion Catégories (10 méthodes)**
-- Catégories générales : `getCategories()`, CRUD complet
-- Catégories employés : `getEmployeeCategories()`, CRUD complet
-
-**⚙️ Paramètres Système (2 méthodes)**
-- `getSystemSettings()`, `updateSystemSettings()`
-
-**🎓 Système de Formation (15 méthodes)**
-- Formations : `getTrainings()`, CRUD complet, `searchTrainings()`
-- Participants : `getTrainingParticipants()`, inscription/désinscription
-- Cours : `getCourses()`, CRUD, `getCoursesByTraining()`
-- Leçons : `getLessons()`, CRUD, `getLessonsByCourse()`
-- Quizzes : `getQuizzes()`, CRUD, `getQuizzesByLesson()`
-- Inscriptions : `getEnrollments()`, gestion complète
-- Progression : `getLessonProgress()`, `updateProgress()`
-- Tentatives quiz : `getQuizAttempts()`, `submitQuizAttempt()`
-- Certificats : `getCertificates()`, `generateCertificate()`
-- Ressources : `getResources()`, CRUD complet
-
-**💬 Système Forum (12 méthodes)**
-- Catégories : `getForumCategories()`, CRUD
-- Sujets : `getForumTopics()`, CRUD, `getTopicsByCategory()`
-- Posts : `getForumPosts()`, CRUD, `getPostsByTopic()`
-- Likes : `getForumLikes()`, `toggleLike()`
-- Statistiques : `getForumUserStats()`, `updateUserStats()`
-
-#### MemStorage - Implémentation en Mémoire (1500+ lignes)
-- **Collections** : Maps pour chaque entité
-- **Données de test** : Utilisateurs, annonces, documents pré-remplis
-- **Validation** : Contraintes de référence simulées
-- **Performance** : Recherche optimisée avec index
-
-### **testData.ts** - Données de Test (300 lignes)
-- **3 utilisateurs** pré-configurés :
-  - `admin` / `admin123` (Administrateur)
-  - `marie.martin` / `marie123` (Manager)
-  - `pierre.dubois` / `pierre123` (Employé)
-- **Annonces** : 2 exemples (politique, formation)
-- **Documents** : 3 exemples (règlement, guide, procédure)
-- **Événements** : 2 réunions planifiées
-- **Formations** : 2 cours (sécurité, management)
-
-### **migrations.ts** - Migrations (150 lignes)
-- **Migration des mots de passe** : bcrypt pour comptes existants
-- **Versioning** : Système de versions de schéma
-- **Rollback** : Possibilité de retour arrière
-- **Logging** : Trace des migrations appliquées
-
-## 🌐 API REST - Routes Principales
-
-### **routes/api.ts** - API Endpoints (1800+ lignes)
-
-#### 🔐 Authentification (6 endpoints)
-```typescript
-POST   /api/auth/login           // Connexion utilisateur
-POST   /api/auth/register        // Inscription (si activé)
-POST   /api/auth/logout          // Déconnexion
-GET    /api/auth/me              // Profil utilisateur connecté
-PUT    /api/auth/me              // Mise à jour profil
-PUT    /api/auth/password        // Changement mot de passe
-```
-
-#### 📊 Statistiques (1 endpoint)
-```typescript
-GET    /api/stats                // Métriques dashboard
-```
-
-#### 📢 Annonces (5 endpoints)
-```typescript
-GET    /api/announcements        // Liste des annonces
-GET    /api/announcements/:id    // Détail annonce
-POST   /api/announcements        // Créer annonce [auth]
-PUT    /api/announcements/:id    // Modifier annonce [permission]
-DELETE /api/announcements/:id    // Supprimer annonce [permission]
-```
-
-#### 📄 Documents (5 endpoints)
-```typescript
-GET    /api/documents            // Liste des documents
-GET    /api/documents/:id        // Détail document
-POST   /api/documents            // Créer document [permission]
-PUT    /api/documents/:id        // Modifier document [permission]
-DELETE /api/documents/:id        // Supprimer document [permission]
-```
-
-#### 📅 Événements (5 endpoints)
-```typescript
-GET    /api/events               // Liste des événements
-GET    /api/events/:id           // Détail événement
-POST   /api/events               // Créer événement [permission]
-PUT    /api/events/:id           // Modifier événement [permission]
-DELETE /api/events/:id           // Supprimer événement [permission]
-```
-
-#### 👥 Utilisateurs (6 endpoints)
-```typescript
-GET    /api/users                // Liste utilisateurs [admin]
-GET    /api/users/:id            // Détail utilisateur [admin]
-POST   /api/users                // Créer utilisateur [admin]
-PUT    /api/users/:id            // Modifier utilisateur [admin]
-PUT    /api/users/:id/activate   // Activer compte [admin]
-PUT    /api/users/:id/deactivate // Désactiver compte [admin]
-```
-
-#### 💬 Messages (4 endpoints)
-```typescript
-GET    /api/messages             // Messages utilisateur [auth]
-GET    /api/messages/:id         // Détail message [auth]
-POST   /api/messages             // Envoyer message [auth]
-PUT    /api/messages/:id/read    // Marquer lu [auth]
-```
-
-#### 🎫 Réclamations (6 endpoints)
-```typescript
-GET    /api/complaints           // Liste réclamations [auth]
-GET    /api/complaints/:id       // Détail réclamation [auth]
-GET    /api/complaints/my        // Mes réclamations [auth]
-POST   /api/complaints           // Créer réclamation [auth]
-PUT    /api/complaints/:id       // Modifier réclamation [permission]
-PUT    /api/complaints/:id/assign// Assigner réclamation [permission]
-```
-
-#### 🛡️ Permissions (4 endpoints)
-```typescript
-GET    /api/permissions/:userId  // Permissions utilisateur [admin]
-POST   /api/permissions          // Accorder permission [admin]
-DELETE /api/permissions/:id      // Révoquer permission [admin]
-GET    /api/permissions/check    // Vérifier permission [auth]
-```
-
-#### 📰 Contenu (5 endpoints)
-```typescript
-GET    /api/contents             // Liste contenus [auth]
-GET    /api/contents/:id         // Détail contenu [auth]
-POST   /api/contents             // Créer contenu [permission]
-PUT    /api/contents/:id         // Modifier contenu [permission]
-DELETE /api/contents/:id         // Supprimer contenu [permission]
-```
-
-#### 🏷️ Catégories (10 endpoints)
-```typescript
-// Catégories générales
-GET    /api/categories           // Liste catégories
-POST   /api/categories           // Créer catégorie [permission]
-PUT    /api/categories/:id       // Modifier catégorie [permission]
-DELETE /api/categories/:id       // Supprimer catégorie [permission]
-
-// Catégories employés
-GET    /api/employee-categories  // Liste catégories employés [admin]
-POST   /api/employee-categories  // Créer catégorie employé [admin]
-PUT    /api/employee-categories/:id // Modifier catégorie [admin]
-DELETE /api/employee-categories/:id // Supprimer catégorie [admin]
-```
-
-#### ⚙️ Paramètres Système (2 endpoints)
-```typescript
-GET    /api/system-settings      // Paramètres système [admin]
-PUT    /api/system-settings      // Modifier paramètres [admin]
-```
-
-#### 🎓 Formations (25 endpoints)
-```typescript
-// Formations
-GET    /api/trainings            // Liste formations
-GET    /api/trainings/:id        // Détail formation
-POST   /api/trainings            // Créer formation [permission]
-PUT    /api/trainings/:id        // Modifier formation [permission]
-DELETE /api/trainings/:id        // Supprimer formation [permission]
-
-// Participants
-GET    /api/trainings/:id/participants // Participants formation
-POST   /api/trainings/:id/register     // S'inscrire [auth]
-DELETE /api/trainings/:id/unregister   // Se désinscrire [auth]
-
-// Cours
-GET    /api/courses              // Liste cours
-GET    /api/trainings/:id/courses// Cours par formation
-POST   /api/courses              // Créer cours [permission]
-PUT    /api/courses/:id          // Modifier cours [permission]
-DELETE /api/courses/:id          // Supprimer cours [permission]
-
-// Leçons  
-GET    /api/lessons              // Liste leçons
-GET    /api/courses/:id/lessons  // Leçons par cours
-POST   /api/lessons              // Créer leçon [permission]
-PUT    /api/lessons/:id          // Modifier leçon [permission]
-DELETE /api/lessons/:id          // Supprimer leçon [permission]
-
-// Progression
-GET    /api/progress/:userId     // Progression utilisateur [auth]
-PUT    /api/progress/:lessonId   // Mettre à jour progression [auth]
-
-// Certificats
-GET    /api/certificates/:userId // Certificats utilisateur [auth]
-POST   /api/certificates         // Générer certificat [permission]
-
-// Ressources
-GET    /api/resources            // Liste ressources
-POST   /api/resources            // Créer ressource [permission]
-PUT    /api/resources/:id        // Modifier ressource [permission]
-DELETE /api/resources/:id        // Supprimer ressource [permission]
-```
-
-#### 💬 Forum (15 endpoints)
-```typescript
-// Catégories forum
-GET    /api/forum/categories     // Catégories forum
-POST   /api/forum/categories     // Créer catégorie [permission]
-PUT    /api/forum/categories/:id // Modifier catégorie [permission]
-DELETE /api/forum/categories/:id // Supprimer catégorie [permission]
-
-// Sujets
-GET    /api/forum/topics         // Liste sujets
-GET    /api/forum/categories/:id/topics // Sujets par catégorie
-GET    /api/forum/topics/:id     // Détail sujet
-POST   /api/forum/topics         // Créer sujet [auth]
-PUT    /api/forum/topics/:id     // Modifier sujet [permission]
-DELETE /api/forum/topics/:id     // Supprimer sujet [permission]
-
-// Posts
-GET    /api/forum/posts          // Liste posts
-GET    /api/forum/topics/:id/posts // Posts par sujet
-POST   /api/forum/posts          // Créer post [auth]
-PUT    /api/forum/posts/:id      // Modifier post [auth/permission]
-DELETE /api/forum/posts/:id      // Supprimer post [permission]
-
-// Likes
-POST   /api/forum/posts/:id/like // Liker/unliker post [auth]
-```
-
-### Middlewares de Sécurité
-
-#### **requireAuth** - Authentification Requise
-- **Vérification** : Session utilisateur active
-- **Réponse** : 401 si non authentifié
-- **Usage** : Toutes les routes protégées
-
-#### **requireRole(roles)** - Contrôle de Rôle
-- **Vérification** : Rôle utilisateur dans liste autorisée
-- **Rôles** : 'admin', 'moderator', 'employee'
-- **Réponse** : 403 si permissions insuffisantes
-- **Usage** : Routes admin uniquement
-
-#### **requirePermission(permission)** - Permission Granulaire
-- **Vérification** : Permission spécifique accordée
-- **Types** :
-  - `manage_announcements`
-  - `manage_documents`
-  - `manage_events`
-  - `manage_users`
-  - `validate_topics`
-  - `validate_posts`
-  - `manage_employee_categories`
-  - `manage_trainings`
-- **Délégation** : Admin peut déléguer permissions
-
-## 🗄️ SCHÉMA DE BASE DE DONNÉES
-
-### **shared/schema.ts** - Modèle de Données (600+ lignes)
-
-#### Tables Principales (13 tables)
-
-**👥 users** - Utilisateurs
-```sql
-- id (UUID, PK)
-- username (unique)
-- password (bcrypt)
-- name, role, avatar
-- employeeId (unique)
-- department, position, isActive
-- phone, email
-- createdAt, updatedAt
-```
-
-**📢 announcements** - Annonces
-```sql
-- id (UUID, PK)
-- title, content, type
-- authorId (FK users), authorName
-- imageUrl, icon
-- createdAt, isImportant
-```
-
-**📄 documents** - Documents
-```sql
-- id (UUID, PK)
-- title, description, category
-- fileName, fileUrl
-- updatedAt, version
-```
-
-**📅 events** - Événements
-```sql
-- id (UUID, PK)
-- title, description, date
-- location, type
-- organizerId (FK users)
-- createdAt
-```
-
-**💬 messages** - Messages Internes
-```sql
-- id (UUID, PK)
-- senderId (FK users)
-- recipientId (FK users)
-- subject, content
-- isRead, createdAt
-```
-
-**🎫 complaints** - Réclamations
-```sql
-- id (UUID, PK)
-- submitterId (FK users)
-- assignedToId (FK users)
-- title, description
-- category, priority, status
-- createdAt, updatedAt
-```
-
-**🛡️ permissions** - Permissions
-```sql
-- id (UUID, PK)
-- userId (FK users)
-- grantedBy (FK users)
-- permission
-- createdAt
-```
-
-#### Tables Formation (6 tables)
-
-**🎓 trainings** - Formations
-```sql
-- id (UUID, PK)
-- title, description, category
-- difficulty, duration
-- instructorId (FK users), instructorName
-- startDate, endDate, location
-- maxParticipants, currentParticipants
-- isMandatory, isActive, isVisible
-- thumbnailUrl, documentUrls[]
-- createdAt, updatedAt
-```
-
-**📚 trainingParticipants** - Participants
-```sql
-- id (UUID, PK)
-- trainingId (FK trainings)
-- userId (FK users)
-- registeredAt, status
-- completionDate, score, feedback
-```
-
-**📖 courses** - Cours
-```sql
-- id (UUID, PK)
-- trainingId (FK trainings)
-- title, description
-- order, duration
-- isActive, prerequisites[]
-- createdAt, updatedAt
-```
-
-**📝 lessons** - Leçons
-```sql
-- id (UUID, PK)
-- courseId (FK courses)
-- title, content, type
-- order, duration
-- videoUrl, attachments[]
-- isActive, createdAt, updatedAt
-```
-
-**🧪 quizzes** - Quiz
-```sql
-- id (UUID, PK)
-- lessonId (FK lessons)
-- title, description
-- questions[] (JSON), passingScore
-- timeLimit, maxAttempts
-- isActive, createdAt, updatedAt
-```
-
-**📋 enrollments** - Inscriptions
-```sql
-- id (UUID, PK)
-- userId (FK users)
-- trainingId (FK trainings)
-- enrolledAt, status
-- progress, completedAt
-- certificateId
-```
-
-#### Tables Forum (4 tables)
-
-**🗂️ forumCategories** - Catégories Forum
-```sql
-- id (UUID, PK)
-- name, description
-- color, icon
-- isActive, order
-- createdAt, updatedAt
-```
-
-**💬 forumTopics** - Sujets Forum
-```sql
-- id (UUID, PK)
-- categoryId (FK forumCategories)
-- authorId (FK users)
-- title, content
-- isPinned, isLocked
-- viewCount, replyCount
-- lastReplyAt, createdAt, updatedAt
-```
-
-**💭 forumPosts** - Posts Forum
-```sql
-- id (UUID, PK)
-- topicId (FK forumTopics)
-- authorId (FK users)
-- content, likeCount
-- isEdited, editedAt
-- createdAt, updatedAt
-```
-
-**👍 forumLikes** - Likes Forum
-```sql
-- id (UUID, PK)
-- postId (FK forumPosts)
-- userId (FK users)
-- createdAt
-```
-
-### Schémas de Validation Zod (25 schémas)
-- **Insert schemas** pour chaque table
-- **Validation** : Types, longueurs, formats
-- **Sécurité** : Sanitization des entrées
-- **Types inférés** pour TypeScript
-
-## 🔧 FONCTIONNALITÉS BACKEND
-
-### Authentification et Sessions
-- **Bcrypt** : Hachage sécurisé (10 rounds)
-- **Sessions** : express-session + PostgreSQL store
-- **Tokens** : UUID pour sessions
-- **Expiration** : Configurable
-- **CSRF** : Protection incluse
-
-### Gestion des Permissions
-- **RBAC** : Role-Based Access Control
-- **Granularité** : Permissions spécifiques par fonctionnalité
-- **Délégation** : Admin peut déléguer sans perdre contrôle
-- **Héritage** : Admin hérite de toutes les permissions
-
-### Upload de Fichiers
-- **Multer** : Gestion des uploads
-- **Validation** : Types MIME, tailles
-- **Stockage** : Local/Cloud configurable
-- **Sécurité** : Scan antivirus potentiel
-
-### Cache et Performance
-- **React Query** : Cache côté client automatique
-- **Compression** : Gzip pour réponses
-- **ETags** : Cache navigateur
-- **Pagination** : Pour listes importantes
-
-### Logging et Monitoring
-- **Structured logging** : JSON format
-- **Niveaux** : error, warn, info, debug
-- **Contexte** : User ID, request ID
-- **Métriques** : Temps de réponse, erreurs
-
-## 📊 MÉTRIQUES BACKEND
-
-### API Endpoints par Fonctionnalité
-1. **Formations** : 25 endpoints (le plus complexe)
-2. **Forum** : 15 endpoints
-3. **Catégories** : 10 endpoints
-4. **Réclamations** : 6 endpoints
-5. **Utilisateurs** : 6 endpoints
-6. **Authentification** : 6 endpoints
-
-### Complexité par Fichier
-1. **routes/api.ts** : 1800+ lignes (le plus complexe)
-2. **data/storage.ts** : 2000+ lignes (interface + implémentation)
-3. **shared/schema.ts** : 600+ lignes (modèle de données)
-4. **testData.ts** : 300+ lignes (données de test)
-5. **services/auth.ts** : 200+ lignes
-
-### Méthodes Storage par Entité
-1. **Formation** : 15 méthodes (système complet)
-2. **Forum** : 12 méthodes (discussion complète)
-3. **Utilisateurs** : 11 méthodes (gestion complète)
-4. **Catégories** : 10 méthodes (double système)
-5. **Standard** : 5 méthodes par entité (CRUD)
-
-## 🚨 POINTS D'ATTENTION DÉTECTÉS
-
-### ✅ Sécurité Opérationnelle
-- **Rate limiting** : ✅ Configuré et fonctionnel avec trust proxy
-- **Input validation** : Zod complet sur tous les endpoints
-- **SQL injection** : Protection Drizzle ORM intégrale
-- **Trust proxy** : ✅ Configuré pour environnement Replit
-- **Sessions** : Sécurisées avec PostgreSQL store
-
-### Performance
-- **MemStorage** : Performant en dev mais non persistant
-- **Database queries** : Pas d'optimisation N+1 queries
-- **Cache** : Pas de cache serveur (Redis recommandé)
-- **Pagination** : Implémentée mais pas partout
-
-### Scalabilité
-- **Single instance** : Pas de support multi-instance
-- **File storage** : Local uniquement, cloud storage recommandé
-- **Session store** : PostgreSQL OK mais Redis plus performant
-- **Background jobs** : Pas de queue pour tâches longues
-
-### Monitoring
-- **Health checks** : Basiques uniquement
-- **Metrics** : Pas de Prometheus/OpenTelemetry
-- **Alerting** : Pas de système d'alertes
-- **Tracing** : Pas de tracing distribué
-
-## ✅ FORCES DU BACKEND
-
-### Architecture Solide
-- **Séparation claire** : routes/services/middleware/data
-- **Interface contracts** : IStorage bien défini
-- **Type safety** : TypeScript intégral + Zod
-- **Modularité** : Fonctionnalités bien découplées
-
-### Sécurité Robuste
-- **Authentification** : Bcrypt + sessions sécurisées
-- **Autorisation** : RBAC + permissions granulaires
-- **Rate limiting** : Protection DOS
-- **Input validation** : Zod complet
-
-### API Complète
-- **RESTful** : Design cohérent
-- **CRUD complet** : Toutes les entités
-- **Error handling** : Codes HTTP appropriés
-- **Documentation** : Endpoints bien structurés
-
-### Fonctionnalités Avancées
-- **Système de formation** : Complet avec progression
-- **Forum de discussion** : Avec modération
-- **Gestion des permissions** : Délégation flexible
-- **Multi-tenancy ready** : Structure extensible
-
-## 🔄 FLUX DE DONNÉES
+## 🚀 SERVEUR PRINCIPAL - server/index.ts
+
+### Configuration Express
+- **Framework** : Express.js avec TypeScript
+- **Port** : 5000 (développement)
+- **Middleware de sécurité** : Helmet pour les en-têtes sécurisés
+- **Parsing** : JSON et URL-encoded
+- **Sessions** : Express-session avec PostgreSQL store
+- **Rate limiting** : Protection contre les attaques DoS
+
+### Middleware Pipeline
+1. **Logging personnalisé** - Capture des requêtes API avec temps de réponse
+2. **Helmet** - Sécurisation des en-têtes HTTP
+3. **JSON/URL parsing** - Traitement des corps de requête
+4. **Session management** - Gestion des sessions utilisateur
+5. **Rate limiting** - Limitation du nombre de requêtes
+6. **Vite middleware** - Serveur de développement intégré
+
+### Services initiaux
+- **Migrations automatiques** - Migration des mots de passe au démarrage
+- **Données de test** - Initialisation optionnelle des données de démonstration
+
+## 🗄️ SCHÉMA DE BASE DE DONNÉES - shared/schema.ts
+
+### Tables principales (13 tables)
+
+#### Gestion des utilisateurs
+**users** - Table des utilisateurs
+- `id` (UUID, PK) - Identifiant unique
+- `username` (TEXT, UNIQUE) - Nom d'utilisateur
+- `password` (TEXT) - Mot de passe hashé
+- `name` (TEXT) - Nom complet
+- `role` (TEXT) - Rôle (employee, admin, moderator)
+- `avatar` (TEXT) - URL de l'avatar
+- `employeeId` (VARCHAR, UNIQUE) - Identifiant employé
+- `department` (VARCHAR) - Département
+- `position` (VARCHAR) - Poste
+- `isActive` (BOOLEAN) - Statut actif
+- `phone` (VARCHAR) - Téléphone
+- `email` (VARCHAR) - Email
+- `createdAt/updatedAt` (TIMESTAMP) - Horodatage
+
+#### Système de contenu
+**announcements** - Annonces
+- `id` (UUID, PK) - Identifiant
+- `title` (TEXT) - Titre
+- `content` (TEXT) - Contenu
+- `type` (TEXT) - Type (info, important, event, formation)
+- `authorId/authorName` - Auteur
+- `imageUrl` (TEXT) - URL image
+- `icon` (TEXT) - Icône
+- `isImportant` (BOOLEAN) - Priorité
+- `createdAt` (TIMESTAMP) - Date création
+
+**documents** - Documents
+- `id` (UUID, PK) - Identifiant
+- `title` (TEXT) - Titre
+- `description` (TEXT) - Description
+- `category` (TEXT) - Catégorie (regulation, policy, guide, procedure)
+- `fileName/fileUrl` (TEXT) - Fichier
+- `version` (TEXT) - Version
+- `updatedAt` (TIMESTAMP) - Dernière mise à jour
+
+**contents** - Contenu multimédia
+- `id` (UUID, PK) - Identifiant
+- `title` (TEXT) - Titre
+- `type` (TEXT) - Type (video, image, document, audio)
+- `category` (TEXT) - Catégorie
+- `description` (TEXT) - Description
+- `fileUrl/thumbnailUrl` (TEXT) - URLs
+- `duration` (TEXT) - Durée
+- `viewCount/rating` (INTEGER) - Métriques
+- `tags` (TEXT[]) - Tags
+- `isPopular/isFeatured` (BOOLEAN) - Statut
+
+**categories** - Catégories de contenu
+- `id` (UUID, PK) - Identifiant
+- `name` (TEXT, UNIQUE) - Nom
+- `description` (TEXT) - Description
+- `icon` (TEXT) - Icône
+- `color` (TEXT) - Couleur
+- `isVisible` (BOOLEAN) - Visibilité
+- `sortOrder` (INTEGER) - Ordre de tri
+- `createdAt` (TIMESTAMP) - Date création
+
+#### Système de communication
+**messages** - Messages privés
+- `id` (UUID, PK) - Identifiant
+- `senderId/recipientId` (UUID, FK) - Expéditeur/Destinataire
+- `subject` (TEXT) - Sujet
+- `content` (TEXT) - Contenu
+- `isRead` (BOOLEAN) - Lu/Non lu
+- `createdAt` (TIMESTAMP) - Date création
+
+**complaints** - Réclamations
+- `id` (UUID, PK) - Identifiant
+- `submitterId/assignedToId` (UUID, FK) - Soumetteur/Assigné
+- `title` (TEXT) - Titre
+- `description` (TEXT) - Description
+- `category` (TEXT) - Catégorie (hr, it, facilities, other)
+- `priority` (TEXT) - Priorité (low, medium, high, urgent)
+- `status` (TEXT) - Statut (open, in_progress, resolved, closed)
+- `createdAt/updatedAt` (TIMESTAMP) - Horodatage
+
+#### Système de formation
+**trainings** - Formations
+- `id` (UUID, PK) - Identifiant
+- `title` (TEXT) - Titre
+- `description` (TEXT) - Description
+- `category` (TEXT) - Catégorie (technical, management, safety, compliance, other)
+- `difficulty` (TEXT) - Difficulté (beginner, intermediate, advanced)
+- `duration` (INTEGER) - Durée en minutes
+- `instructorId/instructorName` - Instructeur
+- `startDate/endDate` (TIMESTAMP) - Dates
+- `location` (TEXT) - Lieu
+- `maxParticipants/currentParticipants` (INTEGER) - Participants
+- `isMandatory/isActive/isVisible` (BOOLEAN) - Statuts
+- `thumbnailUrl` (TEXT) - Miniature
+- `documentUrls` (TEXT[]) - Documents
+- `createdAt/updatedAt` (TIMESTAMP) - Horodatage
+
+**trainingParticipants** - Participants aux formations
+- `id` (UUID, PK) - Identifiant
+- `trainingId/userId` (UUID, FK) - Formation/Utilisateur
+- `registeredAt` (TIMESTAMP) - Date d'inscription
+- `status` (TEXT) - Statut (registered, completed, cancelled)
+- `completionDate` (TIMESTAMP) - Date de completion
+- `score` (INTEGER) - Score (0-100)
+- `feedback` (TEXT) - Commentaires
+
+#### Système de permissions
+**permissions** - Délégations de permissions
+- `id` (UUID, PK) - Identifiant
+- `userId/grantedBy` (UUID, FK) - Utilisateur/Accordé par
+- `permission` (TEXT) - Permission accordée
+- `createdAt` (TIMESTAMP) - Date création
+
+#### Configuration système
+**employeeCategories** - Catégories d'employés
+- `id` (UUID, PK) - Identifiant
+- `name` (TEXT, UNIQUE) - Nom
+- `description` (TEXT) - Description
+- `color` (TEXT) - Couleur
+- `permissions` (TEXT[]) - Permissions
+- `isActive` (BOOLEAN) - Statut actif
+- `createdAt` (TIMESTAMP) - Date création
+
+**systemSettings** - Paramètres système
+- `id` (VARCHAR, PK) - "settings" (singleton)
+- `showAnnouncements/showContent/showDocuments` (BOOLEAN) - Visibilité des modules
+- `showForum/showMessages/showComplaints` (BOOLEAN) - Visibilité communication
+- `showTraining` (BOOLEAN) - Visibilité formation
+- `updatedAt` (TIMESTAMP) - Dernière mise à jour
+
+**events** - Événements
+- `id` (UUID, PK) - Identifiant
+- `title` (TEXT) - Titre
+- `description` (TEXT) - Description
+- `date` (TIMESTAMP) - Date
+- `location` (TEXT) - Lieu
+- `type` (TEXT) - Type (meeting, training, social, other)
+- `organizerId` (UUID, FK) - Organisateur
+- `createdAt` (TIMESTAMP) - Date création
+
+### Schémas de validation Zod (15 schémas)
+- `insertUserSchema` - Validation utilisateur
+- `insertAnnouncementSchema` - Validation annonce
+- `insertDocumentSchema` - Validation document
+- `insertEventSchema` - Validation événement
+- `insertMessageSchema` - Validation message
+- `insertComplaintSchema` - Validation réclamation
+- `insertPermissionSchema` - Validation permission
+- `insertContentSchema` - Validation contenu
+- `insertCategorySchema` - Validation catégorie
+- `insertEmployeeCategorySchema` - Validation catégorie employé
+- `insertSystemSettingsSchema` - Validation paramètres
+- `insertTrainingSchema` - Validation formation
+- `insertTrainingParticipantSchema` - Validation participant
+
+### Types TypeScript (13+ types)
+- Types de sélection pour chaque table (`User`, `Announcement`, etc.)
+- Types d'insertion pour chaque table (`InsertUser`, `InsertAnnouncement`, etc.)
+
+## 🔄 ROUTES API - server/routes/api.ts
+
+### Authentification (4 routes)
+- `POST /api/auth/login` - Connexion utilisateur
+- `POST /api/auth/register` - Inscription utilisateur
+- `GET /api/auth/me` - Informations utilisateur actuel
+- `POST /api/auth/logout` - Déconnexion
+
+### Statistiques
+- `GET /api/stats` - Statistiques du tableau de bord
+
+### Annonces (3 routes)
+- `GET /api/announcements` - Liste des annonces
+- `GET /api/announcements/:id` - Annonce par ID
+- `POST /api/announcements` - Création d'annonce
+
+### Documents (5 routes CRUD complètes)
+- `GET /api/documents` - Liste des documents
+- `GET /api/documents/:id` - Document par ID
+- `POST /api/documents` - Création de document
+- `PATCH /api/documents/:id` - Mise à jour de document
+- `DELETE /api/documents/:id` - Suppression de document
+
+### Événements (3 routes)
+- `GET /api/events` - Liste des événements
+- `GET /api/events/:id` - Événement par ID
+- `POST /api/events` - Création d'événement
+
+### Utilisateurs (Administration - 6 routes)
+- `GET /api/users` - Liste des utilisateurs
+- `POST /api/users` - Création d'utilisateur
+- `PATCH /api/users/:id` - Mise à jour utilisateur
+- `DELETE /api/users/:id` - Suppression utilisateur
+- `POST /api/users/:id/toggle-active` - Activer/Désactiver
+- `GET /api/users/search` - Recherche d'utilisateurs
+
+### Contenu multimédia (5 routes CRUD)
+- `GET /api/content` - Liste du contenu
+- `GET /api/content/:id` - Contenu par ID
+- `POST /api/content` - Création de contenu
+- `PATCH /api/content/:id` - Mise à jour de contenu
+- `DELETE /api/content/:id` - Suppression de contenu
+
+### Catégories (5 routes CRUD)
+- `GET /api/categories` - Liste des catégories
+- `GET /api/categories/:id` - Catégorie par ID
+- `POST /api/categories` - Création de catégorie
+- `PATCH /api/categories/:id` - Mise à jour de catégorie
+- `DELETE /api/categories/:id` - Suppression de catégorie
+
+### Messages privés (4 routes)
+- `GET /api/messages` - Messages de l'utilisateur
+- `GET /api/messages/:id` - Message par ID
+- `POST /api/messages` - Envoi de message
+- `PATCH /api/messages/:id/read` - Marquer comme lu
+
+### Réclamations (6 routes)
+- `GET /api/complaints` - Liste des réclamations
+- `GET /api/complaints/:id` - Réclamation par ID
+- `POST /api/complaints` - Création de réclamation
+- `PATCH /api/complaints/:id` - Mise à jour de réclamation
+- `GET /api/complaints/user/:userId` - Réclamations par utilisateur
+- `PATCH /api/complaints/:id/assign` - Assignation de réclamation
+
+### Permissions (4 routes)
+- `GET /api/permissions/:userId` - Permissions utilisateur
+- `POST /api/permissions` - Accorder permission
+- `DELETE /api/permissions/:id` - Révoquer permission
+- `GET /api/permissions/:userId/:permission` - Vérifier permission
+
+### Catégories d'employés (5 routes CRUD)
+- `GET /api/employee-categories` - Liste des catégories
+- `POST /api/employee-categories` - Création de catégorie
+- `PATCH /api/employee-categories/:id` - Mise à jour
+- `DELETE /api/employee-categories/:id` - Suppression
+- `GET /api/employee-categories/:id` - Catégorie par ID
+
+### Paramètres système (2 routes)
+- `GET /api/system-settings` - Paramètres actuels
+- `PATCH /api/system-settings` - Mise à jour paramètres
+
+### Formations (5 routes CRUD)
+- `GET /api/trainings` - Liste des formations
+- `GET /api/trainings/:id` - Formation par ID
+- `POST /api/trainings` - Création de formation
+- `PATCH /api/trainings/:id` - Mise à jour de formation
+- `DELETE /api/trainings/:id` - Suppression de formation
+
+### Participants aux formations (5 routes)
+- `GET /api/trainings/:id/participants` - Participants d'une formation
+- `POST /api/trainings/:id/participants` - Inscription à une formation
+- `DELETE /api/trainings/:trainingId/participants/:userId` - Désinscription
+- `GET /api/users/:userId/trainings` - Formations d'un utilisateur
+- `PATCH /api/training-participants/:id` - Mise à jour participation
+
+## 🛠️ MIDDLEWARE - server/middleware/
+
+### Sécurité (server/middleware/security.ts)
+- **Rate limiting** - Protection contre les attaques par déni de service
+- **Headers sécurisés** - Configuration Helmet
+- **CORS** - Configuration des origines autorisées
+- **Validation des entrées** - Nettoyage des données
+
+## 🔧 SERVICES - server/services/
+
+### Service d'authentification (server/services/auth.ts)
+- **AuthService.hashPassword()** - Hachage bcrypt des mots de passe
+- **AuthService.verifyPassword()** - Vérification des mots de passe
+- **Gestion des sessions** - Création et validation de sessions
+
+### Service email (server/services/email.ts)
+- **emailService.sendWelcomeEmail()** - Email de bienvenue
+- **Configuration Nodemailer** - Service SMTP
+- **Templates d'emails** - Messages standardisés
+
+## 💾 COUCHE DE DONNÉES - server/data/
+
+### Interface de stockage (server/data/storage.ts)
+**IStorage** - Interface principale (100+ méthodes)
+
+#### Gestion des utilisateurs (6 méthodes)
+- `getUser(id)` - Récupérer utilisateur par ID
+- `getUserByUsername(username)` - Récupérer par nom d'utilisateur
+- `getUserByEmployeeId(employeeId)` - Récupérer par ID employé
+- `createUser(user)` - Créer utilisateur
+- `updateUser(id, user)` - Mettre à jour utilisateur
+- `getUsers()` - Liste des utilisateurs
+
+#### Gestion des annonces (5 méthodes)
+- `getAnnouncements()` - Liste des annonces
+- `getAnnouncementById(id)` - Annonce par ID
+- `createAnnouncement(announcement)` - Créer annonce
+- `updateAnnouncement(id, announcement)` - Mettre à jour
+- `deleteAnnouncement(id)` - Supprimer
+
+#### Gestion des documents (5 méthodes)
+- `getDocuments()` - Liste des documents
+- `getDocumentById(id)` - Document par ID
+- `createDocument(document)` - Créer document
+- `updateDocument(id, document)` - Mettre à jour
+- `deleteDocument(id)` - Supprimer
+
+#### Gestion des événements (5 méthodes)
+- `getEvents()` - Liste des événements
+- `getEventById(id)` - Événement par ID
+- `createEvent(event)` - Créer événement
+- `updateEvent(id, event)` - Mettre à jour
+- `deleteEvent(id)` - Supprimer
+
+#### Gestion des messages (4 méthodes)
+- `getMessages(userId)` - Messages utilisateur
+- `getMessageById(id)` - Message par ID
+- `createMessage(message)` - Créer message
+- `markMessageAsRead(id)` - Marquer comme lu
+
+#### Gestion des réclamations (5 méthodes)
+- `getComplaints()` - Liste des réclamations
+- `getComplaintById(id)` - Réclamation par ID
+- `getComplaintsByUser(userId)` - Par utilisateur
+- `createComplaint(complaint)` - Créer réclamation
+- `updateComplaint(id, complaint)` - Mettre à jour
+
+#### Gestion des permissions (4 méthodes)
+- `getPermissions(userId)` - Permissions utilisateur
+- `createPermission(permission)` - Accorder permission
+- `revokePermission(id)` - Révoquer permission
+- `hasPermission(userId, permission)` - Vérifier permission
+
+#### Gestion du contenu (5 méthodes)
+- `getContents()` - Liste du contenu
+- `getContentById(id)` - Contenu par ID
+- `createContent(content)` - Créer contenu
+- `updateContent(id, content)` - Mettre à jour
+- `deleteContent(id)` - Supprimer
+
+#### Gestion des catégories (5 méthodes)
+- `getCategories()` - Liste des catégories
+- `getCategoryById(id)` - Catégorie par ID
+- `createCategory(category)` - Créer catégorie
+- `updateCategory(id, category)` - Mettre à jour
+- `deleteCategory(id)` - Supprimer
+
+#### Gestion des formations (5 méthodes)
+- `getTrainings()` - Liste des formations
+- `getTrainingById(id)` - Formation par ID
+- `createTraining(training)` - Créer formation
+- `updateTraining(id, training)` - Mettre à jour
+- `deleteTraining(id)` - Supprimer
+
+#### Participants aux formations (5 méthodes)
+- `getTrainingParticipants(trainingId)` - Participants
+- `getUserTrainingParticipations(userId)` - Participations utilisateur
+- `addTrainingParticipant(participant)` - Ajouter participant
+- `updateTrainingParticipant(id, participant)` - Mettre à jour
+- `removeTrainingParticipant(trainingId, userId)` - Supprimer
+
+#### Autres méthodes
+- `getStats()` - Statistiques système (10 métriques)
+- `resetToTestData()` - Réinitialisation données test
+- `searchUsers(query)` - Recherche utilisateurs
+
+## ⚙️ CONFIGURATION
+
+### Configuration serveur (server/config.ts)
+- **Variables d'environnement** - PORT, NODE_ENV, DATABASE_URL
+- **Configuration de session** - Secret, options de cookies
+- **Configuration de base de données** - Pool de connexions
+
+### Configuration base de données (server/db.ts)
+- **Drizzle ORM** - Configuration avec PostgreSQL
+- **Pool de connexions** - Gestion optimisée des connexions
+- **Variables d'environnement** - URL de base de données
+
+### Configuration Vite (server/vite.ts)
+- **Middleware Vite** - Intégration serveur de développement
+- **Hot reload** - Rechargement automatique
+- **Alias de paths** - Résolution des imports
+
+## 🔄 MIGRATIONS - server/migrations.ts
+
+### Système de migration automatique
+- **Migration des mots de passe** - Conversion vers bcrypt
+- **Vérification au démarrage** - Migration automatique si nécessaire
+- **Logs détaillés** - Suivi des opérations
+- **Gestion d'erreurs** - Robustesse du processus
+
+## 📊 DONNÉES DE TEST - server/testData.ts
+
+### Jeu de données initial
+- **3 utilisateurs** - admin, marie.martin, pierre.dubois
+- **2 annonces** - Exemples d'annonces système
+- **Rôles configurés** - Admin, moderator, employee
+- **Données cohérentes** - Relations entre entités
+
+## 🔧 DÉPENDANCES BACKEND PRINCIPALES
+
+### Framework et serveur
+- **Express.js** - Framework web
+- **TypeScript** - Typage statique
+- **Node.js** - Runtime JavaScript
+
+### Base de données
+- **PostgreSQL** - Base de données relationnelle
+- **Drizzle ORM** - ORM type-safe
+- **connect-pg-simple** - Store de session PostgreSQL
+
+### Sécurité et authentification
+- **bcrypt** - Hachage des mots de passe
+- **express-session** - Gestion des sessions
+- **helmet** - Sécurisation des en-têtes
+- **express-rate-limit** - Limitation de débit
+
+### Validation et transformation
+- **Zod** - Validation de schémas
+- **zod-validation-error** - Messages d'erreur améliorés
+
+### Communication
+- **nodemailer** - Service d'email
+- **ws** - WebSockets pour temps réel
+
+### Utilitaires
+- **memoizee** - Cache en mémoire
+- **memorystore** - Store de session en mémoire (fallback)
+
+## 🔒 SÉCURITÉ BACKEND
 
 ### Authentification
-```
-Client → POST /api/auth/login → AuthService.verifyPassword() → Session créée → User retourné
-```
+- **Sessions sécurisées** - HttpOnly cookies
+- **Mots de passe hashés** - bcrypt avec salt
+- **Validation de rôles** - Middleware d'autorisation
+- **Expiration de session** - Nettoyage automatique
 
-### Création de Contenu
-```
-Client → POST /api/announcements → requireAuth → Zod validation → storage.createAnnouncement() → Broadcast update
-```
+### Protection des API
+- **Rate limiting** - 100 req/15min par IP
+- **Validation d'entrée** - Schémas Zod obligatoires
+- **En-têtes sécurisés** - Configuration Helmet
+- **Gestion d'erreurs** - Logs détaillés sans exposition
 
-### Permissions
-```
-Client → Requête protégée → requirePermission → storage.hasPermission() → Action autorisée/refusée
-```
+### Base de données
+- **Requêtes préparées** - Protection injection SQL
+- **Transactions** - Cohérence des données
+- **Connexions poolées** - Optimisation des ressources
 
-### Formation
-```
-Client → GET /api/trainings → storage.getTrainings() → Filtres appliqués → Liste retournée
-Student → POST /api/trainings/:id/register → storage.enrollUser() → Email confirmation
-```
+## 📈 PERFORMANCE ET SURVEILLANCE
 
-## 🎯 RECOMMANDATIONS D'OPTIMISATION
+### Logging
+- **Logs de requêtes** - Temps de réponse, status codes
+- **Logs d'erreurs** - Stack traces détaillées
+- **Logs de migration** - Suivi des opérations DB
 
-### Performance Immédiate
-1. **Redis cache** : Cache queries fréquentes
-2. **Database indexing** : Index sur colonnes recherchées
-3. **Pagination** : Système universel avec curseurs
-4. **Background jobs** : Queue pour emails/notifications
+### Optimisations
+- **Cache en mémoire** - memoizee pour requêtes fréquentes
+- **Pool de connexions** - Réutilisation des connexions DB
+- **Compression** - Réduction de la taille des réponses
 
-### Sécurité Renforcée
-1. **Input sanitization** : HTML/XSS protection
-2. **File scanning** : Antivirus sur uploads
-3. **API versioning** : Dépréciation contrôlée
-4. **Audit logs** : Traçabilité des actions sensibles
+### Monitoring
+- **Health checks** - Vérification de l'état du serveur
+- **Métriques système** - Stats en temps réel
+- **Error tracking** - Capture et analyse des erreurs
 
-### Monitoring Avancé
-1. **Health endpoints** : `/health`, `/metrics`
-2. **Structured logging** : Format JSON avec context
-3. **Performance monitoring** : APM tool
-4. **Error tracking** : Sentry ou équivalent
+## 🔄 ARCHITECTURE DE DONNÉES
 
-### Scalabilité Future
-1. **Microservices ready** : Découpage par domaine
-2. **Event sourcing** : Historique des changements
-3. **CQRS** : Séparation lecture/écriture
-4. **API Gateway** : Point d'entrée unique
+### Pattern Repository
+- **IStorage interface** - Abstraction de la couche de données
+- **Implémentation PostgreSQL** - Stockage relationnel
+- **Type safety** - Types Drizzle générés
+
+### Validation multicouche
+1. **Client-side** - Validation Zod côté frontend
+2. **API-side** - Re-validation côté serveur
+3. **Database-side** - Contraintes PostgreSQL
+
+### Gestion d'état
+- **Sessions serveur** - État d'authentification
+- **Base de données** - Source de vérité
+- **Cache applicatif** - Optimisation des performances

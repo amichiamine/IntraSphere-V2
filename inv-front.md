@@ -1,526 +1,300 @@
-# INVENTAIRE EXHAUSTIF FRONTEND - IntraSphere
-**Date d'analyse**: 8 août 2025 (Mise à jour post-corrections)  
-**Structure**: Option R3 (core/ + features/) ✅ CORRIGÉE  
-**Total fichiers analysés**: 92 fichiers TypeScript/React  
-**Status**: Imports R3 entièrement corrigés, LSP errors résolues
+# INVENTAIRE FRONTEND - INTRASPHERE
 
-## 🏗️ ARCHITECTURE FRONTEND
+## 📁 STRUCTURE GENERALE DU FRONTEND
 
-### Structure des Dossiers
+### Répertoire racine client/
 ```
-client/src/
-├── 📁 core/                    → Composants et utilitaires réutilisables
-│   ├── 📁 components/
-│   │   ├── 📁 ui/              → 43 composants shadcn/ui
-│   │   ├── 📁 layout/          → 3 composants layout
-│   │   └── 📁 dashboard/       → 5 composants dashboard
-│   ├── 📁 hooks/               → 4 hooks custom
-│   └── 📁 lib/                 → 2 utilitaires
-├── 📁 features/                → 18 pages par domaine métier
-│   ├── 📁 auth/               → 2 pages authentification
-│   ├── 📁 admin/              → 1 page administration
-│   ├── 📁 content/            → 5 pages contenu
-│   ├── 📁 messaging/          → 5 pages messagerie
-│   └── 📁 training/           → 3 pages formation
-├── 📁 pages/                  → 6 pages génériques
-├── App.tsx                    → Routeur principal
-├── main.tsx                   → Point d'entrée
-└── index.css                  → Styles globaux
+client/
+├── index.html          # Page HTML principale
+├── src/               # Code source principal
+│   ├── App.tsx         # Composant racine et routeur principal
+│   ├── main.tsx        # Point d'entrée React
+│   ├── index.css       # Styles CSS globaux
+│   ├── core/          # Composants et utilitaires de base
+│   ├── features/      # Fonctionnalités métier par domaine
+│   └── pages/         # Pages principales de l'application
 ```
 
-## 🧩 COMPOSANTS UI (43 composants shadcn/ui)
-
-### Composants d'Interface
-- **accordion.tsx** : Accordéons pliables
-- **alert-dialog.tsx** : Boîtes de dialogue d'alerte
-- **alert.tsx** : Messages d'alerte
-- **avatar.tsx** : Avatars utilisateurs
-- **badge.tsx** : Badges et étiquettes
-- **button.tsx** : Boutons avec variantes
-- **card.tsx** : Cartes conteneurs
-- **checkbox.tsx** : Cases à cocher
-- **dialog.tsx** : Boîtes de dialogue modales
-- **drawer.tsx** : Tiroirs latéraux
-- **dropdown-menu.tsx** : Menus déroulants
-- **form.tsx** : Formulaires avec validation
-- **input.tsx** : Champs de saisie
-- **label.tsx** : Étiquettes
-- **popover.tsx** : Pop-overs
-- **radio-group.tsx** : Groupes radio
-- **select.tsx** : Sélecteurs
-- **sheet.tsx** : Panneaux latéraux
-- **switch.tsx** : Interrupteurs
-- **tabs.tsx** : Onglets
-- **textarea.tsx** : Zones de texte
-- **toast.tsx** + **toaster.tsx** : Notifications
-- **tooltip.tsx** : Info-bulles
-
-### Composants de Navigation
-- **breadcrumb.tsx** : Fil d'Ariane
-- **menubar.tsx** : Barre de menus
-- **navigation-menu.tsx** : Menu de navigation
-- **pagination.tsx** : Pagination
-- **sidebar.tsx** : Barre latérale
-
-### Composants de Données
-- **calendar.tsx** : Calendrier
-- **carousel.tsx** : Carrousel
-- **chart.tsx** : Graphiques
-- **command.tsx** : Palette de commandes
-- **context-menu.tsx** : Menu contextuel
-- **hover-card.tsx** : Cartes au survol
-- **progress.tsx** : Barres de progression
-- **scroll-area.tsx** : Zones de défilement
-- **skeleton.tsx** : Squelettes de chargement
-- **slider.tsx** : Curseurs
-- **table.tsx** : Tableaux
-- **toggle.tsx** + **toggle-group.tsx** : Boutons bascule
-
-### Composants Spécialisés
-- **aspect-ratio.tsx** : Ratios d'aspect
-- **collapsible.tsx** : Éléments pliables
-- **file-uploader.tsx** : Téléchargement de fichiers
-- **glass-card.tsx** : Cartes avec effet verre ✨
-- **icon-picker.tsx** : Sélecteur d'icônes
-- **image-picker.tsx** : Sélecteur d'images
-- **input-otp.tsx** : Saisie OTP
-- **resizable.tsx** : Panneaux redimensionnables
-- **separator.tsx** : Séparateurs
-- **simple-modal.tsx** : Modal simple custom
-- **simple-select.tsx** : Select simple custom
-
-## 🎯 COMPOSANTS LAYOUT (3 composants)
-
-### **header.tsx** - En-tête Principal
-- **Logo** : IntraSphere avec icône
-- **Navigation** : Menu principal (Accueil, Annonces, Documents, etc.)
-- **Profil utilisateur** : Avatar + menu déroulant
-- **Notifications** : Icône avec compteur
-- **Thème** : Bouton basculement sombre/clair
-
-### **main-layout.tsx** - Layout Principal  
-- **Structure** : En-tête + Sidebar + Contenu
-- **Responsive** : Adaptation mobile/desktop
-- **Glass morphism** : Effets de verre
-- **Gestion d'état** : Sidebar ouverte/fermée
-
-### **sidebar.tsx** - Barre Latérale
-- **Menu principal** avec icônes :
-  - 🏠 Tableau de bord
-  - 📢 Annonces  
-  - 📁 Documents
-  - 👥 Annuaire
-  - 💬 Messages
-  - ⚙️ Paramètres
-- **Badge notifications** sur Messages
-- **Responsive** : Pliable sur mobile
-- **Permissions** : Menu différent selon rôle
-
-## 📊 COMPOSANTS DASHBOARD (5 composants)
-
-### **announcements-feed.tsx** - Flux d'Annonces
-- **Liste des annonces** récentes
-- **Badges de type** (info, important, event)
-- **Icônes** personnalisées par annonce
-- **Liens** vers détails
-
-### **quick-links.tsx** - Liens Rapides
-- **Grille d'actions** fréquentes :
-  - 📝 Créer annonce
-  - 📄 Ajouter document  
-  - 👥 Voir annuaire
-  - 💬 Messages
-- **Icônes Lucide** avec descriptions
-
-### **recent-documents.tsx** - Documents Récents
-- **Liste** des derniers documents
-- **Badges de catégorie** (règlement, politique, etc.)
-- **Versions** et dates de mise à jour
-- **Liens** de téléchargement
-
-### **stats-cards.tsx** - Cartes Statistiques
-- **4 métriques** principales :
-  - 👥 Utilisateurs totaux
-  - 📢 Annonces totales  
-  - 📄 Documents totaux
-  - 📅 Événements à venir
-- **Graphiques** avec Recharts
-- **Couleurs** thématiques
-
-### **upcoming-events.tsx** - Événements à Venir
-- **Liste** des prochains événements
-- **Types** (réunion, formation, social)
-- **Dates** formatées en français
-- **Lieux** et organisateurs
-
-## 🔧 HOOKS PERSONNALISÉS (4 hooks)
-
-### **useAuth.ts** - Authentification (AuthContext)
-- **État utilisateur** : user, isLoading, isAuthenticated
-- **Méthodes** :
-  - `login(username, password)` 
-  - `register(userData)`
-  - `logout()`
-- **Gestion des erreurs** avec toast
-- **Sessions** persistantes
-
-### **useTheme.ts** - Gestion des Thèmes
-- **Thèmes prédéfinis** :
-  - default, midnight, sunset, forest, ocean, lavender
-- **Couleurs dynamiques** : primary, secondary, accent
-- **Application CSS** : Variables custom properties
-- **Fonction** : `applyThemeToDOM(theme)`
-
-### **use-toast.ts** - Notifications
-- **État global** des toasts
-- **Méthodes** :
-  - `toast({ title, description, variant })`
-  - `dismiss(toastId)`
-- **Variantes** : default, destructive, success
-- **Auto-dismiss** configurable
-
-### **use-mobile.tsx** - Détection Mobile
-- **Hook responsive** avec breakpoint
-- **MediaQuery** : `(max-width: 768px)`
-- **État réactif** : booléen isMobile
-- **Optimisation** : Événements resize
-
-## 📚 UTILITAIRES LIB (2 fichiers)
-
-### **queryClient.ts** - Client API TanStack Query
-- **Configuration** QueryClient avec cache
-- **Fonction** `apiRequest()` pour requêtes API
-- **Gestion d'erreurs** automatique
-- **Retry policy** et timeouts
-
-### **utils.ts** - Utilitaires Généraux
-- **`cn()`** : Fusion classes Tailwind avec clsx + tailwind-merge
-- **Optimisation** : Classes conditionnelles
-
-## 🚀 FEATURES PAR DOMAINE MÉTIER (18 pages)
-
-### 🔐 AUTH (2 pages)
-#### **login.tsx** - Page de Connexion
-- **Formulaire** : username/password avec validation Zod
-- **Design** : Glass card centré
-- **États** : loading, erreurs
-- **Redirection** automatique après connexion
-
-#### **settings.tsx** - Paramètres Utilisateur  
-- **Onglets** :
-  - 👤 Profil (nom, email, téléphone, poste)
-  - 🔒 Sécurité (mot de passe)
-  - 🎨 Thème (6 thèmes prédéfinis)
-- **Formulaires** avec validation
-- **Upload d'avatar** (image picker)
-
-### 👑 ADMIN (1 page)
-#### **admin.tsx** - Administration Complète (1800+ lignes)
-- **Onglets principaux** :
-  - 👥 **Utilisateurs** : CRUD complet
-    - Liste avec filtres (rôle, département, statut)
-    - Création/édition avec formulaire complet
-    - Activation/désactivation comptes
-    - Gestion des rôles (admin, moderator, employee)
-  - 🛡️ **Permissions** : Système granulaire
-    - manage_announcements, manage_documents, manage_events
-    - manage_users, validate_topics, validate_posts
-    - Assignation par utilisateur
-  - 📄 **Documents** : Gestion avancée
-    - Upload avec FileUploader
-    - Catégories (regulation, policy, procedure, guide)
-    - Versions et metadata
-    - Icônes et images personnalisées
-  - 🏷️ **Catégories Employés** : Classification
-    - Création/édition catégories
-    - Couleurs et icônes
-    - Permissions par catégorie
-  - ⚙️ **Paramètres Système** : Configuration globale
-    - Thème par défaut
-    - Paramètres email
-    - Maintenance mode
-
-### 📰 CONTENT (5 pages)
-#### **content.tsx** - Gestion de Contenu (1600+ lignes)
-- **Vue personnalisable** avec filtres :
-  - Par type (annonces, documents, événements)
-  - Par catégorie et statut
-  - Mode grille/liste
-- **Actions** :
-  - Création rapide
-  - Édition inline
-  - Archivage/suppression
-- **Statistiques** en temps réel
-- **Export** des données
-
-#### **announcements.tsx** - Liste des Annonces
-- **Grille responsive** des annonces
-- **Filtres** par type et importance
-- **Recherche** en temps réel
-- **Badges** colorés par catégorie
-
-#### **create-announcement.tsx** - Créer Annonce
-- **Formulaire complet** avec validation
-- **Champs** :
-  - Titre, contenu (textarea large)
-  - Type (info, important, event, formation)
-  - Image (image picker)
-  - Icône (icon picker)
-  - Importance (switch)
-- **Prévisualisation** en temps réel
-
-#### **create-content.tsx** - Créer Contenu Général
-- **Formulaire universel** pour tout type de contenu
-- **Types supportés** : annonces, documents, événements
-- **Upload** de fichiers multiples
-- **Métadonnées** complètes
-
-#### **documents.tsx** - Documents
-- **Liste** avec colonnes :
-  - Titre, catégorie, version, date maj
-- **Téléchargement** direct
-- **Filtres** par catégorie
-- **Recherche** par nom
-
-### 💬 MESSAGING (5 pages)
-#### **messages.tsx** - Messagerie Interne
-- **Interface** type email :
-  - Liste des conversations
-  - Fil de messages
-  - Composition
-- **Fonctionnalités** :
-  - Recherche messages
-  - Statut lu/non lu
-  - Pièces jointes
-
-#### **forum.tsx** - Forum de Discussion
-- **Catégories** de sujets
-- **Liste des topics** avec :
-  - Titre, auteur, dernière activité
-  - Nombre de réponses et vues
-  - Statut (épinglé, fermé)
-- **Modération** selon permissions
-
-#### **forum-topic.tsx** - Sujet de Forum
-- **Fil de discussion** complet
-- **Posts** avec :
-  - Auteur, date, contenu
-  - Système de likes
-  - Réponses imbriquées
-- **Édition/suppression** selon droits
-
-#### **forum-new-topic.tsx** - Nouveau Sujet
-- **Formulaire** de création :
-  - Titre, catégorie, contenu
-  - Pièces jointes
-  - Tags
-- **Prévisualisation** Markdown
-
-#### **complaints.tsx** - Réclamations
-- **Système de tickets** :
-  - Soumission avec formulaire
-  - Statuts (ouvert, en cours, fermé)
-  - Assignation aux responsables
-  - Historique des actions
-- **Priorités** et catégories
-
-### 🎓 TRAINING (3 pages)  
-#### **training.tsx** - Interface Étudiant
-- **Tableau de bord** d'apprentissage :
-  - Cours en cours
-  - Progression (barres de progression)
-  - Certificats obtenus
-  - Ressources recommandées
-- **Calendrier** des formations
-
-#### **trainings.tsx** - Catalogue de Formations
-- **Grille** des formations disponibles :
-  - Titre, description, durée
-  - Niveau (débutant, intermédiaire, avancé)
-  - Instructeur et note
-- **Inscription** en un clic
-- **Filtres** par catégorie/niveau
-
-#### **training-admin.tsx** - Administration Formation
-- **Gestion complète** des formations :
-  - Création de cours/leçons
-  - Upload de ressources
-  - Suivi des participants
-  - Statistiques détaillées
-  - Génération de certificats
-
-## 📄 PAGES GÉNÉRIQUES (6 pages)
-
-### **dashboard.tsx** - Dashboard Admin
-- **Vue d'ensemble** avec 4 sections :
-  - Cartes statistiques (StatsCards)
-  - Flux d'annonces (AnnouncementsFeed)  
-  - Liens rapides (QuickLinks)
-  - Documents récents (RecentDocuments)
-  - Événements à venir (UpcomingEvents)
-- **Mise à jour** temps réel avec React Query
-
-### **employee-dashboard.tsx** - Dashboard Employé
-- **Interface simplifiée** pour employés :
-  - Annonces importantes
-  - Mes tâches en cours
-  - Messages non lus
-  - Formations assignées
-  - Calendrier personnel
-
-### **directory.tsx** - Annuaire
-- **Liste des employés** avec :
-  - Photo, nom, poste, département
-  - Contact (email, téléphone)
-  - Statut en ligne
-- **Recherche** et filtres
-- **Cartes** responsive
-
-### **public-dashboard.tsx** - Accueil Public
-- **Landing page** pour visiteurs non connectés :
-  - Présentation d'IntraSphere
-  - Statistiques générales
-  - Bouton de connexion
-  - Design marketing
-
-### **views-management.tsx** - Gestion des Vues
-- **Configuration** interface utilisateur :
-  - Onglets : Configuration, Layout, Permissions
-  - Personnalisation des sections visibles
-  - Réorganisation par drag-and-drop
-  - Prévisualisation en temps réel
-  - Gestion des accès par rôle
-
-### **not-found.tsx** - Page 404
-- **Erreur 404** avec design cohérent
-- **Navigation** de retour
-
-## 🎯 ROUTAGE ET NAVIGATION
-
-### **App.tsx** - Routeur Principal (150 lignes)
-- **Wouter** pour le routage SPA
-- **Authentification** : Routes publiques vs privées
-- **Rôles** : Dashboard différent selon admin/employee
-- **Providers** : QueryClient, Auth, Tooltip, Theme
-- **Loading** : Écran de chargement animé
-
-### **main.tsx** - Point d'Entrée
-- **React 18** StrictMode
-- **Rendu** dans #root
-- **Import** des styles globaux
-
-## 🎨 STYLES ET THÉMING
-
-### **index.css** - Styles Globaux
-- **Tailwind CSS** base + utilities
-- **Couleurs** CSS custom properties
-- **Glass morphism** : backdrop-blur, transparence
-- **Animations** : transitions fluides
-- **Responsive** : breakpoints mobile-first
-- **Dark mode** : Variables pour thème sombre
-
-### Design System
-- **6 thèmes** prédéfinis avec couleurs coordonnées
-- **Glass morphism** sur tous les composants principaux
-- **Animations** : fade, slide, scale
-- **Typographie** : Hiérarchie claire
-- **Couleurs** : Palette cohérente purple/blue
-
-## 🔌 INTÉGRATIONS ET IMPORTS
-
-### Imports Principaux
-```typescript
-// Routage
-import { Switch, Route, useLocation } from "wouter"
-
-// État et requêtes  
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { useState, useEffect, createContext, useContext } from "react"
-
-// Formulaires
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-
-// Validation
-import { z } from "zod"
-import { insertAnnouncementSchema, type User } from "@shared/schema"
-
-// Icônes
-import { Bell, Settings, User, Plus } from "lucide-react"
-
-// Date
-import { formatDistanceToNow } from "date-fns"
-import { fr } from "date-fns/locale"
-
-// Utilitaires
-import { cn } from "@/core/lib/utils"
-import { apiRequest } from "@/core/lib/queryClient"
-```
-
-### Aliases de Chemins
-- `@/core/components/*` → Composants réutilisables
-- `@/core/hooks/*` → Hooks personnalisés  
-- `@/core/lib/*` → Utilitaires
-- `@/features/*` → Pages par domaine
-- `@/pages/*` → Pages génériques
-- `@shared/*` → Types partagés frontend/backend
-
-## 📊 MÉTRIQUES FRONTEND
-
-### Complexité par Feature
-1. **admin.tsx** : 1800+ lignes (la plus complexe)
-2. **content.tsx** : 1600+ lignes  
-3. **settings.tsx** : 1400+ lignes
-4. **training-admin.tsx** : 1200+ lignes
-5. **views-management.tsx** : 1000+ lignes
-
-### Composants UI les Plus Utilisés
-1. **Button** : ~40 utilisations
-2. **Input** : ~35 utilisations  
-3. **Card** : ~30 utilisations
-4. **Badge** : ~25 utilisations
-5. **Form** : ~20 utilisations
-
-### Hooks les Plus Appelés
-1. **useQuery** : ~60 appels API
-2. **useState** : ~150 états locaux
-3. **useAuth** : ~25 vérifications auth
-4. **useToast** : ~40 notifications
-
-## 🚨 POINTS D'ATTENTION DÉTECTÉS
-
-### ✅ Imports R3 Corrigés
-- Tous les imports `@/components/*` → `@/core/components/*` ✅
-- Tous les imports `@/hooks/*` → `@/core/hooks/*` ✅  
-- Tous les imports `@/lib/*` → `@/core/lib/*` ✅
-- Cohérence complète des aliases après restructuration R3
-
-### Optimisations Possibles
-- **Code splitting** : Pages lourdes (admin, content) pourraient être lazy-loaded
-- **Memoization** : Composants complexes sans React.memo
-- **Bundle size** : date-fns pourrait être remplacé par des alternatives plus légères
+## 🎯 COMPOSANT PRINCIPAL - App.tsx
+
+### Router et Navigation
+- **Router principal** : Utilise `wouter` pour le routage côté client
+- **AuthProvider** : Gestion de l'authentification globale
+- **QueryClientProvider** : Gestion de l'état serveur avec TanStack React Query
+- **ThemeLoader** : Chargement et gestion des thèmes
+- **TooltipProvider** : Fournisseur de tooltips globaux
+- **Toaster** : Système de notifications
+
+### Routes publiques (non authentifiées)
+- `/login` → LoginPage
+- `/` → PublicDashboard
+
+### Routes authentifiées - selon le rôle
+- **Dashboard principal** (rôle basé) :
+  - `admin` / `moderator` → Dashboard (admin complet)
+  - `employee` → EmployeeDashboard (simplifié)
+
+### Routes communes authentifiées
+- `/announcements` → Announcements
+- `/content` → Content
+- `/documents` → Documents
+- `/directory` → Directory
+- `/training` → Training
+- `/trainings` → Trainings
+- `/messages` → Messages
+- `/complaints` → Complaints
+- `/forum` → ForumPage
+- `/forum/topic/:id` → ForumTopicPage
+- `/forum/new-topic` → ForumNewTopicPage
+- `/settings` → Settings
+
+### Routes admin/modérateur uniquement
+- `/admin` → Admin
+- `/views-management` → ViewsManagement
+- `/create-announcement` → CreateAnnouncement
+- `/create-content` → CreateContent
+- `/training-admin` → TrainingAdmin
+
+## 🏗️ CORE - COMPOSANTS DE BASE
+
+### client/src/core/components/ui/ (53 composants UI)
+**Composants d'interface utilisateur avec shadcn/ui :**
+
+#### Navigation et Structure
+- `navigation-menu.tsx` - Menu de navigation principal
+- `menubar.tsx` - Barre de menu
+- `sidebar.tsx` - Barre latérale
+- `breadcrumb.tsx` - Fil d'Ariane
+- `tabs.tsx` - Onglets
+- `accordion.tsx` - Accordéon
+
+#### Affichage de données
+- `table.tsx` - Tableaux de données
+- `card.tsx` - Cartes d'affichage
+- `avatar.tsx` - Avatar utilisateur
+- `badge.tsx` - Badges et étiquettes
+- `calendar.tsx` - Calendrier
+- `chart.tsx` - Graphiques
+- `progress.tsx` - Barres de progression
+
+#### Formulaires et saisie
+- `form.tsx` - Formulaires
+- `input.tsx` - Champs de saisie
+- `textarea.tsx` - Zone de texte
+- `select.tsx` - Sélecteur
+- `simple-select.tsx` - Sélecteur simple
+- `checkbox.tsx` - Cases à cocher
+- `radio-group.tsx` - Boutons radio
+- `switch.tsx` - Commutateurs
+- `toggle.tsx` - Boutons de basculement
+- `toggle-group.tsx` - Groupe de boutons de basculement
+- `slider.tsx` - Curseurs
+- `input-otp.tsx` - Saisie OTP
+- `label.tsx` - Étiquettes
+
+#### Interaction utilisateur
+- `button.tsx` - Boutons
+- `dropdown-menu.tsx` - Menu déroulant
+- `context-menu.tsx` - Menu contextuel
+- `hover-card.tsx` - Carte de survol
+- `popover.tsx` - Popover
+- `tooltip.tsx` - Info-bulles
+- `command.tsx` - Interface de commande
+
+#### Modales et dialogues
+- `dialog.tsx` - Dialogues
+- `alert-dialog.tsx` - Dialogues d'alerte
+- `drawer.tsx` - Tiroir
+- `sheet.tsx` - Feuille coulissante
+- `simple-modal.tsx` - Modal simple
+
+#### Notifications et feedback
+- `alert.tsx` - Alertes
+- `toast.tsx` - Notifications toast
+- `toaster.tsx` - Gestionnaire de notifications
+
+#### Utilitaires et mise en page
+- `separator.tsx` - Séparateurs
+- `scroll-area.tsx` - Zone de défilement
+- `resizable.tsx` - Panneaux redimensionnables
+- `collapsible.tsx` - Éléments pliables
+- `aspect-ratio.tsx` - Ratio d'aspect
+- `skeleton.tsx` - Squelettes de chargement
+- `pagination.tsx` - Pagination
+
+#### Média et fichiers
+- `image-picker.tsx` - Sélecteur d'images
+- `file-uploader.tsx` - Téléchargeur de fichiers
+- `icon-picker.tsx` - Sélecteur d'icônes
+- `carousel.tsx` - Carrousel
+
+#### Spécialisés
+- `glass-card.tsx` - Cartes avec effet verre (design system)
+
+### client/src/core/components/layout/ (3 composants)
+- `header.tsx` - En-tête principal
+- `main-layout.tsx` - Mise en page principale
+- `sidebar.tsx` - Barre latérale de navigation
+
+### client/src/core/components/dashboard/ (5 composants)
+- `announcements-feed.tsx` - Flux d'annonces
+- `quick-links.tsx` - Liens rapides
+- `recent-documents.tsx` - Documents récents
+- `stats-cards.tsx` - Cartes de statistiques
+- `upcoming-events.tsx` - Événements à venir
+
+### client/src/core/components/
+- `ThemeLoader.tsx` - Chargeur de thème
+
+## 🪝 HOOKS PERSONNALISÉS
+
+### client/src/core/hooks/
+- `useAuth.ts` - Hook d'authentification (AuthProvider, useAuth)
+- `useTheme.ts` - Hook de gestion de thème
+- `use-toast.ts` - Hook de notifications toast
+- `use-mobile.tsx` - Hook de détection mobile
+
+## 📚 LIBRAIRIES ET UTILITAIRES
+
+### client/src/core/lib/
+- `queryClient.ts` - Configuration TanStack React Query
+- `utils.ts` - Utilitaires généraux (cn pour className merge)
+
+## 🎯 FEATURES - FONCTIONNALITÉS MÉTIER
+
+### Authentication (client/src/features/auth/)
+- `login.tsx` - Page de connexion
+- `settings.tsx` - Paramètres utilisateur
+
+### Administration (client/src/features/admin/)
+- `admin.tsx` - Interface d'administration
+
+### Gestion de contenu (client/src/features/content/)
+- `announcements.tsx` - Gestion des annonces
+- `content.tsx` - Gestion du contenu multimédia
+- `documents.tsx` - Gestion des documents
+- `create-announcement.tsx` - Création d'annonces
+- `create-content.tsx` - Création de contenu
+
+### Messagerie et communication (client/src/features/messaging/)
+- `messages.tsx` - Messages privés
+- `complaints.tsx` - Système de réclamations
+- `forum.tsx` - Forum de discussion
+- `forum-topic.tsx` - Sujet de forum
+- `forum-new-topic.tsx` - Création de nouveau sujet
+
+### Formation et e-learning (client/src/features/training/)
+- `training.tsx` - Module de formation
+- `training-admin.tsx` - Administration des formations
+- `trainings.tsx` - Liste des formations
+
+## 📄 PAGES PRINCIPALES
+
+### client/src/pages/
+- `dashboard.tsx` - Tableau de bord administrateur
+- `employee-dashboard.tsx` - Tableau de bord employé
+- `public-dashboard.tsx` - Tableau de bord public
+- `directory.tsx` - Annuaire des utilisateurs
+- `views-management.tsx` - Gestion des vues
+- `not-found.tsx` - Page 404
+
+## ⚙️ CONFIGURATION ET STYLES
+
+### Fichiers de configuration frontend
+- `index.html` - Template HTML principal
+- `index.css` - Styles CSS globaux et variables CSS
+- `main.tsx` - Point d'entrée React
+
+## 🔧 DÉPENDANCES FRONTEND PRINCIPALES
+
+### Frameworks et libraries UI
+- **React 18** - Framework principal
+- **Vite** - Build tool et dev server
+- **TypeScript** - Typage statique
+- **Tailwind CSS** - Framework CSS
+- **shadcn/ui** - Composants UI (Radix UI + Tailwind)
+- **Radix UI** - Primitives UI accessibles
+- **Lucide React** - Icônes
+- **React Icons** - Icônes supplémentaires
+
+### Gestion d'état et données
+- **TanStack React Query** - Gestion de l'état serveur
+- **React Hook Form** - Gestion des formulaires
+- **Zod** - Validation de schémas
+- **Wouter** - Routage côté client
+
+### UI avancée
+- **Framer Motion** - Animations
+- **Embla Carousel** - Carrousels
+- **React Day Picker** - Sélecteur de dates
+- **React Resizable Panels** - Panneaux redimensionnables
+- **Recharts** - Graphiques et diagrammes
+
+### Utilitaires
+- **class-variance-authority** - Variants de classes CSS
+- **clsx** / **tailwind-merge** - Fusion de classes CSS
+- **date-fns** - Manipulation de dates
+- **cmdk** - Interface de commande
+
+## 🎨 SYSTÈME DE DESIGN
+
+### Thème et apparence
+- **Glass morphism** - Design avec effet de verre
+- **Variables CSS personnalisées** - Système de couleurs
+- **Mode sombre/clair** - Support des thèmes
+- **Gradients** - Arrière-plans dégradés
+- **Coins arrondis** - Design moderne
+
+### Couleurs principales
+- **Primary** : Violet (#8B5CF6)
+- **Secondary** : Violet clair (#A78BFA)
+- **Backgrounds** : Dégradés slate/blue/indigo
+
+## 🔄 FLUX DE DONNÉES FRONTEND
+
+### Architecture de données
+1. **TanStack React Query** - Cache et synchronisation serveur
+2. **React Hook Form** - Gestion locale des formulaires
+3. **Zod** - Validation côté client
+4. **Session/Auth** - État d'authentification global
+5. **API REST** - Communication avec le backend
+
+### Pattern de requêtes
+- **Queries** : Récupération de données (GET)
+- **Mutations** : Modifications de données (POST/PUT/DELETE)
+- **Cache invalidation** : Actualisation automatique
+- **Loading states** : États de chargement
+- **Error handling** : Gestion d'erreurs
+
+## 📱 RESPONSIVE ET ACCESSIBILITÉ
+
+### Responsive Design
+- **Mobile-first** - Approche mobile en priorité
+- **Breakpoints Tailwind** - Points de rupture standard
+- **Hook use-mobile** - Détection d'appareil mobile
 
 ### Accessibilité
-- **aria-labels** manquants sur certains boutons d'action
-- **focus management** à améliorer dans les modales
-- **screen reader** : descriptions pour les graphiques
+- **Radix UI** - Composants accessibles par défaut
+- **ARIA** - Attributs d'accessibilité
+- **Keyboard navigation** - Navigation au clavier
+- **Focus management** - Gestion du focus
 
-## ✅ FORCES DU FRONTEND
+## 🧪 ATTRIBUTS DE TEST
 
-### Architecture Solide
-- **Séparation claire** : core vs features
-- **Réutilisabilité** : Composants modulaires
-- **Type safety** : TypeScript intégral
-- **État cohérent** : React Query + Context
+### Test IDs
+- **data-testid** - Attributs pour les tests automatisés
+- **Éléments interactifs** - Boutons, inputs, liens
+- **Contenu dynamique** - Données utilisateur, statuts
+- **Pattern** : `{action}-{target}` ou `{type}-{content}`
 
-### UX/UI Excellente  
-- **Design moderne** : Glass morphism
-- **Responsive** : Mobile-first
-- **Performance** : Lazy loading, cache
-- **Accessibilité** : Composants Radix UI
+## 📊 MÉTRIQUES ET SURVEILLANCE
 
-### Développement
-- **DX optimale** : Hot reload, TypeScript
-- **Maintenance** : Code organisé et documenté
-- **Extensibilité** : Architecture modulaire
-- **Tests** : Hooks et composants testables
+### Performance
+- **React Query DevTools** - Debugging des requêtes
+- **Vite HMR** - Hot Module Replacement
+- **TypeScript** - Vérification de types
+
+### Logging
+- **Console logs** - Logs de développement
+- **Error boundaries** - Capture d'erreurs React
+- **Theme logging** - Logs d'application de thème
