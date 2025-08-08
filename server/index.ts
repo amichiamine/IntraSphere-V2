@@ -1,8 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import { registerRoutes } from "./routes/api";
-import { createServer as createViteServer } from "vite";
-import path from "path";
+import { setupVite, serveStatic, log } from "./vite";
 import { configureSecurity, sanitizeInput, getSessionConfig } from "./middleware/security";
 import { runMigrations } from "./migrations";
 import { ensurePortAvailable, ServerMonitor } from "./utils/process-monitor";
@@ -49,7 +48,7 @@ app.use((req, res, next) => {
         logLine = logLine.slice(0, 79) + "…";
       }
 
-      console.log(logLine);
+      log(logLine);
     }
   });
 
@@ -62,9 +61,9 @@ app.use((req, res, next) => {
   
   try {
     await ensurePortAvailable(port);
-    console.log(`Port ${port} is available for use`);
+    log(`Port ${port} is available for use`);
   } catch (error: any) {
-    console.log(`Port cleanup failed: ${error.message}`);
+    log(`Port cleanup failed: ${error.message}`);
     process.exit(1);
   }
 
@@ -85,7 +84,7 @@ app.use((req, res, next) => {
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
   const nodeEnv = process.env.NODE_ENV || "development";
-  console.log(`Environment detected: ${nodeEnv}`);
+  log(`Environment detected: ${nodeEnv}`);
   
   // Add health check endpoint before Vite setup
   app.get('/health', (_req, res) => {
@@ -98,51 +97,12 @@ app.use((req, res, next) => {
     });
   });
 
-  // Add a simple test endpoint to verify Express routing works
-  app.get('/test', (_req, res) => {
-    res.status(200).send('<h1>Express Server Working!</h1><p>Server is running correctly on port ' + port + '</p>');
-  });
-
-  // Add simple root handler that works with restructured files
-  app.get('/', async (_req, res) => {
-    try {
-      const fs = await import('fs/promises');
-      const path = await import('path');
-      const htmlPath = path.resolve(process.cwd(), 'client/index.html');
-      const template = await fs.readFile(htmlPath, 'utf-8');
-      res.status(200).set({ 'Content-Type': 'text/html' }).send(template);
-    } catch (error) {
-      console.error('Error serving root:', error);
-      res.status(500).send('Error loading application');
-    }
-  });
-
   if (nodeEnv === "development") {
-    console.log("Setting up Vite development server...");
-    
-    // Inline Vite setup
-    const vite = await createViteServer({
-      server: { 
-        middlewareMode: true,
-        host: '0.0.0.0'
-      },
-      appType: "spa",
-      configFile: path.resolve(process.cwd(), "vite.config.ts")
-    });
-    
-    app.use(vite.ssrFixStacktrace);
-    app.use(vite.middlewares);
+    log("Setting up Vite development server...");
+    await setupVite(app, server);
   } else {
-    console.log("Setting up static file serving...");
-    const distPath = path.resolve(process.cwd(), "server/public");
-    app.use(express.static(distPath));
-    
-    app.get("*", (req, res, next) => {
-      if (req.path.startsWith("/api") || req.path.startsWith("/health") || req.path.startsWith("/ws")) {
-        return next();
-      }
-      res.sendFile(path.join(distPath, "index.html"));
-    });
+    log("Setting up static file serving...");
+    serveStatic(app);
   }
 
   // ALWAYS serve the app on the port specified in the environment variable PORT
@@ -156,13 +116,13 @@ app.use((req, res, next) => {
     host: "0.0.0.0",
     reusePort: true,
   }, () => {
-    console.log(`serving on port ${port}`);
-    console.log(`Health check available at http://0.0.0.0:${port}/health`);
+    log(`serving on port ${port}`);
+    log(`Health check available at http://0.0.0.0:${port}/health`);
     
     // Start server monitoring
     const monitor = new ServerMonitor(port);
     monitor.start();
-    console.log('Server monitoring started');
+    log('Server monitoring started');
   });
 
   // Initialize WebSocket after server creation
@@ -170,18 +130,18 @@ app.use((req, res, next) => {
     const { initializeWebSocket } = await import("./services/websocket");
     initializeWebSocket(httpServer);
   } catch (error: any) {
-    console.log(`WebSocket initialization skipped: ${error?.message || 'Unknown error'}`);
+    log(`WebSocket initialization skipped: ${error?.message || 'Unknown error'}`);
   }
 
   // Graceful shutdown handling
   const gracefulShutdown = (signal: string) => {
-    console.log(`Received ${signal}. Graceful shutdown...`);
+    log(`Received ${signal}. Graceful shutdown...`);
     httpServer.close((err) => {
       if (err) {
-        console.log(`Error during server shutdown: ${err.message}`);
+        log(`Error during server shutdown: ${err.message}`);
         process.exit(1);
       }
-      console.log('Server closed successfully.');
+      log('Server closed successfully.');
       process.exit(0);
     });
   };
@@ -192,12 +152,12 @@ app.use((req, res, next) => {
 
   // Handle uncaught exceptions
   process.on('uncaughtException', (error) => {
-    console.log(`Uncaught Exception: ${error.message}`);
+    log(`Uncaught Exception: ${error.message}`);
     gracefulShutdown('uncaughtException');
   });
 
   process.on('unhandledRejection', (reason) => {
-    console.log(`Unhandled Rejection: ${reason}`);
+    log(`Unhandled Rejection: ${reason}`);
     gracefulShutdown('unhandledRejection');
   });
 })().catch((error) => {
