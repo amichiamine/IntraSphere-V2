@@ -7,6 +7,8 @@ import {
   insertContentSchema, 
   insertCategorySchema 
 } from "@shared/schema";
+import { handleUpload, handleMultipleUploads, processUploadedFile, FileManager } from "../services/upload";
+import { wsManager } from "../services/websocket";
 
 // Authentication middleware
 const requireAuth = (req: any, res: any, next: any) => {
@@ -306,6 +308,156 @@ export function registerContentRoutes(app: Express): void {
     } catch (error) {
       console.error("Error deleting category:", error);
       res.status(500).json({ error: "Failed to delete category" });
+    }
+  });
+
+  // UPLOAD ROUTES IMPLEMENTATION
+  
+  // Upload single file
+  app.post("/api/upload", requireAuth, handleUpload('file'), async (req, res) => {
+    try {
+      const file = req.file;
+      if (!file) {
+        return res.status(400).json({ message: "Aucun fichier fourni" });
+      }
+
+      const userId = req.session.userId!;
+      const uploadedFile = processUploadedFile(file, userId);
+      
+      res.status(201).json({
+        message: "Fichier uploadé avec succès",
+        file: uploadedFile
+      });
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      res.status(500).json({ message: "Erreur lors de l'upload" });
+    }
+  });
+
+  // Upload avatar/image specifically
+  app.post("/api/upload/avatar", requireAuth, handleUpload('avatar'), async (req, res) => {
+    try {
+      const file = req.file;
+      if (!file) {
+        return res.status(400).json({ message: "Aucune image fournie" });
+      }
+
+      // Vérifier que c'est bien une image
+      if (!file.mimetype.startsWith('image/')) {
+        await FileManager.deleteFile(file.path);
+        return res.status(400).json({ message: "Le fichier doit être une image" });
+      }
+
+      const userId = req.session.userId!;
+      const uploadedFile = processUploadedFile(file, userId);
+      
+      // Mettre à jour l'avatar de l'utilisateur
+      await storage.updateUser(userId, { avatar: uploadedFile.fileUrl });
+      
+      // Notifier via WebSocket
+      if (wsManager) {
+        wsManager.broadcast({
+          type: 'USER_AVATAR_UPDATE',
+          payload: { userId, avatarUrl: uploadedFile.fileUrl }
+        });
+      }
+      
+      res.status(201).json({
+        message: "Avatar mis à jour avec succès",
+        file: uploadedFile,
+        avatarUrl: uploadedFile.fileUrl
+      });
+    } catch (error) {
+      console.error("Error uploading avatar:", error);
+      res.status(500).json({ message: "Erreur lors de l'upload de l'avatar" });
+    }
+  });
+
+  // Upload document with metadata (enhanced)
+  app.post("/api/upload/document", requireRole(['admin', 'moderator']), handleUpload('document'), async (req, res) => {
+    try {
+      const file = req.file;
+      if (!file) {
+        return res.status(400).json({ message: "Aucun document fourni" });
+      }
+
+      const { title, description, category } = req.body;
+      if (!title || !category) {
+        await FileManager.deleteFile(file.path);
+        return res.status(400).json({ message: "Titre et catégorie requis" });
+      }
+
+      const userId = req.session.userId!;
+      const uploadedFile = processUploadedFile(file, userId);
+      
+      // Créer l'entrée document dans la base
+      const document = await storage.createDocument({
+        title,
+        description: description || '',
+        category,
+        fileName: uploadedFile.originalName,
+        fileUrl: uploadedFile.fileUrl,
+        version: '1.0'
+      });
+      
+      // Notifier via WebSocket
+      if (wsManager) {
+        wsManager.broadcast({
+          type: 'NEW_DOCUMENT',
+          payload: document
+        });
+      }
+      
+      res.status(201).json({
+        message: "Document uploadé avec succès",
+        document,
+        file: uploadedFile
+      });
+    } catch (error) {
+      console.error("Error uploading document:", error);
+      if (req.file) {
+        await FileManager.deleteFile(req.file.path);
+      }
+      res.status(500).json({ message: "Erreur lors de l'upload du document" });
+    }
+  });
+
+  // Get file info
+  app.get("/api/files/:filename", async (req, res) => {
+    try {
+      const { filename } = req.params;
+      const filePath = `server/public/uploads/${filename}`;
+      const fileInfo = await FileManager.getFileInfo(filePath);
+      
+      if (!fileInfo.exists) {
+        return res.status(404).json({ message: "Fichier non trouvé" });
+      }
+      
+      res.json({
+        filename,
+        size: fileInfo.size,
+        formattedSize: FileManager.formatFileSize(fileInfo.size),
+        exists: fileInfo.exists
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Erreur lors de la récupération des infos du fichier" });
+    }
+  });
+
+  // Delete uploaded file
+  app.delete("/api/files/:filename", requireAuth, async (req, res) => {
+    try {
+      const { filename } = req.params;
+      const filePath = `server/public/uploads/${filename}`;
+      
+      await FileManager.deleteFile(filePath);
+      
+      res.json({ 
+        message: "Fichier supprimé avec succès",
+        filename 
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Erreur lors de la suppression du fichier" });
     }
   });
 }

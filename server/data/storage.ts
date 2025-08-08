@@ -179,7 +179,7 @@ export interface IStorage {
   getForumPostById(id: string): Promise<ForumPost | undefined>;
   createForumPost(post: InsertForumPost): Promise<ForumPost>;
   updateForumPost(id: string, post: Partial<ForumPost>): Promise<ForumPost>;
-  deleteForumPost(id: string, deletedBy: string): Promise<void>;
+  deleteForumPost(id: string, deletedBy?: string): Promise<void>;
   
   // Forum Likes/Reactions
   getForumPostLikes(postId: string): Promise<ForumLike[]>;
@@ -2376,6 +2376,37 @@ export class MemStorage implements IStorage {
       this.forumUserStats.set(stats.id, stats);
     }
   }
+
+  // Additional Forum Methods for 100% compatibility
+
+  async updateForumTopicActivity(topicId: string): Promise<void> {
+    const topic = this.forumTopics.get(topicId);
+    if (topic) {
+      const posts = Array.from(this.forumPosts.values()).filter(p => p.topicId === topicId);
+      const updatedTopic = {
+        ...topic,
+        postsCount: posts.length,
+        lastPostAt: new Date(),
+        lastActivity: new Date()
+      };
+      this.forumTopics.set(topicId, updatedTopic);
+    }
+  }
+
+  async getForumLike(postId: string, userId: string): Promise<ForumLike | undefined> {
+    return Array.from(this.forumLikes.values()).find(
+      like => like.postId === postId && like.userId === userId
+    );
+  }
+
+  async deleteForumLike(postId: string, userId: string): Promise<void> {
+    const like = await this.getForumLike(postId, userId);
+    if (like) {
+      this.forumLikes.delete(like.id);
+    }
+  }
+
+
 }
 
 export const storage = new MemStorage();

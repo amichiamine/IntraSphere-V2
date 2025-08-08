@@ -4,6 +4,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { configureSecurity, sanitizeInput, getSessionConfig } from "./middleware/security";
 import { runMigrations } from "./migrations";
+import { initializeWebSocket } from "./services/websocket";
 
 const app = express();
 
@@ -62,6 +63,9 @@ app.use((req, res, next) => {
   await runMigrations();
   
   const server = await registerRoutes(app);
+
+  // Initialize WebSocket after server creation
+  initializeWebSocket(server);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
