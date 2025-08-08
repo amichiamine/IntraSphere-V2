@@ -12,7 +12,7 @@ export const testUsers: User[] = [
   {
     id: "admin-1",
     username: "admin",
-    password: "admin123",
+    password: "Admin123!",
     name: "Marie Dupont",
     email: "marie.dupont@intrasphere.fr",
     department: "Direction",
@@ -28,7 +28,7 @@ export const testUsers: User[] = [
   {
     id: "mod-1",
     username: "moderator",
-    password: "mod123",
+    password: "Mod123!",
     name: "Pierre Martin",
     email: "pierre.martin@intrasphere.fr",
     department: "Ressources Humaines",
@@ -44,7 +44,7 @@ export const testUsers: User[] = [
   {
     id: "emp-1",
     username: "employee",
-    password: "emp123",
+    password: "Emp123!",
     name: "Sophie Bernard",
     email: "sophie.bernard@intrasphere.fr",
     department: "Informatique",
