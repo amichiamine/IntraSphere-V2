@@ -97,6 +97,11 @@ app.use((req, res, next) => {
     });
   });
 
+  // Add a simple test endpoint to verify Express routing works
+  app.get('/test', (_req, res) => {
+    res.status(200).send('<h1>Express Server Working!</h1><p>Server is running correctly on port ' + port + '</p>');
+  });
+
   if (nodeEnv === "development") {
     log("Setting up Vite development server...");
     await setupVite(app, server);

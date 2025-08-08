@@ -2,7 +2,7 @@ import { createServer as createViteServer } from "vite";
 import express from "express";
 import path from "path";
 
-export async function setupVite(app) {
+export async function setupVite(app, server) {
   if (process.env.NODE_ENV === "production") {
     serveStatic(app);
   } else {
@@ -13,6 +13,26 @@ export async function setupVite(app) {
     });
     
     app.use(vite.ssrFixStacktrace);
+    
+    // Simple direct HTML serving for root
+    app.get('/', (req, res) => {
+      res.send(`
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <title>IntraSphere</title>
+    <script type="module" src="/@vite/client"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+      `);
+    });
+    
     app.use(vite.middlewares);
   }
 }
