@@ -7,8 +7,13 @@ import { runMigrations } from "./migrations";
 
 const app = express();
 
-// Configure trust proxy for Replit environment and production
-app.set('trust proxy', true);
+// Configure trust proxy - more restrictive for production security
+// In Replit environment, only trust first proxy
+if (process.env.NODE_ENV === 'development' && process.env.REPL_ID) {
+  app.set('trust proxy', 1); // Trust only first proxy (Replit)
+} else {
+  app.set('trust proxy', false); // Disable in production for security
+}
 
 // Configure security middleware
 configureSecurity(app);

@@ -1533,7 +1533,7 @@ export class MemStorage implements IStorage {
 
   async resetToTestData(): Promise<void> {
     // Import test data
-    const { testUsers, testAnnouncements, testDocuments, testEvents, testMessages, testComplaints } = await import("./testData");
+    const { testUsers, testAnnouncements, testDocuments, testEvents, testMessages, testComplaints } = await import("../testData");
     
     // Clear existing data
     this.users.clear();
@@ -1547,12 +1547,12 @@ export class MemStorage implements IStorage {
     this.categories.clear();
     
     // Load test data
-    testUsers.forEach(user => this.users.set(user.id, user));
-    testAnnouncements.forEach(ann => this.announcements.set(ann.id, ann));
-    testDocuments.forEach(doc => this.documents.set(doc.id, doc));
-    testEvents.forEach(event => this.events.set(event.id, event));
-    testMessages.forEach(msg => this.messages.set(msg.id, msg));
-    testComplaints.forEach(complaint => this.complaints.set(complaint.id, complaint));
+    testUsers.forEach((user: User) => this.users.set(user.id, user));
+    testAnnouncements.forEach((ann: Announcement) => this.announcements.set(ann.id, ann));
+    testDocuments.forEach((doc: Document) => this.documents.set(doc.id, doc));
+    testEvents.forEach((event: Event) => this.events.set(event.id, event));
+    testMessages.forEach((msg: Message) => this.messages.set(msg.id, msg));
+    testComplaints.forEach((complaint: Complaint) => this.complaints.set(complaint.id, complaint));
     
     // Re-initialize default categories and content
     this.initializeDefaultCategories();
