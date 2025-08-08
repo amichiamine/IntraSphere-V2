@@ -12,9 +12,7 @@ import {
   AlertTriangle,
   Shield,
   MessageSquare,
-  GraduationCap,
-  BarChart3,
-  Calendar
+  GraduationCap
 } from "lucide-react";
 
 interface SidebarProps {
@@ -30,9 +28,7 @@ const navigation = [
   { name: "Formations", href: "/trainings", icon: GraduationCap },
   { name: "Forum", href: "/forum", icon: MessageSquare },
   { name: "Messagerie", href: "/messages", icon: MessageCircle },
-  { name: "Événements", href: "/events", icon: Calendar },
   { name: "Réclamations", href: "/complaints", icon: AlertTriangle },
-  { name: "Analytics", href: "/analytics", icon: BarChart3 },
   { name: "Administration", href: "/admin", icon: Shield },
   { name: "Gestion des Vues", href: "/views-management", icon: Settings },
 ];

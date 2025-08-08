@@ -242,8 +242,8 @@ export default function Trainings() {
     trainingForm.reset({
       title: training.title,
       description: training.description || "",
-      category: "technical" as const,
-      difficulty: "beginner" as const,
+      category: training.category as "technical" | "management" | "safety" | "compliance" | "other",
+      difficulty: (training.difficulty || "beginner") as "beginner" | "intermediate" | "advanced",
       duration: training.duration,
       instructorName: training.instructorName,
       startDate: undefined,

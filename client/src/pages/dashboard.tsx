@@ -5,7 +5,6 @@ import { AnnouncementsFeed } from "@/core/components/dashboard/announcements-fee
 import { QuickLinks } from "@/core/components/dashboard/quick-links";
 import { RecentDocuments } from "@/core/components/dashboard/recent-documents";
 import { UpcomingEvents } from "@/core/components/dashboard/upcoming-events";
-import { EnhancedDashboard } from "@/core/components/ui/enhanced-dashboard";
 
 function getCurrentDate(): string {
   return new Intl.DateTimeFormat('fr-FR', {
@@ -32,7 +31,7 @@ export default function Dashboard() {
           <GlassCard className="gradient-overlay p-8 shadow-2xl hover-lift">
             <div className="flex items-center justify-between">
               <div className="text-white">
-                <h1 className="text-3xl font-bold mb-2">{getCurrentGreeting()} !</h1>
+                <h1 className="text-3xl font-bold mb-2">{getCurrentGreeting()}, Jean !</h1>
                 <p className="text-white/90 text-lg">Bienvenue sur votre portail d'entreprise</p>
                 <p className="text-white/75 mt-1">{getCurrentDate()}</p>
               </div>
@@ -43,11 +42,6 @@ export default function Dashboard() {
               </div>
             </div>
           </GlassCard>
-        </div>
-
-        {/* Enhanced Dashboard with Real-time Analytics */}
-        <div className="mb-8">
-          <EnhancedDashboard />
         </div>
 
         {/* Quick Stats Dashboard */}

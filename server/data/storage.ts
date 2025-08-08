@@ -152,15 +152,8 @@ export interface IStorage {
   updateResource(id: string, resource: Partial<Resource>): Promise<Resource>;
   deleteResource(id: string): Promise<void>;
   
-  // Training Analytics
-  getAllTrainingParticipants(): Promise<TrainingParticipant[]>;
-  markLessonComplete(userId: string, courseId: string, lessonId: string): Promise<void>;
-  
   // Search functionality
   searchUsers(query: string): Promise<User[]>;
-  searchContent(query: string): Promise<Content[]>;
-  searchDocuments(query: string): Promise<Document[]>;
-  searchAnnouncements(query: string): Promise<Announcement[]>;
   
   // Forum System Methods
   
@@ -177,6 +170,7 @@ export interface IStorage {
   createForumTopic(topic: InsertForumTopic): Promise<ForumTopic>;
   updateForumTopic(id: string, topic: Partial<ForumTopic>): Promise<ForumTopic>;
   deleteForumTopic(id: string): Promise<void>;
+  incrementTopicViews(id: string): Promise<void>;
   
   // Forum Posts
   getForumPosts(topicId: string): Promise<ForumPost[]>;
@@ -184,12 +178,6 @@ export interface IStorage {
   createForumPost(post: InsertForumPost): Promise<ForumPost>;
   updateForumPost(id: string, post: Partial<ForumPost>): Promise<ForumPost>;
   deleteForumPost(id: string, deletedBy: string): Promise<void>;
-  
-  // Training recommendations
-  getTrainingRecommendations(userId: string): Promise<Course[]>;
-  
-  // Course lessons
-  getCourseLessons(courseId: string): Promise<Lesson[]>;
   
   // Forum Likes/Reactions
   getForumPostLikes(postId: string): Promise<ForumLike[]>;
@@ -1543,26 +1531,9 @@ export class MemStorage implements IStorage {
     };
   }
 
-  // Forum methods implementation - removed duplicate, using the complete one below
-
-  // Forum topics - removed duplicate, using the complete one below
-
-  // Forum topic by ID - removed duplicate, using the complete one below
-
-  // Forum posts - removed duplicate, using the complete one below
-
-  async getTrainingRecommendations(userId: string): Promise<Course[]> {
-    const courses = await this.getCourses();
-    return courses.slice(0, 3); // Return first 3 as recommendations
-  }
-
-  async getCourseLessons(courseId: string): Promise<Lesson[]> {
-    return this.getLessons(courseId);
-  }
-
   async resetToTestData(): Promise<void> {
     // Import test data
-    const { testUsers, testAnnouncements, testDocuments, testEvents, testMessages, testComplaints } = await import("../testData");
+    const { testUsers, testAnnouncements, testDocuments, testEvents, testMessages, testComplaints } = await import("./testData");
     
     // Clear existing data
     this.users.clear();
@@ -1576,12 +1547,12 @@ export class MemStorage implements IStorage {
     this.categories.clear();
     
     // Load test data
-    testUsers.forEach((user: User) => this.users.set(user.id, user));
-    testAnnouncements.forEach((ann: Announcement) => this.announcements.set(ann.id, ann));
-    testDocuments.forEach((doc: Document) => this.documents.set(doc.id, doc));
-    testEvents.forEach((event: Event) => this.events.set(event.id, event));
-    testMessages.forEach((msg: Message) => this.messages.set(msg.id, msg));
-    testComplaints.forEach((complaint: Complaint) => this.complaints.set(complaint.id, complaint));
+    testUsers.forEach(user => this.users.set(user.id, user));
+    testAnnouncements.forEach(ann => this.announcements.set(ann.id, ann));
+    testDocuments.forEach(doc => this.documents.set(doc.id, doc));
+    testEvents.forEach(event => this.events.set(event.id, event));
+    testMessages.forEach(msg => this.messages.set(msg.id, msg));
+    testComplaints.forEach(complaint => this.complaints.set(complaint.id, complaint));
     
     // Re-initialize default categories and content
     this.initializeDefaultCategories();
@@ -1927,10 +1898,7 @@ export class MemStorage implements IStorage {
       completedAt: null,
       progress: 0,
       status: "enrolled",
-      certificateUrl: null,
-      timeSpent: 0,
-      score: null,
-      courseTitle: null
+      certificateUrl: null
     };
     this.enrollments.set(id, enrollment);
     return enrollment;
@@ -2053,49 +2021,16 @@ export class MemStorage implements IStorage {
     this.resources.delete(id);
   }
 
-  // Training Analytics Implementation
-  async getAllTrainingParticipants(): Promise<TrainingParticipant[]> {
-    return Array.from(this.trainingParticipants.values());
-  }
-
-  async markLessonComplete(userId: string, courseId: string, lessonId: string): Promise<void> {
-    await this.updateLessonProgress(userId, lessonId, courseId, true);
-  }
-
   // Search functionality
   async searchUsers(query: string): Promise<User[]> {
     const searchTerm = query.toLowerCase();
     return Array.from(this.users.values()).filter(user => 
       user.isActive && (
         user.name.toLowerCase().includes(searchTerm) ||
-        user.username.toLowerCase().includes(searchTerm) ||
-        (user.email && user.email.toLowerCase().includes(searchTerm)) ||
-        (user.employeeId && user.employeeId.toLowerCase().includes(searchTerm))
+        user.position?.toLowerCase().includes(searchTerm) ||
+        user.department?.toLowerCase().includes(searchTerm) ||
+        user.email?.toLowerCase().includes(searchTerm)
       )
-    );
-  }
-
-  async searchContent(query: string): Promise<Content[]> {
-    const lowerQuery = query.toLowerCase();
-    return Array.from(this.contents.values()).filter(content =>
-      content.title.toLowerCase().includes(lowerQuery) ||
-      content.description?.toLowerCase().includes(lowerQuery)
-    );
-  }
-
-  async searchDocuments(query: string): Promise<Document[]> {
-    const lowerQuery = query.toLowerCase();
-    return Array.from(this.documents.values()).filter(doc =>
-      doc.title.toLowerCase().includes(lowerQuery) ||
-      doc.description?.toLowerCase().includes(lowerQuery)
-    );
-  }
-
-  async searchAnnouncements(query: string): Promise<Announcement[]> {
-    const lowerQuery = query.toLowerCase();
-    return Array.from(this.announcements.values()).filter(ann =>
-      ann.title.toLowerCase().includes(lowerQuery) ||
-      ann.content.toLowerCase().includes(lowerQuery)
     );
   }
 

@@ -7,33 +7,30 @@ import { AuthProvider, useAuth } from "@/core/hooks/useAuth";
 import { ThemeLoader } from "@/core/components/ThemeLoader";
 
 // Public pages
-import PublicDashboard from "./pages/public-dashboard";
-import LoginPage from "./features/auth/login";
+import PublicDashboard from "@/pages/public-dashboard";
+import LoginPage from "@/features/auth/login";
 
 // Authenticated pages
-import Dashboard from "./pages/dashboard"; // Admin dashboard
-import EmployeeDashboard from "./pages/employee-dashboard";
-import Announcements from "./features/content/announcements";
-import Content from "./features/content/content";
-import Documents from "./features/content/documents";
-import Directory from "./pages/directory";
-import Settings from "./features/auth/settings";
-import Messages from "./features/messaging/messages";
-import Complaints from "./features/messaging/complaints";
-import Admin from "./features/admin/admin";
-import ViewsManagement from "./pages/views-management";
-import CreateAnnouncement from "./features/content/create-announcement";
-import CreateContent from "./features/content/create-content";
-import Training from "./features/training/training";
-import TrainingAdmin from "./features/training/training-admin";
-import Trainings from "./features/training/trainings";
-import { ForumPage } from "./features/messaging/forum";
-import { ForumTopicPage } from "./features/messaging/forum-topic";
-import { ForumNewTopicPage } from "./features/messaging/forum-new-topic";
-import { AnalyticsAdminPage } from "./features/admin/analytics-admin";
-import { EventsManagementPage } from "./features/events/events-management";
-import { AdvancedContentPage } from "./features/content/advanced-content";
-import NotFound from "./pages/not-found";
+import Dashboard from "@/pages/dashboard"; // Admin dashboard
+import EmployeeDashboard from "@/pages/employee-dashboard";
+import Announcements from "@/features/content/announcements";
+import Content from "@/features/content/content";
+import Documents from "@/features/content/documents";
+import Directory from "@/pages/directory";
+import Settings from "@/features/auth/settings";
+import Messages from "@/features/messaging/messages";
+import Complaints from "@/features/messaging/complaints";
+import Admin from "@/features/admin/admin";
+import ViewsManagement from "@/pages/views-management";
+import CreateAnnouncement from "@/features/content/create-announcement";
+import CreateContent from "@/features/content/create-content";
+import Training from "@/features/training/training";
+import TrainingAdmin from "@/features/training/training-admin";
+import Trainings from "@/features/training/trainings";
+import { ForumPage } from "@/features/messaging/forum";
+import { ForumTopicPage } from "@/features/messaging/forum-topic";
+import { ForumNewTopicPage } from "@/features/messaging/forum-new-topic";
+import NotFound from "@/pages/not-found";
 
 function Router() {
   const { user, isLoading } = useAuth();
@@ -102,9 +99,6 @@ function Router() {
           <Route path="/create-announcement" component={CreateAnnouncement} />
           <Route path="/create-content" component={CreateContent} />
           <Route path="/training-admin" component={TrainingAdmin} />
-          <Route path="/analytics" component={AnalyticsAdminPage} />
-          <Route path="/events" component={EventsManagementPage} />
-          <Route path="/advanced-content" component={AdvancedContentPage} />
         </>
       )}
       

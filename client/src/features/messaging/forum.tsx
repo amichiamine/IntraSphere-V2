@@ -1,14 +1,11 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/core/lib/queryClient";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/core/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/core/components/ui/card";
 import { Badge } from "@/core/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/core/components/ui/avatar";
 import { Input } from "@/core/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/core/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/core/components/ui/select";
 import { 
   MessageCircle, 
   Pin, 
@@ -17,14 +14,7 @@ import {
   Search,
   Plus,
   Clock,
-  TrendingUp,
-  Heart,
-  Star,
-  Filter,
-  ThumbsUp,
-  Flame,
-  Calendar,
-  BarChart3
+  TrendingUp
 } from "lucide-react";
 import type { ForumCategory, ForumTopic } from "@shared/schema";
 
@@ -32,9 +22,6 @@ export function ForumPage() {
   const [, navigate] = useLocation();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState("recent");
-  const [filterBy, setFilterBy] = useState("all");
-  const queryClient = useQueryClient();
 
   // Fetch forum categories
   const { data: categories = [], isLoading: categoriesLoading } = useQuery<ForumCategory[]>({
@@ -59,16 +46,6 @@ export function ForumPage() {
     queryKey: ['/api/forum/stats/me'],
   });
 
-  // Like topic mutation
-  const likeMutation = useMutation({
-    mutationFn: async ({ topicId, reactionType }: { topicId: string, reactionType?: string }) => {
-      return apiRequest(`/api/forum/posts/${topicId}/like`, "POST", { reactionType });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/forum/topics'] });
-    }
-  });
-
   const filteredTopics = searchQuery
     ? topics.filter(topic => 
         topic.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -80,8 +57,7 @@ export function ForumPage() {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   };
 
-  const formatDate = (date: Date | string | null) => {
-    if (!date) return "Non défini";
+  const formatDate = (date: Date | string) => {
     return new Intl.DateTimeFormat('fr-FR', {
       day: 'numeric',
       month: 'short',
@@ -337,52 +313,32 @@ export function ForumPage() {
                                   
                                   <div className="flex items-center gap-1">
                                     <Clock className="h-3 w-3" />
-                                    <span>{formatDate(topic.createdAt)}</span>
+                                    <span>{formatDate(topic.createdAt!)}</span>
                                   </div>
                                 </div>
                               </div>
-                              
-                              <div className="flex flex-col items-end gap-2">
-                                <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
-                                  <div className="flex items-center gap-1">
-                                    <MessageCircle className="h-3 w-3" />
-                                    <span>{topic.replyCount || 0}</span>
-                                  </div>
+
+                              <div className="flex flex-col items-end text-xs text-gray-500 dark:text-gray-400">
+                                <div className="flex items-center gap-4 mb-2">
                                   <div className="flex items-center gap-1">
                                     <Eye className="h-3 w-3" />
                                     <span>{formatNumber(topic.viewCount || 0)}</span>
                                   </div>
                                   <div className="flex items-center gap-1">
-                                    <Heart className="h-3 w-3" />
-                                    <span>{topic.replyCount || 0}</span>
+                                    <MessageCircle className="h-3 w-3" />
+                                    <span>{formatNumber(topic.replyCount || 0)}</span>
                                   </div>
                                 </div>
                                 
-                                {/* Quick action buttons */}
-                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-6 px-2 text-xs"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      likeMutation.mutate({ topicId: topic.id, reactionType: "like" });
-                                    }}
-                                  >
-                                    <ThumbsUp className="h-3 w-3" />
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-6 px-2 text-xs"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      navigate(`/forum/topic/${topic.id}`);
-                                    }}
-                                  >
-                                    <MessageCircle className="h-3 w-3" />
-                                  </Button>
-                                </div>
+                                {topic.lastReplyAt && topic.lastReplyByName && (
+                                  <div className="text-right">
+                                    <div>Dernière réponse par</div>
+                                    <div className="font-medium text-gray-700 dark:text-gray-300">
+                                      {topic.lastReplyByName}
+                                    </div>
+                                    <div>{formatDate(topic.lastReplyAt)}</div>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -395,81 +351,6 @@ export function ForumPage() {
             </CardContent>
           </Card>
         </div>
-      </div>
-      
-      {/* Forum Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
-                <MessageCircle className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {formatNumber(topics.length)}
-                </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                  Sujets de discussion
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
-                <Users className="h-5 w-5 text-green-600 dark:text-green-400" />
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {formatNumber(categories.length)}
-                </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                  Catégories actives
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
-                <TrendingUp className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {formatNumber(topics.reduce((sum, topic) => sum + (topic.viewCount || 0), 0))}
-                </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                  Vues totales
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
-                <Flame className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {userStats?.reputationScore || 0}
-                </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                  Votre réputation
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

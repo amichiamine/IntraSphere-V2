@@ -52,17 +52,132 @@ interface ContentSettings {
   categories: ContentCategory[];
 }
 
-// Utiliser les types corrects du schéma
-interface ContentDisplay extends Content {
-  viewCount: number;
-  downloadCount?: number;
-  likesCount?: number;
-}
+// Données d'exemple pour la démonstration
+const sampleContent: ContentItem[] = [
+  {
+    id: "content-1",
+    title: "Guide d'intégration nouveaux employés",
+    type: "video",
+    category: "Formation",
+    description: "Vidéo d'accueil complète pour faciliter l'intégration des nouveaux collaborateurs dans l'entreprise.",
+    thumbnailUrl: "https://images.unsplash.com/photo-1552664730-d307ca884978?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=225",
+    fileUrl: "/content/integration-guide.mp4",
+    duration: "12 min",
+    views: 245,
+    rating: 4.8,
+    isPopular: true,
+    isFeatured: true,
+    tags: ["formation", "intégration", "nouveaux employés"],
+    createdAt: "2024-01-15T10:00:00Z",
+    updatedAt: "2024-01-15T10:00:00Z"
+  },
+  {
+    id: "content-2",
+    title: "Présentation des nouveaux bureaux",
+    type: "image",
+    category: "Actualités",
+    description: "Galerie photos complète des nouveaux espaces de travail aménagés avec les dernières technologies.",
+    thumbnailUrl: "https://images.unsplash.com/photo-1497366216548-37526070297c?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=225",
+    fileUrl: "/content/bureaux-galerie.jpg",
+    views: 156,
+    rating: 4.5,
+    isPopular: false,
+    isFeatured: false,
+    tags: ["bureaux", "aménagement", "photos"],
+    createdAt: "2024-01-10T14:30:00Z",
+    updatedAt: "2024-01-10T14:30:00Z"
+  },
+  {
+    id: "content-3",
+    title: "Formation cybersécurité avancée",
+    type: "video",
+    category: "Formation",
+    description: "Module de formation obligatoire sur les bonnes pratiques en sécurité informatique et protection des données.",
+    thumbnailUrl: "https://images.unsplash.com/photo-1563013544-824ae1b704d3?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=225",
+    fileUrl: "/content/cybersecurity-training.mp4",
+    duration: "25 min",
+    views: 312,
+    rating: 4.9,
+    isPopular: true,
+    isFeatured: true,
+    tags: ["cybersécurité", "formation", "obligatoire"],
+    createdAt: "2024-01-08T09:15:00Z",
+    updatedAt: "2024-01-08T09:15:00Z"
+  },
+  {
+    id: "content-4",
+    title: "Rapport annuel 2023",
+    type: "document",
+    category: "Corporate",
+    description: "Bilan complet de l'année 2023 avec analyses détaillées et perspectives pour 2024.",
+    thumbnailUrl: "https://images.unsplash.com/photo-1586953208448-b95a79798f07?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=225",
+    fileUrl: "/content/rapport-annuel-2023.pdf",
+    views: 89,
+    rating: 4.2,
+    isPopular: false,
+    isFeatured: false,
+    tags: ["rapport", "2023", "bilan"],
+    createdAt: "2024-01-01T00:00:00Z",
+    updatedAt: "2024-01-01T00:00:00Z"
+  }
+];
 
-// Données d'exemple pour la démonstration - avec types corrects
-// Sample content removed - using API data only
-
-// Categories are now fetched from API only
+const defaultCategories: ContentCategory[] = [
+  {
+    id: 'formation',
+    name: 'Formation',
+    color: '#3B82F6',
+    icon: '🎓',
+    description: 'Contenus de formation et développement des compétences',
+    isVisible: true,
+    displayOrder: 1
+  },
+  {
+    id: 'actualites',
+    name: 'Actualités',
+    color: '#10B981',
+    icon: '📰',
+    description: 'Actualités et informations de l\'entreprise',
+    isVisible: true,
+    displayOrder: 2
+  },
+  {
+    id: 'corporate',
+    name: 'Corporate',
+    color: '#8B5CF6',
+    icon: '🏢',
+    description: 'Documents et communications corporate',
+    isVisible: true,
+    displayOrder: 3
+  },
+  {
+    id: 'social',
+    name: 'Social',
+    color: '#F59E0B',
+    icon: '🎉',
+    description: 'Événements sociaux et team building',
+    isVisible: true,
+    displayOrder: 4
+  },
+  {
+    id: 'ressources',
+    name: 'Ressources',
+    color: '#EF4444',
+    icon: '📚',
+    description: 'Ressources et outils de travail',
+    isVisible: false,
+    displayOrder: 5
+  },
+  {
+    id: 'projets',
+    name: 'Projets',
+    color: '#06B6D4',
+    icon: '🚀',
+    description: 'Documentation et présentation de projets',
+    isVisible: false,
+    displayOrder: 6
+  }
+];
 
 const defaultSettings: ContentSettings = {
   viewMode: 'grid',
@@ -75,7 +190,7 @@ const defaultSettings: ContentSettings = {
   categoriesVisible: ['Formation', 'Actualités', 'Corporate', 'Social'],
   sortBy: 'date',
   theme: 'default',
-  categories: []
+  categories: defaultCategories
 };
 
 export default function Content() {
@@ -105,7 +220,7 @@ export default function Content() {
     queryKey: ["/api/contents"],
   });
   
-  const featuredContent = (content as ContentDisplay[]).filter((item: ContentDisplay) => item.isFeatured);
+  const featuredContent = content.filter((item: ContentItem) => item.isFeatured);
 
   const form = useForm({
     defaultValues: {
@@ -204,14 +319,14 @@ export default function Content() {
     }));
   };
 
-  const filteredContent = (content as any[] || [])
-    .filter((item: any) => selectedCategory === "all" || item.category === selectedCategory)
-    .filter((item: any) => searchQuery === "" || 
+  const filteredContent = content
+    .filter(item => selectedCategory === "all" || item.category === selectedCategory)
+    .filter(item => searchQuery === "" || 
       item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (item.tags && item.tags.some((tag: string) => tag.toLowerCase().includes(searchQuery.toLowerCase())))
+      (item.tags && item.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase())))
     )
-    .sort((a: any, b: any) => {
+    .sort((a, b) => {
       switch (settings.sortBy) {
         case 'popularity':
           return (b.viewCount || 0) - (a.viewCount || 0);
@@ -532,7 +647,7 @@ export default function Content() {
               <Archive className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Aucun contenu trouvé</h3>
               <p className="text-gray-600 mb-6">
-                {(content as any[] || []).length === 0 
+                {content.length === 0 
                   ? "Aucun contenu n'a encore été publié. Commencez par créer votre premier contenu !"
                   : "Aucun contenu ne correspond aux filtres sélectionnés. Essayez de modifier vos critères de recherche."
                 }
@@ -578,7 +693,7 @@ export default function Content() {
                     <Label>Mode d'affichage par défaut</Label>
                     <Select 
                       value={settings.viewMode} 
-                      onValueChange={(value) => setSettings(prev => ({ ...prev, viewMode: value as 'grid' | 'list' }))}
+                      onValueChange={(value: any) => setSettings(prev => ({ ...prev, viewMode: value }))}
                     >
                       <SelectTrigger className="w-32">
                         <SelectValue />
