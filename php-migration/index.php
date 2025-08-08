@@ -35,6 +35,14 @@ $router->addRoute('GET', '/api/auth/me', 'Api\AuthController@me');
 $router->addRoute('POST', '/api/auth/login', 'Api\AuthController@login');
 $router->addRoute('POST', '/api/auth/logout', 'Api\AuthController@logout');
 
+// Routes API Notifications (temps réel et multi-canal)
+$router->addRoute('GET', '/api/notifications', 'Api\NotificationsController@index');
+$router->addRoute('GET', '/api/notifications/unread-count', 'Api\NotificationsController@unreadCount');
+$router->addRoute('PATCH', '/api/notifications/:id/read', 'Api\NotificationsController@markAsRead');
+$router->addRoute('POST', '/api/notifications/mark-all-read', 'Api\NotificationsController@markAllAsRead');
+$router->addRoute('GET', '/api/notifications/stream', 'Api\NotificationsController@stream');
+$router->addRoute('POST', '/api/notifications/test', 'Api\NotificationsController@test');
+
 // Routes API Utilisateurs
 $router->addRoute('GET', '/api/users', 'Api\UsersController@index');
 $router->addRoute('GET', '/api/users/:id', 'Api\UsersController@show');
@@ -73,6 +81,23 @@ $router->addRoute('GET', '/api/admin/users-overview', 'Api\AdminController@users
 $router->addRoute('GET', '/api/admin/content-overview', 'Api\AdminController@contentOverview');
 $router->addRoute('GET', '/api/admin/system-info', 'Api\AdminController@systemInfo');
 $router->addRoute('POST', '/api/admin/maintenance-mode', 'Api\AdminController@toggleMaintenanceMode');
+
+// Routes API Système (cache, performance, santé)
+$router->addRoute('GET', '/api/system/cache/stats', 'Api\SystemController@cacheStats');
+$router->addRoute('POST', '/api/system/cache/clear', 'Api\SystemController@clearCache');
+$router->addRoute('POST', '/api/system/cache/cleanup', 'Api\SystemController@cleanupCache');
+$router->addRoute('GET', '/api/system/health', 'Api\SystemController@health');
+$router->addRoute('GET', '/api/system/performance', 'Api\SystemController@performance');
+
+// Routes API Réclamations (workflow complet)
+$router->addRoute('GET', '/api/complaints', 'Api\ComplaintsController@index');
+$router->addRoute('GET', '/api/complaints/:id', 'Api\ComplaintsController@show');
+$router->addRoute('POST', '/api/complaints', 'Api\ComplaintsController@create');
+$router->addRoute('PATCH', '/api/complaints/:id', 'Api\ComplaintsController@update');
+$router->addRoute('DELETE', '/api/complaints/:id', 'Api\ComplaintsController@delete');
+$router->addRoute('GET', '/api/complaints/stats', 'Api\ComplaintsController@stats');
+$router->addRoute('POST', '/api/complaints/:id/assign', 'Api\ComplaintsController@assign');
+$router->addRoute('GET', '/api/complaints/my-complaints', 'Api\ComplaintsController@myComplaints');
 
 // Routes API Documents - Nouvelles
 $router->addRoute('GET', '/api/documents', 'Api\DocumentsController@index');

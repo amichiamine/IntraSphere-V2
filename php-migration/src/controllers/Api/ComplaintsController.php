@@ -2,8 +2,8 @@
 namespace Api;
 
 /**
- * Contrôleur API des réclamations
- * Équivalent aux routes /api/complaints/* TypeScript
+ * Contrôleur API des réclamations - COMPLET
+ * Workflow de traitement des réclamations avec notifications
  */
 
 class ComplaintsController extends \BaseController {
@@ -23,36 +23,32 @@ class ComplaintsController extends \BaseController {
         
         $status = $this->getQueryParam('status');
         $priority = $this->getQueryParam('priority');
-        $assignee = $this->getQueryParam('assignee');
-        $search = $this->getQueryParam('search');
-        $page = $this->getQueryParam('page', 1);
-        $limit = $this->getQueryParam('limit', 20);
+        $assigned_to = $this->getQueryParam('assigned_to');
+        $page = (int) $this->getQueryParam('page', 1);
+        $limit = min((int) $this->getQueryParam('limit', 20), 50);
         
         try {
-            if ($search) {
-                $complaints = $this->complaintModel->search($search);
-            } elseif ($status) {
-                $complaints = $this->complaintModel->getByStatus($status);
-            } elseif ($priority) {
-                $complaints = $this->complaintModel->getByPriority($priority);
-            } elseif ($assignee) {
-                $complaints = $this->complaintModel->getAssignedTo($assignee);
-            } elseif ($user['role'] === 'employee') {
-                // Les employés ne voient que leurs propres réclamations
-                $complaints = $this->complaintModel->getBySubmitter($user['id']);
-            } else {
-                // Les modérateurs/admins voient tout avec pagination
-                $filters = array_filter([
-                    'status' => $status,
-                    'priority' => $priority,
-                    'assignee_id' => $assignee
-                ]);
-                $complaints = $this->complaintModel->getPaginated($page, $limit, $filters);
-            }
+            $complaints = $this->complaintModel->findWithFilters([
+                'status' => $status,
+                'priority' => $priority,
+                'assigned_to' => $assigned_to,
+                'submitter_id' => $user['role'] === 'employee' ? $user['id'] : null
+            ], $page, $limit);
             
-            $this->json($complaints);
+            $total = $this->complaintModel->countWithFilters([
+                'status' => $status,
+                'priority' => $priority,
+                'assigned_to' => $assigned_to,
+                'submitter_id' => $user['role'] === 'employee' ? $user['id'] : null
+            ]);
+            
+            $this->paginated($complaints, $page, $limit, $total);
             
         } catch (Exception $e) {
+            Logger::error('Erreur récupération réclamations', [
+                'user_id' => $user['id'],
+                'error' => $e->getMessage()
+            ]);
             $this->error('Erreur lors de la récupération des réclamations');
         }
     }
@@ -63,20 +59,23 @@ class ComplaintsController extends \BaseController {
     public function show(string $id): void {
         $user = $this->requireAuth();
         
-        $complaint = $this->complaintModel->find($id);
-        if (!$complaint) {
-            $this->error('Réclamation introuvable', 404);
+        try {
+            $complaint = $this->complaintModel->findWithDetails($id);
+            
+            if (!$complaint) {
+                ResponseFormatter::notFound('Réclamation');
+            }
+            
+            // Vérifier les droits d'accès
+            if ($user['role'] === 'employee' && $complaint['submitter_id'] !== $user['id']) {
+                ResponseFormatter::permissionError('Accès refusé à cette réclamation');
+            }
+            
+            $this->json($complaint, 'Réclamation récupérée');
+            
+        } catch (Exception $e) {
+            $this->error('Erreur lors de la récupération');
         }
-        
-        // Vérifier les permissions de lecture
-        if ($user['role'] === 'employee' && $complaint['submitter_id'] !== $user['id']) {
-            $this->error('Vous ne pouvez consulter que vos propres réclamations', 403);
-        }
-        
-        // Enrichir avec les informations des utilisateurs
-        $complaintWithUsers = $this->complaintModel->findWithUsers($id);
-        
-        $this->json($complaintWithUsers);
     }
     
     /**
@@ -84,94 +83,93 @@ class ComplaintsController extends \BaseController {
      */
     public function create(): void {
         $user = $this->requireAuth();
-        
         $data = $this->getJsonInput();
-        $this->validateRequired($data, ['title', 'description']);
         
-        $complaintData = $this->sanitizeInput([
-            'submitter_id' => $user['id'],
-            'title' => $data['title'],
-            'description' => $data['description'],
-            'category' => $data['category'] ?? null,
-            'priority' => $data['priority'] ?? 'medium'
-        ]);
+        // Validation
+        $rules = [
+            'title' => 'required|max_length:255',
+            'description' => 'required|max_length:5000',
+            'category' => 'max_length:100',
+            'priority' => 'in:low,medium,high,urgent'
+        ];
+        
+        $errors = ValidationHelper::validate($data, $rules);
+        if (!empty($errors)) {
+            $this->validationError($errors);
+        }
         
         try {
+            $complaintData = [
+                'id' => uniqid('complaint_', true),
+                'submitter_id' => $user['id'],
+                'title' => $data['title'],
+                'description' => $data['description'],
+                'category' => $data['category'] ?? null,
+                'priority' => $data['priority'] ?? 'medium',
+                'status' => 'open',
+                'created_at' => date('Y-m-d H:i:s')
+            ];
+            
             $complaint = $this->complaintModel->create($complaintData);
             
-            // Enrichir avec les informations utilisateur
-            $complaintWithUsers = $this->complaintModel->findWithUsers($complaint['id']);
+            // Notifier les modérateurs
+            $this->notifyModerators($complaint);
             
-            $this->logActivity('complaint_created', [
+            // Log de l'action
+            Logger::info('Nouvelle réclamation créée', [
                 'complaint_id' => $complaint['id'],
-                'title' => $complaint['title'],
-                'priority' => $complaint['priority']
+                'submitter_id' => $user['id'],
+                'title' => $complaint['title']
             ]);
             
-            $this->json($complaintWithUsers, 201);
+            $this->json($complaint, 'Réclamation créée avec succès', 201);
             
         } catch (Exception $e) {
+            Logger::error('Erreur création réclamation', [
+                'user_id' => $user['id'],
+                'data' => $data,
+                'error' => $e->getMessage()
+            ]);
             $this->error('Erreur lors de la création de la réclamation');
         }
     }
     
     /**
-     * PUT /api/complaints/:id
+     * PATCH /api/complaints/:id
      */
     public function update(string $id): void {
-        $user = $this->requireAuth();
-        
-        $complaint = $this->complaintModel->find($id);
-        if (!$complaint) {
-            $this->error('Réclamation introuvable', 404);
-        }
-        
-        // Vérifier les permissions de modification
-        $canEdit = ($user['role'] === 'admin') || 
-                   ($user['role'] === 'moderator') ||
-                   ($complaint['submitter_id'] === $user['id'] && $complaint['status'] === 'open');
-        
-        if (!$canEdit) {
-            $this->error('Vous ne pouvez modifier cette réclamation', 403);
-        }
-        
+        $user = $this->requireRole('moderator');
         $data = $this->getJsonInput();
         
-        $updateData = [];
-        
-        // Les employés ne peuvent modifier que le titre et la description
-        if ($user['role'] === 'employee') {
-            if (isset($data['title'])) $updateData['title'] = $data['title'];
-            if (isset($data['description'])) $updateData['description'] = $data['description'];
-        } else {
-            // Les modérateurs/admins peuvent tout modifier
-            if (isset($data['title'])) $updateData['title'] = $data['title'];
-            if (isset($data['description'])) $updateData['description'] = $data['description'];
-            if (isset($data['category'])) $updateData['category'] = $data['category'];
-            if (isset($data['priority'])) $updateData['priority'] = $data['priority'];
-            if (isset($data['status'])) $updateData['status'] = $data['status'];
-            if (isset($data['assigned_to_id'])) $updateData['assigned_to_id'] = $data['assigned_to_id'];
-        }
-        
-        if (empty($updateData)) {
-            $this->error('Aucune donnée à mettre à jour');
-        }
-        
         try {
-            $updatedComplaint = $this->complaintModel->update($id, $this->sanitizeInput($updateData));
+            $complaint = $this->complaintModel->find($id);
+            if (!$complaint) {
+                ResponseFormatter::notFound('Réclamation');
+            }
             
-            // Enrichir avec les informations utilisateur
-            $complaintWithUsers = $this->complaintModel->findWithUsers($id);
+            // Validation des champs modifiables
+            $allowedFields = ['status', 'assigned_to_id', 'priority', 'category'];
+            $updateData = array_intersect_key($data, array_flip($allowedFields));
+            $updateData['updated_at'] = date('Y-m-d H:i:s');
             
-            $this->logActivity('complaint_updated', [
+            $updated = $this->complaintModel->update($id, $updateData);
+            
+            // Notifier le demandeur des changements
+            if (isset($data['status']) || isset($data['assigned_to_id'])) {
+                $this->notifyStatusChange($updated, $user);
+            }
+            
+            // Log
+            Logger::info('Réclamation mise à jour', [
                 'complaint_id' => $id,
-                'title' => $updatedComplaint['title']
+                'updater_id' => $user['id'],
+                'changes' => array_keys($updateData)
             ]);
             
-            $this->json($complaintWithUsers);
+            $this->json($updated, 'Réclamation mise à jour');
             
         } catch (Exception $e) {
-            $this->error('Erreur lors de la mise à jour de la réclamation');
+            $this->error('Erreur lors de la mise à jour');
         }
     }
     
@@ -179,130 +177,96 @@ class ComplaintsController extends \BaseController {
      * DELETE /api/complaints/:id
      */
     public function delete(string $id): void {
-        $user = $this->requirePermission('manage_complaints');
-        
-        $complaint = $this->complaintModel->find($id);
-        if (!$complaint) {
-            $this->error('Réclamation introuvable', 404);
-        }
+        $user = $this->requireRole('admin');
         
         try {
+            $complaint = $this->complaintModel->find($id);
+            if (!$complaint) {
+                ResponseFormatter::notFound('Réclamation');
+            }
+            
             $this->complaintModel->delete($id);
             
-            $this->logActivity('complaint_deleted', [
+            Logger::info('Réclamation supprimée', [
                 'complaint_id' => $id,
-                'title' => $complaint['title']
+                'deleter_id' => $user['id']
             ]);
             
-            $this->json(['message' => 'Réclamation supprimée avec succès']);
+            $this->json(null, 'Réclamation supprimée');
             
         } catch (Exception $e) {
-            $this->error('Erreur lors de la suppression de la réclamation');
+            $this->error('Erreur lors de la suppression');
         }
     }
     
     /**
-     * PATCH /api/complaints/:id/assign
+     * GET /api/complaints/stats
+     */
+    public function stats(): void {
+        $user = $this->requireRole('moderator');
+        
+        try {
+            $stats = [
+                'by_status' => $this->complaintModel->getStatsByStatus(),
+                'by_priority' => $this->complaintModel->getStatsByPriority(),
+                'by_category' => $this->complaintModel->getStatsByCategory(),
+                'recent_count' => $this->complaintModel->getRecentCount(30),
+                'average_resolution_time' => $this->complaintModel->getAverageResolutionTime(),
+                'top_assignees' => $this->complaintModel->getTopAssignees(5)
+            ];
+            
+            $this->json($stats, 'Statistiques des réclamations');
+            
+        } catch (Exception $e) {
+            $this->error('Erreur lors de la récupération des statistiques');
+        }
+    }
+    
+    /**
+     * POST /api/complaints/:id/assign
      */
     public function assign(string $id): void {
         $user = $this->requireRole('moderator');
-        
-        $complaint = $this->complaintModel->find($id);
-        if (!$complaint) {
-            $this->error('Réclamation introuvable', 404);
-        }
-        
         $data = $this->getJsonInput();
-        $this->validateRequired($data, ['assignee_id']);
         
-        // Vérifier que l'assignee existe
-        $assignee = $this->userModel->find($data['assignee_id']);
-        if (!$assignee || !in_array($assignee['role'], ['moderator', 'admin'])) {
-            $this->error('L\'assigné doit être un modérateur ou administrateur');
+        if (empty($data['assigned_to_id'])) {
+            $this->validationError(['assigned_to_id' => ['Utilisateur assigné requis']]);
         }
         
         try {
-            $updatedComplaint = $this->complaintModel->assignTo($id, $data['assignee_id']);
+            // Vérifier que l'utilisateur assigné existe
+            $assignee = $this->userModel->find($data['assigned_to_id']);
+            if (!$assignee) {
+                ResponseFormatter::notFound('Utilisateur assigné');
+            }
             
-            $this->logActivity('complaint_assigned', [
-                'complaint_id' => $id,
-                'assignee_id' => $data['assignee_id'],
-                'assignee_name' => $assignee['name']
+            $updated = $this->complaintModel->update($id, [
+                'assigned_to_id' => $data['assigned_to_id'],
+                'status' => 'in_progress',
+                'updated_at' => date('Y-m-d H:i:s')
             ]);
             
-            // Enrichir avec les informations utilisateur
-            $complaintWithUsers = $this->complaintModel->findWithUsers($id);
+            // Notifier l'assigné
+            NotificationManager::sendSystemNotification(
+                'complaint_assigned',
+                $assignee['id'],
+                [
+                    'complaint_id' => $id,
+                    'complaint_title' => $updated['title'],
+                    'assigner_name' => $user['name']
+                ]
+            );
             
-            $this->json($complaintWithUsers);
-            
-        } catch (Exception $e) {
-            $this->error('Erreur lors de l\'assignation de la réclamation');
-        }
-    }
-    
-    /**
-     * PATCH /api/complaints/:id/status
-     */
-    public function changeStatus(string $id): void {
-        $user = $this->requireRole('moderator');
-        
-        $complaint = $this->complaintModel->find($id);
-        if (!$complaint) {
-            $this->error('Réclamation introuvable', 404);
-        }
-        
-        $data = $this->getJsonInput();
-        $this->validateRequired($data, ['status']);
-        
-        try {
-            $updatedComplaint = $this->complaintModel->changeStatus($id, $data['status']);
-            
-            $this->logActivity('complaint_status_changed', [
+            Logger::info('Réclamation assignée', [
                 'complaint_id' => $id,
-                'old_status' => $complaint['status'],
-                'new_status' => $data['status']
+                'assigned_to' => $assignee['id'],
+                'assigned_by' => $user['id']
             ]);
             
-            // Enrichir avec les informations utilisateur
-            $complaintWithUsers = $this->complaintModel->findWithUsers($id);
-            
-            $this->json($complaintWithUsers);
+            $this->json($updated, 'Réclamation assignée avec succès');
             
         } catch (Exception $e) {
-            $this->error('Erreur lors du changement de statut');
-        }
-    }
-    
-    /**
-     * PATCH /api/complaints/:id/priority
-     */
-    public function changePriority(string $id): void {
-        $user = $this->requireRole('moderator');
-        
-        $complaint = $this->complaintModel->find($id);
-        if (!$complaint) {
-            $this->error('Réclamation introuvable', 404);
-        }
-        
-        $data = $this->getJsonInput();
-        $this->validateRequired($data, ['priority']);
-        
-        try {
-            $updatedComplaint = $this->complaintModel->changePriority($id, $data['priority']);
-            
-            $this->logActivity('complaint_priority_changed', [
-                'complaint_id' => $id,
-                'old_priority' => $complaint['priority'],
-                'new_priority' => $data['priority']
-            ]);
-            
-            // Enrichir avec les informations utilisateur
-            $complaintWithUsers = $this->complaintModel->findWithUsers($id);
-            
-            $this->json($complaintWithUsers);
-            
-        } catch (Exception $e) {
-            $this->error('Erreur lors du changement de priorité');
+            $this->error('Erreur lors de l\'assignation');
         }
     }
     
@@ -312,62 +276,70 @@ class ComplaintsController extends \BaseController {
     public function myComplaints(): void {
         $user = $this->requireAuth();
         
-        $complaints = $this->complaintModel->getBySubmitter($user['id']);
-        
-        $this->json($complaints);
-    }
-    
-    /**
-     * GET /api/complaints/assigned-to-me
-     */
-    public function assignedToMe(): void {
-        $user = $this->requireRole('moderator');
-        
-        $complaints = $this->complaintModel->getAssignedTo($user['id']);
-        
-        $this->json($complaints);
-    }
-    
-    /**
-     * GET /api/complaints/stats
-     */
-    public function stats(): void {
-        $this->requireRole('moderator');
-        
-        $stats = $this->complaintModel->getStats();
-        
-        $this->json($stats);
-    }
-    
-    /**
-     * POST /api/complaints/bulk-delete
-     */
-    public function bulkDelete(): void {
-        $user = $this->requireRole('admin');
-        
-        $data = $this->getJsonInput();
-        $this->validateRequired($data, ['complaint_ids']);
-        
-        $complaintIds = $data['complaint_ids'];
-        if (!is_array($complaintIds) || empty($complaintIds)) {
-            $this->error('Liste d\'IDs de réclamations invalide');
-        }
+        $page = (int) $this->getQueryParam('page', 1);
+        $limit = min((int) $this->getQueryParam('limit', 20), 50);
         
         try {
-            $deletedCount = $this->complaintModel->bulkDelete($complaintIds);
+            $complaints = $this->complaintModel->findBySubmitter($user['id'], $page, $limit);
+            $total = $this->complaintModel->countBySubmitter($user['id']);
             
-            $this->logActivity('complaints_bulk_deleted', [
-                'count' => $deletedCount,
-                'complaint_ids' => $complaintIds
-            ]);
-            
-            $this->json([
-                'message' => "$deletedCount réclamation(s) supprimée(s) avec succès",
-                'deleted_count' => $deletedCount
+            $this->paginated($complaints, $page, $limit, $total, [
+                'user_role' => $user['role']
             ]);
             
         } catch (Exception $e) {
-            $this->error('Erreur lors de la suppression en masse des réclamations');
+            $this->error('Erreur lors de la récupération');
+        }
+    }
+    
+    /**
+     * Notifier les modérateurs d'une nouvelle réclamation
+     */
+    private function notifyModerators(array $complaint): void {
+        try {
+            $moderators = $this->userModel->getUsersByRole('moderator');
+            $admins = $this->userModel->getUsersByRole('admin');
+            $recipients = array_merge($moderators, $admins);
+            
+            foreach ($recipients as $recipient) {
+                NotificationManager::sendSystemNotification(
+                    'new_complaint',
+                    $recipient['id'],
+                    [
+                        'complaint_id' => $complaint['id'],
+                        'complaint_title' => $complaint['title'],
+                        'priority' => $complaint['priority'],
+                        'submitter_name' => $complaint['submitter_name'] ?? 'Utilisateur'
+                    ]
+                );
+            }
+            
+        } catch (Exception $e) {
+            Logger::error('Erreur notification modérateurs', ['error' => $e->getMessage()]);
+        }
+    }
+    
+    /**
+     * Notifier le changement de statut
+     */
+    private function notifyStatusChange(array $complaint, array $updater): void {
+        try {
+            if ($complaint['submitter_id']) {
+                NotificationManager::sendSystemNotification(
+                    'complaint_updated',
+                    $complaint['submitter_id'],
+                    [
+                        'complaint_id' => $complaint['id'],
+                        'complaint_title' => $complaint['title'],
+                        'new_status' => $complaint['status'],
+                        'updater_name' => $updater['name']
+                    ]
+                );
+            }
+            
+        } catch (Exception $e) {
+            Logger::error('Erreur notification changement statut', ['error' => $e->getMessage()]);
         }
     }
 }
+?>

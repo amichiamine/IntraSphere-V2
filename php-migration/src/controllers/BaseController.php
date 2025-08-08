@@ -6,28 +6,46 @@
 abstract class BaseController {
     
     /**
-     * Retourner une réponse JSON
+     * Retourner une réponse JSON standardisée
      */
-    protected function json($data, int $statusCode = 200): void {
-        http_response_code($statusCode);
-        header('Content-Type: application/json; charset=utf-8');
-        echo json_encode($data, JSON_UNESCAPED_UNICODE);
-        exit;
+    protected function json($data, string $message = '', int $statusCode = 200, array $meta = []): void {
+        ResponseFormatter::success($data, $message, $statusCode, $meta);
     }
     
     /**
-     * Retourner une erreur JSON
+     * Retourner une erreur JSON standardisée
      */
-    protected function error(string $message, int $statusCode = 400): void {
-        $this->json(['error' => $message], $statusCode);
+    protected function error(string $message, int $statusCode = 400, array $details = []): void {
+        ResponseFormatter::error($message, $statusCode, $details);
+    }
+    
+    /**
+     * Retourner une liste paginée
+     */
+    protected function paginated(array $items, int $page, int $limit, int $total, array $meta = []): void {
+        ResponseFormatter::paginated($items, $page, $limit, $total, $meta);
+    }
+    
+    /**
+     * Erreur de validation avec détails
+     */
+    protected function validationError(array $errors, string $message = 'Données invalides'): void {
+        ResponseFormatter::validationError($errors, $message);
     }
     
     /**
      * Vérifier l'authentification
      */
     protected function requireAuth(): array {
-        if (!isset($_SESSION['user'])) {
-            $this->error('Non authentifié', 401);
+        if (!isset($_SESSION['user']) || empty($_SESSION['user'])) {
+            ResponseFormatter::authError('Authentification requise');
+        }
+        
+        // Vérifier l'expiration de session
+        if (isset($_SESSION['login_time']) && 
+            (time() - $_SESSION['login_time']) > SESSION_LIFETIME) {
+            session_destroy();
+            ResponseFormatter::authError('Session expirée');
         }
         
         return $_SESSION['user'];
@@ -49,7 +67,7 @@ abstract class BaseController {
         $requiredLevel = $roleHierarchy[$role] ?? 999;
         
         if ($userLevel < $requiredLevel) {
-            $this->error('Permissions insuffisantes', 403);
+            ResponseFormatter::permissionError('Rôle insuffisant: ' . $role . ' requis');
         }
         
         return $user;
