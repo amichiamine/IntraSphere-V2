@@ -1,763 +1,598 @@
-import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { MainLayout } from "@/core/components/layout/main-layout";
-import { GlassCard } from "@/core/components/ui/glass-card";
-import { Button } from "@/core/components/ui/button";
-import { Switch } from "@/core/components/ui/switch";
-import { Input } from "@/core/components/ui/input";
-import { Label } from "@/core/components/ui/label";
-import { Badge } from "@/core/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/core/components/ui/tabs";
-import { useToast } from "@/core/hooks/use-toast";
-import { 
-  Eye, 
-  EyeOff, 
-  Settings, 
-  Users, 
-  FileText, 
-  Calendar, 
-  MessageCircle,
-  AlertTriangle,
-  Layout,
-  Palette,
-  Save,
-  RotateCcw,
-  Home,
-  FolderOpen,
-  Shield,
-  ArrowUp,
-  ArrowDown,
-  Edit3,
-  Trash2,
-  ChevronDown,
-  Check
-} from "lucide-react";
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/core/components/ui/card';
+import { Button } from '@/core/components/ui/button';
+import { Badge } from '@/core/components/ui/badge';
+import { Input } from '@/core/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/core/components/ui/tabs';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/core/components/ui/dialog';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/core/components/ui/form';
+import { Textarea } from '@/core/components/ui/textarea';
+import { Checkbox } from '@/core/components/ui/checkbox';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Layout, Eye, Settings, Users, Plus, Edit, Trash2, Monitor } from 'lucide-react';
+import { useAuth } from '@/core/hooks/useAuth';
+import { userHasPermission } from '@/shared/utils/auth';
+import { API_ROUTES } from '@/shared/constants/routes';
+import { PERMISSIONS } from '@/shared/constants/permissions';
+
+const viewConfigSchema = z.object({
+  viewId: z.string().min(1, 'L\'ID de la vue est requis'),
+  title: z.string().min(1, 'Le titre est requis'),
+  description: z.string().optional(),
+  layout: z.enum(['grid', 'list', 'card', 'table']),
+  isVisible: z.boolean().default(true),
+  allowedRoles: z.array(z.string()).min(1, 'Au moins un rôle doit être sélectionné'),
+  customSettings: z.record(z.any()).optional()
+});
+
+type ViewConfigFormData = z.infer<typeof viewConfigSchema>;
 
 interface ViewConfig {
   id: string;
-  name: string;
-  description: string;
-  icon: string;
+  viewId: string;
+  title: string;
+  description?: string;
+  layout: 'grid' | 'list' | 'card' | 'table';
   isVisible: boolean;
-  sortOrder: number;
-  color: string;
-  isCore: boolean;
-  accessLevel: 'all' | 'employee' | 'moderator' | 'admin';
-  category: 'main' | 'communication' | 'management' | 'tools';
+  allowedRoles: string[];
+  customSettings: Record<string, any>;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-const iconMap = {
-  Layout: Layout,
-  AlertTriangle: AlertTriangle,
-  FileText: FileText,
-  Users: Users,
-  MessageCircle: MessageCircle,
-  Calendar: Calendar,
-  Home: Home,
-  FolderOpen: FolderOpen,
-  Shield: Shield
-};
+const availableViews = [
+  { id: 'dashboard', name: 'Tableau de Bord', description: 'Page d\'accueil principal' },
+  { id: 'announcements', name: 'Annonces', description: 'Liste des annonces' },
+  { id: 'documents', name: 'Documents', description: 'Bibliothèque de documents' },
+  { id: 'events', name: 'Événements', description: 'Calendrier des événements' },
+  { id: 'directory', name: 'Annuaire', description: 'Liste des employés' },
+  { id: 'training', name: 'Formations', description: 'Système de formation' },
+  { id: 'forum', name: 'Forum', description: 'Forum de discussion' }
+];
 
-const accessLabels = {
-  all: "Tous les utilisateurs",
-  employee: "Employés et plus",
-  moderator: "Modérateurs et plus", 
-  admin: "Administrateurs uniquement"
-};
+const availableRoles = ['admin', 'moderator', 'employee', 'guest'];
 
-// Custom Select Component for Access Level
-const AccessLevelSelect = ({ 
-  value, 
-  onChange, 
-  disabled = false, 
-  viewId 
-}: { 
-  value: ViewConfig['accessLevel'], 
-  onChange: (value: ViewConfig['accessLevel']) => void, 
-  disabled?: boolean,
-  viewId: string 
-}) => {
-  const [isOpen, setIsOpen] = useState(false);
-
-  const handleSelect = (accessLevel: ViewConfig['accessLevel']) => {
-    if (!disabled) {
-      onChange(accessLevel);
-      setIsOpen(false);
-    }
-  };
-
-  return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={() => !disabled && setIsOpen(!isOpen)}
-        className={`px-3 py-2 rounded-lg border text-sm bg-white transition-all min-w-[200px] text-left flex items-center justify-between ${
-          disabled 
-            ? 'border-gray-200 bg-gray-50 text-gray-500 cursor-not-allowed' 
-            : 'border-gray-300 hover:border-purple-400 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 cursor-pointer'
-        } outline-none`}
-        disabled={disabled}
-      >
-        <span>{accessLabels[value]}</span>
-        <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''} ${disabled ? 'text-gray-400' : 'text-gray-600'}`} />
-      </button>
-
-      {isOpen && !disabled && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50">
-          {Object.entries(accessLabels).map(([accessValue, label]) => (
-            <button
-              key={accessValue}
-              type="button"
-              onClick={() => handleSelect(accessValue as ViewConfig['accessLevel'])}
-              className={`w-full px-3 py-2 text-left text-sm hover:bg-purple-50 transition-colors flex items-center justify-between ${
-                value === accessValue ? 'bg-purple-100 text-purple-700' : 'text-gray-700'
-              } first:rounded-t-lg last:rounded-b-lg`}
-            >
-              <span>{label}</span>
-              {value === accessValue && <Check className="w-4 h-4 text-purple-600" />}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
-
-const categoryLabels = {
-  main: "Sections principales",
-  communication: "Communication",
-  management: "Gestion",
-  tools: "Outils"
-};
-
-const ViewsManagement = () => {
-  const { toast } = useToast();
+export default function ViewsManagement() {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [selectedView, setSelectedView] = useState<ViewConfig | null>(null);
+  const [isConfigDialogOpen, setIsConfigDialogOpen] = useState(false);
+  const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('configuration');
 
-  const [localViews, setLocalViews] = useState<ViewConfig[]>([]);
-  const [hasChanges, setHasChanges] = useState(false);
-  const [activeTab, setActiveTab] = useState("configuration");
-
-  // Close dropdowns when clicking outside
-  useEffect(() => {
-    const handleClickOutside = () => {
-      // This will help close any open dropdowns when clicking elsewhere
-      const openDropdowns = document.querySelectorAll('[data-dropdown-open="true"]');
-      openDropdowns.forEach(dropdown => {
-        dropdown.removeAttribute('data-dropdown-open');
-      });
-    };
-
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, []);
-
-  // Fetch current view configuration
-  const { data: viewsConfig, isLoading } = useQuery({
-    queryKey: ['/api/views-config'],
-    queryFn: async () => {
-      const response = await fetch('/api/views-config');
-      if (!response.ok) {
-        throw new Error('Failed to fetch views configuration');
-      }
-      return response.json();
-    }
+  const { data: viewConfigs, isLoading } = useQuery({
+    queryKey: [API_ROUTES.VIEWS_CONFIG],
+    queryFn: () => fetch(API_ROUTES.VIEWS_CONFIG, { credentials: 'include' }).then(res => res.json())
   });
 
-  // Initialize local state when data is loaded
-  useEffect(() => {
-    if (viewsConfig) {
-      setLocalViews(viewsConfig);
-      setHasChanges(false);
-    }
-  }, [viewsConfig]);
-
-  // Save configuration mutation
-  const saveConfigMutation = useMutation({
-    mutationFn: async (views: ViewConfig[]) => {
-      const response = await fetch('/api/views-config', {
+  const createConfigMutation = useMutation({
+    mutationFn: (data: ViewConfigFormData) =>
+      fetch(API_ROUTES.VIEWS_CONFIG, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ views })
-      });
-      if (!response.ok) throw new Error('Failed to save configuration');
-      return response.json();
-    },
+        credentials: 'include',
+        body: JSON.stringify(data)
+      }).then(res => res.json()),
     onSuccess: () => {
-      toast({
-        title: "Configuration sauvegardée",
-        description: "Les paramètres de vue ont été mis à jour avec succès.",
-      });
-      queryClient.invalidateQueries({ queryKey: ['/api/views-config'] });
-      setHasChanges(false);
-    },
-    onError: () => {
-      toast({
-        title: "Erreur",
-        description: "Impossible de sauvegarder la configuration.",
-        variant: "destructive"
-      });
+      queryClient.invalidateQueries({ queryKey: [API_ROUTES.VIEWS_CONFIG] });
+      setIsConfigDialogOpen(false);
+      form.reset();
     }
   });
 
-  const toggleViewVisibility = (viewId: string) => {
-    const updatedViews = localViews.map(view => 
-      view.id === viewId 
-        ? { ...view, isVisible: !view.isVisible }
-        : view
-    );
-    setLocalViews(updatedViews);
-    setHasChanges(true);
-  };
+  const updateConfigMutation = useMutation({
+    mutationFn: (data: ViewConfigFormData & { id: string }) =>
+      fetch(API_ROUTES.VIEWS_CONFIG_BY_ID(data.id), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(data)
+      }).then(res => res.json()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [API_ROUTES.VIEWS_CONFIG] });
+      setIsConfigDialogOpen(false);
+      setSelectedView(null);
+    }
+  });
 
-  const updateViewOrder = (viewId: string, newOrder: number) => {
-    const updatedViews = localViews.map(view => 
-      view.id === viewId 
-        ? { ...view, sortOrder: newOrder }
-        : view
-    );
-    setLocalViews(updatedViews);
-    setHasChanges(true);
-  };
+  const deleteConfigMutation = useMutation({
+    mutationFn: (id: string) =>
+      fetch(API_ROUTES.VIEWS_CONFIG_BY_ID(id), {
+        method: 'DELETE',
+        credentials: 'include'
+      }).then(res => res.json()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [API_ROUTES.VIEWS_CONFIG] });
+    }
+  });
 
-  const updateViewColor = (viewId: string, newColor: string) => {
-    const updatedViews = localViews.map(view => 
-      view.id === viewId 
-        ? { ...view, color: newColor }
-        : view
-    );
-    setLocalViews(updatedViews);
-    setHasChanges(true);
-  };
+  const form = useForm<ViewConfigFormData>({
+    resolver: zodResolver(viewConfigSchema),
+    defaultValues: {
+      viewId: '',
+      title: '',
+      description: '',
+      layout: 'grid',
+      isVisible: true,
+      allowedRoles: ['employee'],
+      customSettings: {}
+    }
+  });
 
-  const updateViewAccess = (viewId: string, accessLevel: ViewConfig['accessLevel']) => {
-    const updatedViews = localViews.map(view => 
-      view.id === viewId 
-        ? { ...view, accessLevel }
-        : view
-    );
-    setLocalViews(updatedViews);
-    setHasChanges(true);
-  };
-
-  const moveView = (viewId: string, direction: 'up' | 'down') => {
-    const sortedViews = [...localViews].sort((a, b) => a.sortOrder - b.sortOrder);
-    const currentIndex = sortedViews.findIndex(v => v.id === viewId);
-    
-    if (direction === 'up' && currentIndex > 0) {
-      // Swap orders between current and previous view
-      const currentView = sortedViews[currentIndex];
-      const previousView = sortedViews[currentIndex - 1];
-      
-      const updatedViews = localViews.map(view => {
-        if (view.id === currentView.id) {
-          return { ...view, sortOrder: previousView.sortOrder };
-        } else if (view.id === previousView.id) {
-          return { ...view, sortOrder: currentView.sortOrder };
-        }
-        return view;
-      });
-      
-      setLocalViews(updatedViews);
-      setHasChanges(true);
-    } else if (direction === 'down' && currentIndex < sortedViews.length - 1) {
-      // Swap orders between current and next view
-      const currentView = sortedViews[currentIndex];
-      const nextView = sortedViews[currentIndex + 1];
-      
-      const updatedViews = localViews.map(view => {
-        if (view.id === currentView.id) {
-          return { ...view, sortOrder: nextView.sortOrder };
-        } else if (view.id === nextView.id) {
-          return { ...view, sortOrder: currentView.sortOrder };
-        }
-        return view;
-      });
-      
-      setLocalViews(updatedViews);
-      setHasChanges(true);
+  const handleSubmit = (data: ViewConfigFormData) => {
+    if (selectedView) {
+      updateConfigMutation.mutate({ ...data, id: selectedView.id });
+    } else {
+      createConfigMutation.mutate(data);
     }
   };
 
-  const saveConfiguration = () => {
-    saveConfigMutation.mutate(localViews);
-  };
-
-  const resetToDefault = () => {
-    // Reset to default configuration
-    const defaultViews: ViewConfig[] = [
-      {
-        id: "dashboard",
-        name: "Tableau de Bord",
-        description: "Vue d'accueil avec statistiques et raccourcis",
-        icon: "Home",
-        isVisible: true,
-        sortOrder: 1,
-        color: "#3B82F6",
-        isCore: true,
-        accessLevel: "all",
-        category: "main"
-      },
-      {
-        id: "announcements", 
-        name: "Annonces",
-        description: "Communications officielles de l'entreprise",
-        icon: "AlertTriangle",
-        isVisible: true,
-        sortOrder: 2,
-        color: "#EF4444",
-        isCore: true,
-        accessLevel: "all",
-        category: "communication"
-      },
-      {
-        id: "documents",
-        name: "Documents",
-        description: "Bibliothèque de documents et règlements",
-        icon: "FileText",
-        isVisible: true,
-        sortOrder: 3,
-        color: "#10B981",
-        isCore: true,
-        accessLevel: "all",
-        category: "main"
-      },
-      {
-        id: "content",
-        name: "Contenu",
-        description: "Galerie multimédia et ressources de formation",
-        icon: "FolderOpen",
-        isVisible: true,
-        sortOrder: 4,
-        color: "#8B5CF6",
-        isCore: false,
-        accessLevel: "all",
-        category: "main"
-      },
-      {
-        id: "directory",
-        name: "Annuaire",
-        description: "Répertoire des employés et contacts",
-        icon: "Users",
-        isVisible: true,
-        sortOrder: 5,
-        color: "#F59E0B",
-        isCore: false,
-        accessLevel: "employee",
-        category: "tools"
-      },
-      {
-        id: "messages",
-        name: "Messages",
-        description: "Système de messagerie interne",
-        icon: "MessageCircle",
-        isVisible: true,
-        sortOrder: 6,
-        color: "#06B6D4",
-        isCore: false,
-        accessLevel: "employee",
-        category: "communication"
-      },
-      {
-        id: "complaints",
-        name: "Réclamations",
-        description: "Système de gestion des plaintes et suggestions",
-        icon: "AlertTriangle",
-        isVisible: false,
-        sortOrder: 7,
-        color: "#DC2626",
-        isCore: false,
-        accessLevel: "employee",
-        category: "management"
-      },
-      {
-        id: "administration",
-        name: "Administration",
-        description: "Panneau d'administration et gestion des utilisateurs",
-        icon: "Shield",
-        isVisible: true,
-        sortOrder: 8,
-        color: "#7C3AED",
-        isCore: true,
-        accessLevel: "admin",
-        category: "management"
-      }
-    ];
-    
-    setLocalViews(defaultViews);
-    setHasChanges(true);
-    toast({
-      title: "Configuration réinitialisée",
-      description: "Les paramètres par défaut ont été restaurés. Pensez à sauvegarder.",
+  const handleEdit = (config: ViewConfig) => {
+    setSelectedView(config);
+    form.reset({
+      viewId: config.viewId,
+      title: config.title,
+      description: config.description || '',
+      layout: config.layout,
+      isVisible: config.isVisible,
+      allowedRoles: config.allowedRoles,
+      customSettings: config.customSettings || {}
     });
+    setIsConfigDialogOpen(true);
   };
 
-  if (isLoading) {
+  const handleDelete = (id: string) => {
+    if (confirm('Êtes-vous sûr de vouloir supprimer cette configuration?')) {
+      deleteConfigMutation.mutate(id);
+    }
+  };
+
+  const getLayoutIcon = (layout: string) => {
+    switch (layout) {
+      case 'grid': return '⊞';
+      case 'list': return '☰';
+      case 'card': return '⊡';
+      case 'table': return '⊞';
+      default: return '⊞';
+    }
+  };
+
+  const canManageViews = userHasPermission(user as any, PERMISSIONS.MANAGE_SYSTEM_SETTINGS);
+
+  if (!canManageViews) {
     return (
-      <MainLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Chargement de la configuration...</p>
-          </div>
-        </div>
-      </MainLayout>
+      <div className="container mx-auto p-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Accès Refusé</CardTitle>
+            <CardDescription>
+              Vous n'avez pas les permissions nécessaires pour gérer les vues.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
     );
   }
 
-  const visibleViews = localViews.filter(view => view.isVisible).sort((a, b) => a.sortOrder - b.sortOrder);
-  const viewsByCategory = localViews.reduce((acc, view) => {
-    acc[view.category] = acc[view.category] || [];
-    acc[view.category].push(view);
-    return acc;
-  }, {} as Record<string, ViewConfig[]>);
-
   return (
-    <MainLayout>
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold" style={{
-              background: `linear-gradient(to right, var(--color-primary, #8B5CF6), var(--color-secondary, #A78BFA))`,
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text'
-            }}>
-              Gestion des Vues
-            </h1>
-            <p className="text-gray-600 mt-2">
-              Configurez l'affichage, l'ordre et les permissions des sections de votre intranet
-            </p>
-            {hasChanges && (
-              <Badge className="mt-2 bg-orange-100 text-orange-800">
-                Modifications non sauvegardées
-              </Badge>
+    <div className="container mx-auto p-6 space-y-6" data-testid="views-management-page">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Gestion des Vues</h1>
+          <p className="text-gray-600 mt-2">Configurez l'affichage et les permissions des différentes vues</p>
+        </div>
+        <Button 
+          onClick={() => {
+            setSelectedView(null);
+            form.reset();
+            setIsConfigDialogOpen(true);
+          }}
+          data-testid="button-create-view-config"
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Nouvelle Configuration
+        </Button>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="configuration" data-testid="tab-configuration">Configuration</TabsTrigger>
+          <TabsTrigger value="layout" data-testid="tab-layout">Mise en Page</TabsTrigger>
+          <TabsTrigger value="permissions" data-testid="tab-permissions">Permissions</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="configuration" className="space-y-4">
+          <div className="grid gap-4">
+            {isLoading ? (
+              <div>Chargement des configurations...</div>
+            ) : (
+              <>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {viewConfigs?.map((config: ViewConfig) => (
+                    <Card key={config.id} data-testid={`card-view-config-${config.id}`}>
+                      <CardHeader>
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <CardTitle className="text-lg">{config.title}</CardTitle>
+                            <CardDescription>{config.description}</CardDescription>
+                          </div>
+                          <Badge variant={config.isVisible ? "default" : "secondary"}>
+                            {config.isVisible ? 'Visible' : 'Masqué'}
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2">
+                          <div className="flex items-center text-sm text-gray-600">
+                            <Layout className="w-4 h-4 mr-2" />
+                            <span>Vue: {config.viewId}</span>
+                          </div>
+                          <div className="flex items-center text-sm text-gray-600">
+                            <Monitor className="w-4 h-4 mr-2" />
+                            <span>Mise en page: {getLayoutIcon(config.layout)} {config.layout}</span>
+                          </div>
+                          <div className="flex items-center text-sm text-gray-600">
+                            <Users className="w-4 h-4 mr-2" />
+                            <span>Rôles: {config.allowedRoles.join(', ')}</span>
+                          </div>
+                          <div className="flex justify-between mt-4">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedView(config);
+                                setIsPreviewDialogOpen(true);
+                              }}
+                              data-testid={`button-preview-${config.id}`}
+                            >
+                              <Eye className="w-4 h-4 mr-1" />
+                              Aperçu
+                            </Button>
+                            <div className="flex space-x-1">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEdit(config)}
+                                data-testid={`button-edit-${config.id}`}
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => handleDelete(config.id)}
+                                data-testid={`button-delete-${config.id}`}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+
+                {viewConfigs?.length === 0 && (
+                  <div className="text-center py-12">
+                    <Layout className="mx-auto h-12 w-12 text-gray-400" />
+                    <h3 className="mt-2 text-sm font-medium text-gray-900">Aucune configuration</h3>
+                    <p className="mt-1 text-sm text-gray-500">Commencez par créer votre première configuration de vue.</p>
+                  </div>
+                )}
+              </>
             )}
           </div>
-          <div className="flex space-x-3">
-            <Button variant="outline" onClick={resetToDefault}>
-              <RotateCcw className="w-4 h-4 mr-2" />
-              Réinitialiser
-            </Button>
-            <Button 
-              onClick={saveConfiguration} 
-              disabled={!hasChanges || saveConfigMutation.isPending}
-              className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700"
-            >
-              <Save className="w-4 h-4 mr-2" />
-              {saveConfigMutation.isPending ? "Sauvegarde..." : "Sauvegarder"}
-            </Button>
+        </TabsContent>
+
+        <TabsContent value="layout" className="space-y-4">
+          <div className="grid gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Types de Mise en Page Disponibles</CardTitle>
+                <CardDescription>Choisissez le type d'affichage pour chaque vue</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                  <div className="p-4 border rounded-lg text-center">
+                    <div className="text-2xl mb-2">⊞</div>
+                    <h4 className="font-medium">Grille</h4>
+                    <p className="text-sm text-gray-600">Affichage en grille</p>
+                  </div>
+                  <div className="p-4 border rounded-lg text-center">
+                    <div className="text-2xl mb-2">☰</div>
+                    <h4 className="font-medium">Liste</h4>
+                    <p className="text-sm text-gray-600">Affichage en liste</p>
+                  </div>
+                  <div className="p-4 border rounded-lg text-center">
+                    <div className="text-2xl mb-2">⊡</div>
+                    <h4 className="font-medium">Cartes</h4>
+                    <p className="text-sm text-gray-600">Affichage en cartes</p>
+                  </div>
+                  <div className="p-4 border rounded-lg text-center">
+                    <div className="text-2xl mb-2">⊞</div>
+                    <h4 className="font-medium">Tableau</h4>
+                    <p className="text-sm text-gray-600">Affichage tabulaire</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        </div>
+        </TabsContent>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="configuration">Configuration</TabsTrigger>
-            <TabsTrigger value="layout">Disposition</TabsTrigger>
-            <TabsTrigger value="permissions">Permissions</TabsTrigger>
-          </TabsList>
-
-          {/* Configuration Tab */}
-          <TabsContent value="configuration" className="space-y-6">
-            <GlassCard className="p-6">
-              <div className="flex items-center space-x-3 mb-6">
-                <Settings className="w-6 h-6 text-purple-600" />
-                <h2 className="text-xl font-bold">Configuration des Sections</h2>
-              </div>
-
-              <div className="space-y-4">
-                {localViews
-                  .sort((a, b) => a.sortOrder - b.sortOrder)
-                  .map((view) => {
-                    const IconComponent = iconMap[view.icon as keyof typeof iconMap] || Layout;
-                    return (
-                      <div key={view.id} className="flex items-center justify-between p-4 bg-white/50 rounded-xl border border-white/20">
-                        <div className="flex items-center space-x-4">
-                          <div 
-                            className="p-3 rounded-xl"
-                            style={{ backgroundColor: `${view.color}20` }}
-                          >
-                            <IconComponent 
-                              className="w-5 h-5" 
-                              style={{ color: view.color }}
-                            />
+        <TabsContent value="permissions" className="space-y-4">
+          <div className="grid gap-4">
+            {availableViews.map(view => {
+              const config = viewConfigs?.find((c: ViewConfig) => c.viewId === view.id);
+              return (
+                <Card key={view.id} data-testid={`card-view-permissions-${view.id}`}>
+                  <CardHeader>
+                    <CardTitle>{view.name}</CardTitle>
+                    <CardDescription>{view.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        {config ? (
+                          <div className="flex space-x-2">
+                            {config.allowedRoles.map((role: string) => (
+                              <Badge key={role} variant="outline">{role}</Badge>
+                            ))}
                           </div>
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-3">
-                              <h3 className="font-medium">{view.name}</h3>
-                              <Badge 
-                                variant={view.isVisible ? "default" : "secondary"}
-                                className={view.isVisible ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600"}
-                              >
-                                {view.isVisible ? "Visible" : "Masqué"}
-                              </Badge>
-                              {view.isCore && (
-                                <Badge className="bg-blue-100 text-blue-800 text-xs">
-                                  Section principale
-                                </Badge>
-                              )}
-                            </div>
-                            <p className="text-sm text-gray-600 mt-1">{view.description}</p>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center space-x-6">
-                          {/* Order Control */}
-                          <div className="flex items-center space-x-2">
-                            <Label className="text-sm">Ordre:</Label>
-                            <Input
-                              type="number"
-                              value={view.sortOrder}
-                              onChange={(e) => updateViewOrder(view.id, parseInt(e.target.value))}
-                              className="w-16 h-8"
-                              min="1"
-                              max="15"
-                            />
-                          </div>
-
-                          {/* Color Picker */}
-                          <div className="flex items-center space-x-2">
-                            <Label className="text-sm">Couleur:</Label>
-                            <input
-                              type="color"
-                              value={view.color}
-                              onChange={(e) => updateViewColor(view.id, e.target.value)}
-                              className="w-8 h-8 rounded border cursor-pointer"
-                            />
-                          </div>
-
-                          {/* Visibility Toggle */}
-                          <div className="flex items-center space-x-2">
-                            <Label className="text-sm flex items-center space-x-1">
-                              {view.isVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                              <span>Visible</span>
-                            </Label>
-                            <Switch
-                              checked={view.isVisible}
-                              onCheckedChange={() => toggleViewVisibility(view.id)}
-                              disabled={view.isCore && view.isVisible}
-                            />
-                          </div>
-                        </div>
+                        ) : (
+                          <Badge variant="secondary">Non configuré</Badge>
+                        )}
                       </div>
-                    );
-                  })}
-              </div>
-            </GlassCard>
-          </TabsContent>
-
-          {/* Layout Tab */}
-          <TabsContent value="layout" className="space-y-6">
-            <GlassCard className="p-6">
-              <div className="flex items-center space-x-3 mb-6">
-                <Layout className="w-6 h-6 text-purple-600" />
-                <h2 className="text-xl font-bold">Disposition et Ordre</h2>
-              </div>
-
-              <div className="space-y-4">
-                <h3 className="font-medium text-gray-700 border-b pb-2">Toutes les sections visibles</h3>
-                <div className="space-y-2">
-                  {visibleViews.map((view, index) => {
-                    const IconComponent = iconMap[view.icon as keyof typeof iconMap] || Layout;
-                    
-                    return (
-                      <div key={view.id} className="flex items-center justify-between p-3 bg-white/30 rounded-lg border border-white/20">
-                        <div className="flex items-center space-x-3">
-                          <span className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-medium text-sm">
-                            {index + 1}
-                          </span>
-                          <IconComponent 
-                            className="w-5 h-5" 
-                            style={{ color: view.color }}
-                          />
-                          <span className="font-medium">{view.name}</span>
-                          <Badge className="bg-gray-100 text-gray-600 text-xs">
-                            {categoryLabels[view.category]}
-                          </Badge>
-                          <Badge className={`text-xs ${
-                            view.accessLevel === 'all' ? 'bg-green-100 text-green-800' : 
-                            view.accessLevel === 'employee' ? 'bg-blue-100 text-blue-800' :
-                            view.accessLevel === 'moderator' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-red-100 text-red-800'
-                          }`}>
-                            {accessLabels[view.accessLevel]}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => moveView(view.id, 'up')}
-                            disabled={index === 0}
-                            className="hover:bg-purple-100 disabled:opacity-50"
-                            title="Monter"
-                          >
-                            <ArrowUp className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => moveView(view.id, 'down')}
-                            disabled={index === visibleViews.length - 1}
-                            className="hover:bg-purple-100 disabled:opacity-50"
-                            title="Descendre"
-                          >
-                            <ArrowDown className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </GlassCard>
-
-            {/* Preview Section */}
-            <GlassCard className="p-6">
-              <div className="flex items-center space-x-3 mb-6">
-                <Palette className="w-6 h-6 text-purple-600" />
-                <h2 className="text-xl font-bold">Aperçu de la Navigation</h2>
-              </div>
-
-              <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl p-6 border-2 border-dashed border-purple-200">
-                <h3 className="font-medium mb-4 text-gray-700">Menu de Navigation (Aperçu)</h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {visibleViews.map((view) => {
-                    const IconComponent = iconMap[view.icon as keyof typeof iconMap] || Layout;
-                    return (
-                      <div
-                        key={view.id}
-                        className="flex items-center space-x-3 px-4 py-3 rounded-lg border border-white/30 hover:shadow-sm transition-shadow"
-                        style={{ 
-                          backgroundColor: `${view.color}15`,
-                          borderColor: `${view.color}30`
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          if (config) {
+                            handleEdit(config);
+                          } else {
+                            form.reset({
+                              viewId: view.id,
+                              title: view.name,
+                              description: view.description,
+                              layout: 'grid',
+                              isVisible: true,
+                              allowedRoles: ['employee'],
+                              customSettings: {}
+                            });
+                            setIsConfigDialogOpen(true);
+                          }
                         }}
+                        data-testid={`button-configure-${view.id}`}
                       >
-                        <IconComponent 
-                          className="w-5 h-5" 
-                          style={{ color: view.color }}
-                        />
-                        <div className="flex-1">
-                          <span 
-                            className="text-sm font-medium block"
-                            style={{ color: view.color }}
-                          >
-                            {view.name}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            Ordre: {view.sortOrder}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-                
-                {visibleViews.length === 0 && (
-                  <p className="text-center text-gray-500 py-8">
-                    Aucune section visible configurée
-                  </p>
-                )}
-              </div>
-            </GlassCard>
-          </TabsContent>
-
-          {/* Permissions Tab */}
-          <TabsContent value="permissions" className="space-y-6">
-            <GlassCard className="p-6">
-              <div className="flex items-center space-x-3 mb-6">
-                <Shield className="w-6 h-6 text-purple-600" />
-                <h2 className="text-xl font-bold">Gestion des Permissions</h2>
-              </div>
-
-              <div className="space-y-4">
-                {localViews
-                  .sort((a, b) => a.sortOrder - b.sortOrder)
-                  .map((view) => {
-                    const IconComponent = iconMap[view.icon as keyof typeof iconMap] || Layout;
-                    return (
-                      <div key={view.id} className="flex items-center justify-between p-4 bg-white/50 rounded-xl border border-white/20 hover:bg-white/70 transition-colors">
-                        <div className="flex items-center space-x-4">
-                          <div 
-                            className="p-3 rounded-xl"
-                            style={{ backgroundColor: `${view.color}20` }}
-                          >
-                            <IconComponent 
-                              className="w-5 h-5" 
-                              style={{ color: view.color }}
-                            />
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-3">
-                              <h3 className="font-medium">{view.name}</h3>
-                              <Badge className={`${view.accessLevel === 'all' ? 'bg-green-100 text-green-800' : 
-                                view.accessLevel === 'employee' ? 'bg-blue-100 text-blue-800' :
-                                view.accessLevel === 'moderator' ? 'bg-yellow-100 text-yellow-800' :
-                                'bg-red-100 text-red-800'}`}>
-                                {accessLabels[view.accessLevel]}
-                              </Badge>
-                              {view.isCore && (
-                                <Badge className="bg-gray-100 text-gray-600 text-xs">
-                                  Section protégée
-                                </Badge>
-                              )}
-                            </div>
-                            <p className="text-sm text-gray-600 mt-1">{view.description}</p>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center space-x-4">
-                          <div className="flex flex-col items-end space-y-1">
-                            <Label className="text-sm font-medium">Niveau d'accès</Label>
-                            <AccessLevelSelect
-                              value={view.accessLevel}
-                              onChange={(accessLevel) => updateViewAccess(view.id, accessLevel)}
-                              disabled={view.isCore}
-                              viewId={view.id}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-              </div>
-
-              {/* Permissions Info */}
-              <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="flex items-start space-x-3">
-                  <AlertTriangle className="w-5 h-5 text-blue-600 mt-0.5" />
-                  <div className="text-sm text-blue-800">
-                    <p className="font-medium mb-2">Niveaux d'accès :</p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-blue-700">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-3 h-3 rounded-full bg-green-400"></div>
-                        <span><strong>Tous les utilisateurs :</strong> Accès libre</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <div className="w-3 h-3 rounded-full bg-blue-400"></div>
-                        <span><strong>Employés et plus :</strong> Accès employé+</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <div className="w-3 h-3 rounded-full bg-yellow-400"></div>
-                        <span><strong>Modérateurs et plus :</strong> Accès modérateur+</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <div className="w-3 h-3 rounded-full bg-red-400"></div>
-                        <span><strong>Administrateurs uniquement :</strong> Accès admin</span>
-                      </div>
+                        <Settings className="w-4 h-4 mr-2" />
+                        {config ? 'Modifier' : 'Configurer'}
+                      </Button>
                     </div>
-                    <p className="mt-3 text-xs text-blue-600">
-                      Les sections principales (Tableau de Bord, Annonces, Documents, Administration) ont des niveaux d'accès fixes pour garantir la sécurité.
-                    </p>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      {/* Configuration Dialog */}
+      <Dialog open={isConfigDialogOpen} onOpenChange={setIsConfigDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedView ? 'Modifier la Configuration' : 'Nouvelle Configuration de Vue'}
+            </DialogTitle>
+            <DialogDescription>
+              Configurez l'affichage et les permissions pour cette vue.
+            </DialogDescription>
+          </DialogHeader>
+
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="viewId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Vue*</FormLabel>
+                    <FormControl>
+                      <select 
+                        {...field}
+                        className="w-full p-2 border rounded-md"
+                        disabled={!!selectedView}
+                        data-testid="select-view-id"
+                      >
+                        <option value="">Sélectionner une vue</option>
+                        {availableViews.map(view => (
+                          <option key={view.id} value={view.id}>
+                            {view.name}
+                          </option>
+                        ))}
+                      </select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Titre*</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Titre de la vue" 
+                        {...field} 
+                        data-testid="input-view-title"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Description de la vue" 
+                        {...field} 
+                        data-testid="input-view-description"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="layout"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Mise en page*</FormLabel>
+                    <FormControl>
+                      <select 
+                        {...field}
+                        className="w-full p-2 border rounded-md"
+                        data-testid="select-view-layout"
+                      >
+                        <option value="grid">Grille</option>
+                        <option value="list">Liste</option>
+                        <option value="card">Cartes</option>
+                        <option value="table">Tableau</option>
+                      </select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="allowedRoles"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Rôles autorisés*</FormLabel>
+                    <FormControl>
+                      <div className="space-y-2" data-testid="checkboxes-allowed-roles">
+                        {availableRoles.map(role => (
+                          <label key={role} className="flex items-center space-x-2">
+                            <Checkbox
+                              checked={field.value.includes(role)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  field.onChange([...field.value, role]);
+                                } else {
+                                  field.onChange(field.value.filter((r: string) => r !== role));
+                                }
+                              }}
+                              data-testid={`checkbox-role-${role}`}
+                            />
+                            <span className="capitalize">{role}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="isVisible"
+                render={({ field }) => (
+                  <FormItem className="flex items-center space-x-2">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        data-testid="checkbox-view-visible"
+                      />
+                    </FormControl>
+                    <FormLabel>Vue visible</FormLabel>
+                  </FormItem>
+                )}
+              />
+
+              <div className="flex justify-end space-x-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setIsConfigDialogOpen(false)}
+                  data-testid="button-cancel-config"
+                >
+                  Annuler
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={createConfigMutation.isPending || updateConfigMutation.isPending}
+                  data-testid="button-save-config"
+                >
+                  {(createConfigMutation.isPending || updateConfigMutation.isPending) 
+                    ? 'Enregistrement...' 
+                    : selectedView ? 'Mettre à jour' : 'Créer'}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Preview Dialog */}
+      <Dialog open={isPreviewDialogOpen} onOpenChange={setIsPreviewDialogOpen}>
+        <DialogContent className="sm:max-w-[800px]">
+          <DialogHeader>
+            <DialogTitle>Aperçu de la Configuration</DialogTitle>
+            <DialogDescription>
+              Prévisualisation de la configuration de vue
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedView && (
+            <div className="space-y-4" data-testid="view-preview">
+              <div className="p-4 bg-gray-50 rounded">
+                <h3 className="font-medium">{selectedView.title}</h3>
+                <p className="text-sm text-gray-600">{selectedView.description}</p>
+                <div className="mt-2 flex space-x-2">
+                  <Badge variant="outline">Vue: {selectedView.viewId}</Badge>
+                  <Badge variant="outline">Layout: {selectedView.layout}</Badge>
+                  <Badge variant={selectedView.isVisible ? "default" : "secondary"}>
+                    {selectedView.isVisible ? 'Visible' : 'Masqué'}
+                  </Badge>
+                </div>
+                <div className="mt-2">
+                  <p className="text-sm text-gray-600">Rôles autorisés:</p>
+                  <div className="flex space-x-1 mt-1">
+                    {selectedView.allowedRoles.map(role => (
+                      <Badge key={role} variant="secondary" className="text-xs">{role}</Badge>
+                    ))}
                   </div>
                 </div>
               </div>
-            </GlassCard>
-          </TabsContent>
-        </Tabs>
-      </div>
-    </MainLayout>
+              
+              <div className="p-4 border rounded">
+                <h4 className="font-medium mb-2">Aperçu du layout: {selectedView.layout}</h4>
+                <div className="text-center p-8 bg-gray-100 rounded">
+                  <div className="text-4xl mb-2">{getLayoutIcon(selectedView.layout)}</div>
+                  <p className="text-gray-600">Rendu de la vue en mode {selectedView.layout}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
   );
-};
-
-export default ViewsManagement;
+}
