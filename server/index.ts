@@ -1,7 +1,8 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import { registerRoutes } from "./routes/api";
-import { setupVite, serveStatic, log } from "./vite.js";
+import { createServer as createViteServer } from "vite";
+import path from "path";
 import { configureSecurity, sanitizeInput, getSessionConfig } from "./middleware/security";
 import { runMigrations } from "./migrations";
 import { ensurePortAvailable, ServerMonitor } from "./utils/process-monitor";
@@ -48,7 +49,7 @@ app.use((req, res, next) => {
         logLine = logLine.slice(0, 79) + "…";
       }
 
-      log(logLine);
+      console.log(logLine);
     }
   });
 
@@ -61,9 +62,9 @@ app.use((req, res, next) => {
   
   try {
     await ensurePortAvailable(port);
-    log(`Port ${port} is available for use`);
+    console.log(`Port ${port} is available for use`);
   } catch (error: any) {
-    log(`Port cleanup failed: ${error.message}`);
+    console.log(`Port cleanup failed: ${error.message}`);
     process.exit(1);
   }
 
@@ -84,7 +85,7 @@ app.use((req, res, next) => {
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
   const nodeEnv = process.env.NODE_ENV || "development";
-  log(`Environment detected: ${nodeEnv}`);
+  console.log(`Environment detected: ${nodeEnv}`);
   
   // Add health check endpoint before Vite setup
   app.get('/health', (_req, res) => {
@@ -117,11 +118,31 @@ app.use((req, res, next) => {
   });
 
   if (nodeEnv === "development") {
-    log("Setting up Vite development server...");
-    await setupVite(app, server);
+    console.log("Setting up Vite development server...");
+    
+    // Inline Vite setup
+    const vite = await createViteServer({
+      server: { 
+        middlewareMode: true,
+        host: '0.0.0.0'
+      },
+      appType: "spa",
+      configFile: path.resolve(process.cwd(), "vite.config.ts")
+    });
+    
+    app.use(vite.ssrFixStacktrace);
+    app.use(vite.middlewares);
   } else {
-    log("Setting up static file serving...");
-    serveStatic(app);
+    console.log("Setting up static file serving...");
+    const distPath = path.resolve(process.cwd(), "server/public");
+    app.use(express.static(distPath));
+    
+    app.get("*", (req, res, next) => {
+      if (req.path.startsWith("/api") || req.path.startsWith("/health") || req.path.startsWith("/ws")) {
+        return next();
+      }
+      res.sendFile(path.join(distPath, "index.html"));
+    });
   }
 
   // ALWAYS serve the app on the port specified in the environment variable PORT
@@ -135,13 +156,13 @@ app.use((req, res, next) => {
     host: "0.0.0.0",
     reusePort: true,
   }, () => {
-    log(`serving on port ${port}`);
-    log(`Health check available at http://0.0.0.0:${port}/health`);
+    console.log(`serving on port ${port}`);
+    console.log(`Health check available at http://0.0.0.0:${port}/health`);
     
     // Start server monitoring
     const monitor = new ServerMonitor(port);
     monitor.start();
-    log('Server monitoring started');
+    console.log('Server monitoring started');
   });
 
   // Initialize WebSocket after server creation
@@ -149,18 +170,18 @@ app.use((req, res, next) => {
     const { initializeWebSocket } = await import("./services/websocket");
     initializeWebSocket(httpServer);
   } catch (error: any) {
-    log(`WebSocket initialization skipped: ${error?.message || 'Unknown error'}`);
+    console.log(`WebSocket initialization skipped: ${error?.message || 'Unknown error'}`);
   }
 
   // Graceful shutdown handling
   const gracefulShutdown = (signal: string) => {
-    log(`Received ${signal}. Graceful shutdown...`);
+    console.log(`Received ${signal}. Graceful shutdown...`);
     httpServer.close((err) => {
       if (err) {
-        log(`Error during server shutdown: ${err.message}`);
+        console.log(`Error during server shutdown: ${err.message}`);
         process.exit(1);
       }
-      log('Server closed successfully.');
+      console.log('Server closed successfully.');
       process.exit(0);
     });
   };
