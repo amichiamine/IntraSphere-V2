@@ -1,0 +1,83 @@
+<?php
+/**
+ * Configuration de la base de données
+ */
+
+class Database {
+    private static $instance = null;
+    private $connection;
+    
+    private function __construct() {
+        try {
+            // Configuration par défaut (à adapter selon l'hébergement)
+            $host = $_ENV['DB_HOST'] ?? 'localhost';
+            $port = $_ENV['DB_PORT'] ?? '5432';
+            $dbname = $_ENV['DB_NAME'] ?? 'intrasphere';
+            $username = $_ENV['DB_USER'] ?? 'postgres';
+            $password = $_ENV['DB_PASSWORD'] ?? '';
+            
+            // Support MySQL et PostgreSQL
+            $driver = $_ENV['DB_DRIVER'] ?? 'mysql';
+            
+            if ($driver === 'mysql') {
+                $dsn = "mysql:host={$host};port={$port};dbname={$dbname};charset=utf8mb4";
+            } else {
+                $dsn = "pgsql:host={$host};port={$port};dbname={$dbname}";
+            }
+            
+            $this->connection = new PDO($dsn, $username, $password, [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                PDO::ATTR_EMULATE_PREPARES => false
+            ]);
+            
+        } catch (PDOException $e) {
+            error_log("Erreur connexion base de données: " . $e->getMessage());
+            throw new Exception("Impossible de se connecter à la base de données");
+        }
+    }
+    
+    public static function getInstance(): Database {
+        if (self::$instance === null) {
+            self::$instance = new Database();
+        }
+        return self::$instance;
+    }
+    
+    public function getConnection(): PDO {
+        return $this->connection;
+    }
+    
+    public function query(string $sql, array $params = []): PDOStatement {
+        $stmt = $this->connection->prepare($sql);
+        $stmt->execute($params);
+        return $stmt;
+    }
+    
+    public function fetchAll(string $sql, array $params = []): array {
+        return $this->query($sql, $params)->fetchAll();
+    }
+    
+    public function fetchOne(string $sql, array $params = []) {
+        return $this->query($sql, $params)->fetch();
+    }
+    
+    public function execute(string $sql, array $params = []): bool {
+        return $this->query($sql, $params)->rowCount() > 0;
+    }
+    
+    public function lastInsertId(): string {
+        return $this->connection->lastInsertId();
+    }
+}
+
+// Instance globale
+$GLOBALS['db'] = Database::getInstance();
+
+/**
+ * Helper pour récupérer la connexion DB
+ */
+function db(): Database {
+    return $GLOBALS['db'];
+}
+?>
