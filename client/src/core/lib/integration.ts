@@ -22,11 +22,11 @@ export class IntraSphereIntegration {
 
   constructor(config: Partial<IntegrationConfig> = {}) {
     this.config = {
-      enableWebSocket: false, // Disabled during development
-      enableServiceWorker: false, // Disabled during development
+      enableWebSocket: true,
+      enableServiceWorker: false, // Keep disabled to prevent SW registration issues
       enableCaching: true,
-      enableRealTimeSync: false, // Disabled during development
-      enableOfflineMode: false, // Disabled during development
+      enableRealTimeSync: true,
+      enableOfflineMode: false, // Keep disabled to prevent offline issues
       ...config
     };
   }
@@ -452,9 +452,12 @@ export class IntraSphereIntegration {
 // Global integration instance
 export const intraSphereIntegration = new IntraSphereIntegration();
 
-// Manual initialization to avoid unhandled promise rejections during development
-// Auto-initialization is disabled until production-ready
-// To enable: call integrationUtils.initialize() manually
+// Auto-initialize with safe configuration
+setTimeout(() => {
+  intraSphereIntegration.initialize().catch(error => {
+    console.warn('Integration initialization failed (this is normal):', error);
+  });
+}, 1000); // Delay to ensure DOM is ready
 
 // Export for manual control
 export const integrationUtils = {

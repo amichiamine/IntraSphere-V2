@@ -41,25 +41,33 @@ export class WebSocketClient {
       ...config
     };
 
-    // Listen to authentication state changes
-    appState.subscribe((newState, oldState) => {
-      if (newState.user.isAuthenticated !== oldState.user.isAuthenticated) {
-        if (newState.user.isAuthenticated) {
-          this.connect();
-        } else {
-          this.disconnect();
+    // Listen to authentication state changes with error handling
+    try {
+      appState.subscribe((newState, oldState) => {
+        if (newState.user.isAuthenticated !== oldState.user.isAuthenticated) {
+          if (newState.user.isAuthenticated) {
+            setTimeout(() => this.connect(), 500); // Small delay to ensure everything is ready
+          } else {
+            this.disconnect();
+          }
         }
-      }
-    });
+      });
+    } catch (error) {
+      console.warn('WebSocket state subscription failed:', error);
+    }
   }
 
   public connect(): void {
-    if (this.ws?.readyState === WebSocket.OPEN) {
-      return; // Already connected
-    }
+    try {
+      if (this.ws?.readyState === WebSocket.OPEN) {
+        return; // Already connected
+      }
 
-    this.isManualClose = false;
-    this.createConnection();
+      this.isManualClose = false;
+      this.createConnection();
+    } catch (error) {
+      console.warn('WebSocket connection failed:', error);
+    }
   }
 
   public disconnect(): void {

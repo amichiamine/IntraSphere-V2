@@ -6,9 +6,8 @@ import { TooltipProvider } from "@/core/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/core/hooks/useAuth";
 import { ThemeLoader } from "@/core/components/ThemeLoader";
 
-// Load manual features loader (advanced features disabled by default)
-import { featuresLoader } from "@/core/lib/features-loader";
-import "@/core/lib/features-disabled";
+// Advanced features enabled automatically
+// No manual activation required
 
 // Public pages
 import PublicDashboard from "@/pages/public-dashboard";
