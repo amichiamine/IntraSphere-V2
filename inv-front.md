@@ -1,269 +1,287 @@
-# Inventaire Frontend IntraSphere - Version TypeScript/React
+# INVENTAIRE EXHAUSTIF - FRONTEND REACT
 
-## Architecture Générale Frontend
+## 🏗️ ARCHITECTURE GÉNÉRALE
 
-### Technologies
+### Technologies principales
 - **Framework**: React 18 avec TypeScript
-- **Build Tool**: Vite
-- **Routing**: Wouter
-- **State Management**: TanStack Query (React Query v5)
-- **Styling**: Tailwind CSS + shadcn/ui
-- **Authentication**: Hook personnalisé useAuth
-- **UI Components**: Radix UI + shadcn/ui
-- **Theme**: ThemeProvider avec support dark/light mode
+- **Bundler**: Vite 
+- **Routage**: Wouter (routage client léger)
+- **UI Library**: shadcn/ui (Radix UI + Tailwind CSS)
+- **État serveur**: TanStack React Query
+- **Formulaires**: React Hook Form + Zod
+- **Styling**: Tailwind CSS + Glass morphism
 
-### Structure des Dossiers
+### Structure des dossiers
 ```
-client/src/
-├── App.tsx (Point d'entrée principal avec routing)
-├── main.tsx (Bootstrap React)
-├── index.css (Styles globaux)
-├── core/ (Composants et hooks centraux)
-│   ├── components/ (UI components partagés)
-│   ├── hooks/ (Hooks personnalisés)
-│   └── lib/ (Utilitaires et configuration)
-├── features/ (Fonctionnalités métier)
-│   ├── admin/
-│   ├── auth/
-│   ├── content/
-│   ├── messaging/
-│   └── training/
-├── pages/ (Pages principales)
-├── shared/ (Types et constantes partagées)
-└── assets/ (Ressources statiques)
+client/
+├── index.html                    # Point d'entrée HTML
+├── src/
+│   ├── main.tsx                  # Point d'entrée React + config d'erreurs
+│   ├── App.tsx                   # Router principal + providers
+│   ├── index.css                 # Styles globaux Tailwind
+│   ├── core/                     # Composants et hooks système
+│   │   ├── components/           
+│   │   │   ├── ThemeLoader.tsx   # Chargement des thèmes
+│   │   │   ├── dashboard/        # Composants tableau de bord
+│   │   │   │   ├── announcements-feed.tsx
+│   │   │   │   ├── quick-links.tsx
+│   │   │   │   ├── recent-documents.tsx
+│   │   │   │   ├── stats-cards.tsx
+│   │   │   │   └── upcoming-events.tsx
+│   │   │   ├── layout/           # Structure de l'application
+│   │   │   │   ├── header.tsx    # En-tête avec navigation
+│   │   │   │   ├── main-layout.tsx # Layout principal
+│   │   │   │   └── sidebar.tsx   # Barre latérale navigation
+│   │   │   └── ui/               # Composants UI réutilisables (50+ composants shadcn)
+│   │   │       ├── accordion.tsx, alert-dialog.tsx, alert.tsx
+│   │   │       ├── avatar.tsx, badge.tsx, button.tsx, card.tsx
+│   │   │       ├── carousel.tsx, chart.tsx, checkbox.tsx
+│   │   │       ├── dialog.tsx, dropdown-menu.tsx, form.tsx
+│   │   │       ├── input.tsx, label.tsx, select.tsx, table.tsx
+│   │   │       ├── toast.tsx, tooltip.tsx, etc.
+│   │   ├── hooks/                # Hooks personnalisés
+│   │   │   ├── use-mobile.tsx    # Détection mobile
+│   │   │   ├── use-toast.ts      # Système de notifications
+│   │   │   ├── useAuth.ts        # Authentification
+│   │   │   └── useTheme.ts       # Gestion des thèmes
+│   │   └── lib/                  # Utilitaires
+│   │       ├── queryClient.ts    # Configuration TanStack Query
+│   │       └── utils.ts          # Fonctions utilitaires
+│   ├── features/                 # Fonctionnalités métier
+│   │   ├── admin/                # Administration
+│   │   │   └── admin.tsx         
+│   │   ├── auth/                 # Authentification
+│   │   │   ├── login.tsx         # Connexion/inscription
+│   │   │   └── settings.tsx      # Paramètres utilisateur
+│   │   ├── content/              # Gestion de contenu
+│   │   │   ├── announcements.tsx # Liste des annonces
+│   │   │   ├── content.tsx       # Contenu multimédia
+│   │   │   ├── create-announcement.tsx
+│   │   │   ├── create-content.tsx
+│   │   │   └── documents.tsx     # Documents
+│   │   ├── messaging/            # Messagerie et communication
+│   │   │   ├── complaints.tsx    # Réclamations
+│   │   │   ├── forum.tsx         # Forum principal
+│   │   │   ├── forum-topic.tsx   # Sujet de forum
+│   │   │   ├── forum-new-topic.tsx
+│   │   │   └── messages.tsx      # Messages privés
+│   │   └── training/             # Formation
+│   │       ├── training.tsx      # Formations utilisateur
+│   │       ├── training-admin.tsx # Admin formations
+│   │       └── trainings.tsx     # Liste des formations
+│   ├── pages/                    # Pages principales
+│   │   ├── dashboard.tsx         # Tableau de bord admin
+│   │   ├── employee-dashboard.tsx # Tableau de bord employé
+│   │   ├── public-dashboard.tsx  # Page publique
+│   │   ├── directory.tsx         # Annuaire
+│   │   ├── views-management.tsx  # Gestion des vues
+│   │   └── not-found.tsx         # 404
+│   └── shared/                   # Éléments partagés
 ```
 
-## Pages Principales
+## 🔐 SYSTÈME D'AUTHENTIFICATION
 
-### Pages Publiques (Non authentifiées)
-1. **PublicDashboard** (`/`)
-   - Vue d'ensemble publique
-   - Affichage des annonces publiques
-   - Statistiques générales
+### Composants d'auth
+- **LoginPage** (`auth/login.tsx`):
+  - Formulaire de connexion avec validation
+  - Formulaire d'inscription avec champs étendus
+  - Gestion des erreurs et succès
+  - Onglets login/register avec Tabs UI
+  - Validation mot de passe avec indicateurs visuels
+  - Intégration avec useAuth hook
 
-2. **LoginPage** (`/login`)
-   - Formulaire de connexion
-   - Authentification utilisateur
+### Hooks d'authentification
+- **useAuth** (`core/hooks/useAuth.ts`):
+  - login(), logout(), register()
+  - État utilisateur global
+  - Vérification des rôles
+  - Session management
 
-### Pages Authentifiées
+## 📱 PAGES ET VUES
 
-#### Tableaux de Bord
-1. **Dashboard** (`/dashboard`) - Admin/Modérateur
-   - Statistiques complètes
-   - Graphiques et métriques
-   - Gestion administrative
+### Pages principales
+1. **PublicDashboard** - Page d'accueil non connecté
+2. **Dashboard** - Tableau de bord admin/modérateur
+3. **EmployeeDashboard** - Tableau de bord employé
+4. **Directory** - Annuaire des employés
+5. **ViewsManagement** - Gestion des vues (admin)
+6. **NotFound** - Page 404
 
-2. **EmployeeDashboard** (`/employee-dashboard`) - Employés
-   - Vue simplifiée
-   - Contenu pertinent pour l'employé
-   - Actions rapides
+### Composants de tableau de bord
+- **AnnouncementsFeed** - Flux d'annonces
+- **QuickLinks** - Liens rapides
+- **RecentDocuments** - Documents récents
+- **StatsCards** - Cartes de statistiques
+- **UpcomingEvents** - Événements à venir
 
-#### Gestion du Contenu
-3. **Announcements** (`/announcements`)
-   - Liste des annonces
-   - Filtres et recherche
-   - Actions CRUD selon permissions
+## 📢 FONCTIONNALITÉS MÉTIER
 
-4. **CreateAnnouncement** (`/announcements/create`)
-   - Formulaire de création d'annonce
-   - Upload d'images
-   - Aperçu en temps réel
+### Gestion du contenu
+1. **Announcements**:
+   - Liste avec filtres et recherche
+   - Vue détaillée des annonces
+   - Création/modification (admin)
+   - Types: info, important, event, formation
 
-5. **Content** (`/content`)
-   - Galerie de contenu multimédia
-   - Filtres par type/catégorie
-   - Système de notation
+2. **Content** (Multimédia):
+   - Galerie de contenu
+   - Filtres par type et catégorie
+   - Upload et gestion des médias
+   - Système de ratings et vues
 
-6. **CreateContent** (`/content/create`)
-   - Upload de contenu multimédia
-   - Métadonnées et catégorisation
-
-7. **Documents** (`/documents`)
+3. **Documents**:
    - Bibliothèque de documents
-   - Téléchargement et prévisualisation
-   - Gestion des versions
+   - Catégories: regulation, policy, guide, procedure
+   - Téléchargement et versioning
+   - Recherche et filtres
 
-#### Communication
-8. **Messages** (`/messages`)
-   - Messagerie interne
-   - Conversations et threads
-   - Notifications
+### Communication et messagerie
+1. **Messages**:
+   - Messagerie privée interne
+   - Boîte de réception/envoi
+   - Marquage lu/non lu
+   - Interface conversation
 
-9. **Complaints** (`/complaints`)
-   - Système de réclamations
-   - Suivi des statuts
-   - Attribution et résolution
+2. **Complaints** (Réclamations):
+   - Système de tickets
+   - Catégories: hr, it, facilities, other
+   - Priorités: low, medium, high, urgent
+   - Statuts: open, in_progress, resolved, closed
+   - Attribution et suivi
 
-10. **ForumPage** (`/forum`)
-    - Forum de discussion
-    - Catégories et sujets
-    - Système de votes
+3. **Forum**:
+   - Forum public par catégories
+   - Création de sujets et réponses
+   - Système de likes
+   - Modération (admin/modérateur)
 
-11. **ForumTopicPage** (`/forum/topic/:id`)
-    - Discussion détaillée
-    - Réponses et interactions
+### Formation et training
+1. **Training** (Vue utilisateur):
+   - Catalogue des formations
+   - Inscription aux sessions
+   - Suivi des progressions
+   - Certificats
 
-12. **ForumNewTopicPage** (`/forum/new`)
-    - Création de nouveau sujet
-    - Sélection de catégorie
+2. **TrainingAdmin**:
+   - Création/gestion des formations
+   - Gestion des participants
+   - Statistiques et rapports
 
-#### Formation et Apprentissage
-13. **Training** (`/training/:id`)
-    - Contenu de formation détaillé
-    - Progression et suivi
+3. **Trainings** (Liste):
+   - Formations disponibles
+   - Filtres par catégorie, difficulté
+   - Recherche et inscription
 
-14. **Trainings** (`/trainings`)
-    - Catalogue des formations
-    - Inscription et planification
+## 🎨 SYSTÈME DE DESIGN
 
-15. **TrainingAdmin** (`/training-admin`)
-    - Administration des formations
-    - Gestion des participants
-
-#### Administration
-16. **Admin** (`/admin`)
-    - Panneau d'administration
-    - Gestion des utilisateurs
-    - Configuration système
-
-17. **Directory** (`/directory`)
-    - Annuaire des employés
-    - Recherche et contacts
-
-18. **Settings** (`/settings`)
-    - Paramètres utilisateur
-    - Préférences et profil
-
-19. **ViewsManagement** (`/views-management`)
-    - Gestion de l'affichage
-    - Configuration des modules
-
-20. **PermissionsAdmin** (`/permissions-admin`)
-    - Gestion des permissions
-    - Attribution des rôles
-
-## Fonctionnalités par Feature
-
-### Auth (`features/auth/`)
-- **login.tsx**: Authentification utilisateur
-- **settings.tsx**: Paramètres du profil utilisateur
-
-### Content (`features/content/`)
-- **announcements.tsx**: Gestion des annonces
-- **content.tsx**: Galerie multimédia
-- **create-announcement.tsx**: Création d'annonces
-- **create-content.tsx**: Upload de contenu
-- **documents.tsx**: Bibliothèque documentaire
-
-### Messaging (`features/messaging/`)
-- **messages.tsx**: Messagerie interne
-- **complaints.tsx**: Système de réclamations
-- **forum.tsx**: Forum principal
-- **forum-topic.tsx**: Discussion de forum
-- **forum-new-topic.tsx**: Nouveau sujet forum
-
-### Training (`features/training/`)
-- **training.tsx**: Contenu de formation
-- **trainings.tsx**: Catalogue formations
-- **training-admin.tsx**: Administration formations
-
-### Admin (`features/admin/`)
-- **admin.tsx**: Panneau d'administration
-
-## Composants UI et Hooks
-
-### Hooks Core (`core/hooks/`)
-- **useAuth**: Gestion de l'authentification
-- Autres hooks métier personnalisés
-
-### Composants Core (`core/components/`)
-- **ThemeLoader**: Gestion des thèmes
-- **UI Components**: Composants shadcn/ui
-- **Toaster**: Système de notifications
-- **TooltipProvider**: Bulles d'aide
-
-### Lib (`core/lib/`)
-- **queryClient**: Configuration TanStack Query
-- Utilitaires et helpers
-
-## Gestion des États
-
-### TanStack Query
-- Configuration centralisée dans queryClient
-- Gestion du cache et synchronisation
-- Mutations pour les opérations CRUD
-- Invalidation automatique du cache
-
-### Hooks d'Authentication
-- Contexte d'authentification global
-- Gestion des sessions
-- Protection des routes
-
-## Système de Routing
-
-### Routes Publiques
-- `/` → PublicDashboard
-- `/login` → LoginPage
-
-### Routes Privées
-- Routes conditionnelles selon le rôle utilisateur
-- Redirection automatique selon l'authentification
-- Protection par permissions
-
-## Gestion des Permissions
-
-### Système de Rôles
-- **employee**: Accès de base
-- **moderator**: Permissions étendues
-- **admin**: Accès complet
-
-### Protection des Composants
-- Vérification des permissions en temps réel
-- Affichage conditionnel selon les droits
-- Redirection automatique si non autorisé
-
-## API et Communication Backend
-
-### Configuration API
-- Client HTTP centralisé
-- Gestion des erreurs automatique
-- Authentification automatique via cookies/sessions
-
-### Endpoints Utilisés
-- `/api/auth/*` - Authentification
-- `/api/announcements/*` - Annonces
-- `/api/content/*` - Contenu multimédia
-- `/api/documents/*` - Documents
-- `/api/messages/*` - Messagerie
-- `/api/complaints/*` - Réclamations
-- `/api/training/*` - Formations
-- `/api/admin/*` - Administration
-- `/api/stats` - Statistiques
-
-## Styling et Thème
-
-### Tailwind CSS
-- Configuration personnalisée
-- Classes utilitaires
-- Responsive design
-
-### Système de Thème
-- Mode sombre/clair
-- Variables CSS personnalisées
-- Cohérence visuelle globale
-
-### Glass Morphism
-- Effets visuels modernes
-- Transparence et flou
+### Thématique Glass Morphism
+- Effets de transparence et flou
+- Gradients et overlays
+- Coins arrondis
 - Animations fluides
 
-## Internationalisation
-- Français par défaut
-- Structure prête pour extension multilingue
+### Composants UI (50+ composants)
+- **Navigation**: accordion, menubar, navigation-menu, breadcrumb
+- **Formulaires**: form, input, textarea, select, checkbox, radio-group
+- **Feedback**: alert, toast, progress, skeleton
+- **Overlays**: dialog, popover, tooltip, hover-card, sheet
+- **Data**: table, chart, calendar, carousel
+- **Layout**: card, separator, resizable, scroll-area
+- **Contrôles**: button, toggle, switch, slider
 
-## Points d'Amélioration Identifiés
-- Système de notifications temps réel
-- Optimisation des performances
-- Tests automatisés
-- PWA capabilities
-- Système de cache plus avancé
+### Thèmes et personnalisation
+- **ThemeLoader**: Chargement dynamique des thèmes
+- **useTheme**: Hook de gestion des thèmes
+- Variables CSS personnalisées
+- Support du mode sombre
+- Thèmes personnalisables par couleurs
+
+## 🔧 CONFIGURATION ET OUTILS
+
+### Routage (Wouter)
+- Routes publiques: `/`, `/login`
+- Routes authentifiées: `/dashboard`, `/announcements`, etc.
+- Routes admin: `/admin`, `/create-*`, `/training-admin`
+- Protection par rôles
+- Redirection automatique
+
+### État et données (TanStack Query)
+- Cache intelligent des données
+- Mutations optimistes
+- Invalidation automatique
+- États de loading/error
+- Retry et offline support
+
+### Formulaires (React Hook Form + Zod)
+- Validation côté client
+- Schémas Zod partagés avec backend
+- Gestion d'erreurs intégrée
+- Performance optimisée
+
+## 🧩 COMPOSANTS SPÉCIALISÉS
+
+### Composants personnalisés
+- **GlassCard**: Cartes avec effet glass
+- **IconPicker**: Sélecteur d'icônes
+- **ImagePicker**: Sélecteur d'images
+- **FileUploader**: Upload de fichiers
+- **SimpleModal**: Modal simplifié
+- **SimpleSelect**: Select simplifié
+
+### Hooks personnalisés
+- **useMobile**: Détection responsive
+- **useToast**: Notifications toast
+- **useAuth**: Authentification globale
+- **useTheme**: Gestion des thèmes
+
+## 🎯 FONCTIONNALITÉS AVANCÉES
+
+### Permissions et rôles
+- **Rôles**: employee, moderator, admin
+- Navigation conditionnelle
+- Composants protégés
+- Délégation de permissions
+
+### Internationalisation
+- Interface en français
+- Messages d'erreur localisés
+- Dates et formats régionaux
+
+### Optimisations
+- Lazy loading des composants
+- Code splitting automatique
+- Optimisation des requêtes
+- Cache intelligent
+
+## 🚀 INTÉGRATIONS
+
+### APIs Backend
+- RESTful API calls
+- WebSocket temps réel
+- Upload de fichiers
+- Authentification session
+
+### Services externes
+- Email service
+- File storage
+- Notifications push
+
+## 📊 MÉTRIQUES ET TRACKING
+
+### Analytics intégrés
+- Vues de contenu
+- Utilisation des fonctionnalités
+- Performances utilisateur
+- Erreurs et exceptions
+
+## 🔒 SÉCURITÉ FRONTEND
+
+### Protections implémentées
+- Validation côté client
+- Sanitisation des entrées
+- Protection CSRF
+- Gestion sécurisée des tokens
+- Headers de sécurité
+
+---
+*Inventaire généré le 8 août 2025 - Version React/TypeScript*

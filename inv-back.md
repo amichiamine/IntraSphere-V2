@@ -1,506 +1,438 @@
-# Inventaire Backend IntraSphere - Version PHP
+# INVENTAIRE EXHAUSTIF - BACKEND (DUAL STACK)
 
-## Architecture Générale Backend PHP
+## 🏗️ ARCHITECTURE GÉNÉRALE
 
-### Technologies
-- **Langage**: PHP 8.0+
-- **Base de données**: MySQL/PostgreSQL avec PDO
-- **Architecture**: MVC Pattern
-- **Router**: Router personnalisé
-- **Authentification**: Sessions PHP natives
-- **Security**: Headers sécurisés, validation des entrées
-- **ORM**: PDO avec modèles personnalisés
+### Version Node.js/Express (Principale)
 
-### Structure des Dossiers
+#### Technologies principales
+- **Runtime**: Node.js avec Express.js
+- **Language**: TypeScript avec ES modules
+- **Base de données**: PostgreSQL avec Drizzle ORM
+- **Validation**: Zod schemas partagés
+- **Authentification**: Sessions avec bcrypt
+- **Email**: Nodemailer
+- **WebSockets**: ws
+- **Sécurité**: Helmet, rate limiting, CSRF protection
+
+#### Structure des dossiers
+```
+server/
+├── index.ts                      # Point d'entrée principal
+├── config.ts                     # Configuration générale
+├── db.ts                         # Configuration base de données
+├── vite.ts                       # Configuration Vite pour dev/prod
+├── testData.ts                   # Données de test
+├── migrations.ts                 # Migrations de sécurité
+├── data/
+│   └── storage.ts               # Interface IStorage + MemStorage
+├── middleware/
+│   └── security.ts              # Middleware sécurité
+├── routes/                      # Routes API RESTful
+│   ├── index.ts                 # Configuration des routes
+│   ├── auth.ts                  # /api/auth/*
+│   ├── admin.ts                 # /api/admin/*
+│   ├── content.ts               # /api/announcements, /api/documents
+│   ├── messaging.ts             # /api/messages, /api/complaints, /api/forum
+│   ├── training.ts              # /api/training/*
+│   └── users.ts                 # /api/users/*
+├── services/
+│   ├── auth.ts                  # AuthService
+│   └── email.ts                 # EmailService
+├── utils/
+│   └── rate-limiter.ts          # Limitation de débit
+└── public/                      # Assets statiques (production)
+    ├── assets/
+    └── index.html
+```
+
+### Version PHP (Migration)
+
+#### Technologies principales
+- **Language**: PHP 8+ (POO)
+- **Base de données**: MySQL/PostgreSQL compatible
+- **Architecture**: MVC pattern
+- **Routage**: Router personnalisé
+- **Sécurité**: Password hashing, SQL prepared statements
+
+#### Structure des dossiers
 ```
 php-migration/
-├── index.php (Point d'entrée principal)
-├── config/ (Configuration)
-│   ├── app.php (Configuration générale)
-│   ├── database.php (Connexion DB)
-│   └── bootstrap.php (Autoloader et initialisation)
-├── src/ (Code source)
-│   ├── Router.php (Routeur principal)
-│   ├── controllers/ (Contrôleurs)
-│   │   ├── BaseController.php
-│   │   ├── Api/ (Contrôleurs API REST)
-│   │   └── [Contrôleurs de pages]
-│   ├── models/ (Modèles de données)
-│   └── utils/ (Utilitaires)
-├── views/ (Templates PHP)
-│   ├── layout/ (Layout principal)
-│   └── [Vues par module]
-└── sql/ (Scripts de base de données)
+├── index.php                    # Point d'entrée
+├── README.md                    # Documentation PHP
+├── config/
+│   ├── app.php                  # Configuration application
+│   ├── bootstrap.php            # Autoloader et initialisation
+│   └── database.php             # Configuration BDD
+├── sql/
+│   └── create_tables.sql        # Script de création des tables
+├── src/
+│   ├── Router.php               # Routeur personnalisé
+│   ├── controllers/             # Contrôleurs MVC
+│   │   ├── BaseController.php   # Contrôleur de base
+│   │   ├── AdminController.php  # Administration
+│   │   ├── AnnouncementsController.php
+│   │   ├── DashboardController.php
+│   │   ├── DocumentsController.php
+│   │   ├── MessagesController.php
+│   │   ├── TrainingsController.php
+│   │   ├── UploadController.php # Upload de fichiers
+│   │   └── Api/                 # API Controllers
+│   ├── models/                  # Modèles de données
+│   │   ├── BaseModel.php        # Modèle de base
+│   │   ├── User.php             # Utilisateurs
+│   │   ├── Announcement.php     # Annonces
+│   │   ├── Document.php         # Documents
+│   │   ├── Message.php          # Messages
+│   │   ├── Complaint.php        # Réclamations
+│   │   ├── Training.php         # Formations
+│   │   ├── Content.php          # Contenu multimédia
+│   │   ├── Event.php            # Événements
+│   │   └── Permission.php       # Permissions
+│   └── utils/                   # Utilitaires
+│       ├── helpers.php          # Fonctions helper
+│       ├── CacheManager.php     # Gestion du cache
+│       ├── Logger.php           # Logging
+│       ├── PasswordValidator.php # Validation mot de passe
+│       ├── PermissionManager.php # Gestion des permissions
+│       └── RateLimiter.php      # Limitation de débit
+└── views/                       # Vues PHP/HTML
+    ├── layout/
+    │   └── app.php              # Layout principal
+    ├── admin/
+    │   └── index.php            # Interface admin
+    ├── auth/
+    │   └── login.php            # Connexion
+    ├── dashboard/
+    │   └── index.php            # Tableau de bord
+    ├── announcements/
+    │   ├── index.php
+    │   └── create.php
+    ├── documents/
+    │   └── index.php
+    ├── messages/
+    │   └── index.php
+    └── trainings/
+        └── index.php
 ```
 
-## Configuration (`config/`)
+## 🗄️ MODÈLES DE DONNÉES
 
-### app.php - Configuration Générale
-**Constants Définies:**
-- `APP_NAME`: 'IntraSphere'
-- `APP_VERSION`: '2.0.0-PHP'
-- `APP_ENV`: production/development
-- `APP_DEBUG`: Mode debug conditionnel
-- `BASE_URL`, `ASSETS_URL`, `UPLOADS_URL`: URLs de base
-- `SECRET_KEY`: Clé de sécurité
-- `PASSWORD_HASH_ALGO`: Algorithme de hashage
-- `DEFAULT_PAGE_SIZE`: 20, `MAX_PAGE_SIZE`: 100
-- `MAX_FILE_SIZE`: 50MB
-- `ALLOWED_FILE_TYPES`: Extensions autorisées
-- `MAIL_FROM`, `MAIL_FROM_NAME`: Configuration email
-- `SESSION_LIFETIME`: 3600s, `SESSION_NAME`: 'INTRASPHERE_SESSION'
-- `CACHE_ENABLED`: true, `CACHE_TTL`: 300s
-- `LOG_ENABLED`: true, `LOG_LEVEL`: DEBUG/ERROR
+### Schémas partagés (`shared/schema.ts`)
 
-**Constantes Métier:**
-- `USER_ROLES`: employee, moderator, admin
-- `PERMISSIONS`: manage_announcements, manage_documents, manage_events, manage_users, manage_trainings, validate_topics, validate_posts, manage_employee_categories
-- `CONTENT_TYPES`: video, image, document, audio
-- `ANNOUNCEMENT_TYPES`: info, important, event, formation
-- `COMPLAINT_PRIORITIES`: low, medium, high, urgent
+#### Entités principales
+1. **Users** - Utilisateurs et employés
+   - Champs: id, username, password, name, role, avatar
+   - Champs étendus: employeeId, department, position, isActive
+   - Contacts: phone, email
+   - Timestamps: createdAt, updatedAt
 
-### database.php - Configuration Base de Données
-**Classe `Database` (Singleton):**
-- Support MySQL et PostgreSQL
-- Configuration via variables d'environnement
-- Connexion PDO avec options sécurisées
-- Méthodes: `query()`, `fetchAll()`, `fetchOne()`
+2. **Announcements** - Annonces et communications
+   - Champs: id, title, content, type, authorId, authorName
+   - Visual: imageUrl, icon, isImportant
+   - Timestamp: createdAt
 
-### bootstrap.php - Initialisation
-**Fonctionnalités:**
-- Autoloader PSR-4 personnalisé
-- Définition des chemins constants
-- Configuration timezone (Europe/Paris)
-- Configuration sessions sécurisées
-- Chargement des helpers globaux
+3. **Documents** - Bibliothèque de documents
+   - Champs: id, title, description, category, fileName, fileUrl
+   - Versioning: version, updatedAt
 
-## Routeur (`src/Router.php`)
+4. **Events** - Événements et rendez-vous
+   - Champs: id, title, description, date, location, type
+   - Relations: organizerId
+   - Timestamp: createdAt
 
-### Fonctionnalités
-- **addRoute()**: Enregistrement des routes avec méthode HTTP
-- **dispatch()**: Distribution des requêtes
-- **convertPathToPattern()**: Conversion des patterns d'URL
-- **callHandler()**: Exécution des contrôleurs
-- Support des paramètres d'URL dynamiques
-- Gestion des erreurs 404
+5. **Messages** - Messagerie interne
+   - Champs: id, senderId, recipientId, subject, content
+   - État: isRead
+   - Timestamp: createdAt
 
-## Contrôleurs
+6. **Complaints** - Système de réclamations
+   - Champs: id, submitterId, assignedToId, title, description
+   - Classification: category, priority, status
+   - Timestamps: createdAt, updatedAt
 
-### BaseController (`src/controllers/BaseController.php`)
+7. **Permissions** - Délégation de droits
+   - Champs: id, userId, grantedBy, permission
+   - Timestamp: createdAt
 
-#### Méthodes de Réponse
-- **json()**: Réponse JSON avec status code
-- **error()**: Réponse d'erreur JSON
-- **view()**: Rendu de template PHP
+#### Entités de formation
+8. **Trainings** - Formations disponibles
+   - Info: id, title, description, category, difficulty, duration
+   - Instructeur: instructorId, instructorName
+   - Planning: startDate, endDate, location
+   - Capacité: maxParticipants, currentParticipants
+   - Statuts: isMandatory, isActive, isVisible
+   - Médias: thumbnailUrl, documentUrls[]
 
-#### Sécurité et Authentification
-- **requireAuth()**: Vérification authentification
-- **requireRole()**: Vérification rôle hiérarchique
-- **requirePermission()**: Vérification permission spécifique
-- Hiérarchie des rôles: employee(1) < moderator(2) < admin(3)
+9. **TrainingParticipants** - Participants aux formations
+   - Relations: trainingId, userId
+   - État: status, registeredAt, completionDate, score
 
-#### Validation et Sanitisation
-- **getJsonInput()**: Récupération données JSON
-- **validateRequired()**: Validation champs obligatoires
-- **sanitizeInput()**: Nettoyage des entrées
-- **validateEmail()**: Validation email
-- **validateFileUpload()**: Validation uploads
+#### Entités forum et contenu
+10. **ForumCategories** - Catégories du forum
+11. **ForumTopics** - Sujets de discussion
+12. **ForumPosts** - Messages du forum
+13. **ForumLikes** - Système de likes
+14. **ForumUserStats** - Statistiques utilisateurs
+15. **Contents** - Contenu multimédia
+16. **Categories** - Catégories de contenu
+17. **EmployeeCategories** - Catégories d'employés
 
-#### Utilitaires
-- **paginate()**: Système de pagination
-- **checkRateLimit()**: Limitation de taux
-- **logActivity()**: Journalisation des actions
+## 🔐 SYSTÈME D'AUTHENTIFICATION
 
-### Contrôleurs de Pages
+### Version Node.js/Express
 
-#### AdminController
-**Routes:**
-- `GET /admin` → index(): Panneau d'administration
-- `GET /admin/users` → users(): Gestion utilisateurs
-- `GET /admin/permissions` → permissions(): Gestion permissions
-- `GET /admin/system` → system(): Configuration système
-- `GET /admin/logs` → logs(): Journaux système
+#### Routes d'authentification (`routes/auth.ts`)
+- **POST /api/auth/login**: Connexion avec rate limiting
+- **POST /api/auth/register**: Inscription avec validation
+- **POST /api/auth/logout**: Déconnexion et nettoyage session
+- **GET /api/auth/me**: Profil utilisateur actuel
 
-#### AnnouncementsController
-**Routes:**
-- `GET /announcements` → index(): Liste des annonces
-- `GET /announcements/create` → create(): Formulaire création
-- `GET /announcements/:id` → show(): Détail annonce
-- `GET /announcements/:id/edit` → edit(): Formulaire édition
+#### AuthService (`services/auth.ts`)
+- `validatePasswordStrength()`: Validation robuste des mots de passe
+- `hashPassword()`: Hachage sécurisé bcrypt
+- `verifyPassword()`: Vérification des mots de passe
+- Session management avec express-session
 
-#### DashboardController
-**Routes:**
-- `GET /dashboard` → index(): Tableau de bord principal
+#### Sécurité implémentée
+- Helmet.js pour headers de sécurité
+- Rate limiting par IP/endpoint
+- CSRF protection
+- Session sécurisée avec PostgreSQL store
+- Sanitisation des entrées
+- Validation Zod stricte
 
-#### DocumentsController
-**Routes:**
-- `GET /documents` → index(): Bibliothèque de documents
-- Actions CRUD pour les documents
+### Version PHP
 
-#### MessagesController
-**Routes:**
-- `GET /messages` → index(): Messagerie interne
-- Gestion des conversations
-
-#### TrainingsController
-**Routes:**
-- `GET /trainings` → index(): Catalogue des formations
-- Gestion des inscriptions
-
-#### UploadController
-**Fonctionnalités:**
-- Upload de fichiers sécurisé
-- Validation des types et tailles
-- Génération de noms uniques
-
-### Contrôleurs API (`src/controllers/Api/`)
-
-#### AuthController (`Api/AuthController.php`)
-**Endpoints:**
-- `POST /api/auth/login` → login(): Authentification
-- `POST /api/auth/logout` → logout(): Déconnexion
-- `GET /api/auth/me` → me(): Profil utilisateur
-- `POST /api/auth/register` → register(): Inscription
-- `POST /api/auth/change-password` → changePassword(): Changement mot de passe
-- `POST /api/auth/forgot-password` → forgotPassword(): Mot de passe oublié
-
-**Sécurité:**
-- Rate limiting sur login/forgot-password
-- Validation des mots de passe
-- Hashage sécurisé
-- Journalisation des tentatives
-
-#### AdminController (`Api/AdminController.php`)
-**Endpoints:**
-- `GET /api/stats` → stats(): Statistiques générales
-- `GET /api/permissions` → permissions(): Liste des permissions
-- `GET /api/admin/users-overview` → usersOverview(): Vue d'ensemble utilisateurs
-- `GET /api/admin/content-overview` → contentOverview(): Vue d'ensemble contenu
-- `GET /api/admin/system-info` → systemInfo(): Informations système
-
-**Statistiques Fournies:**
-- Compteurs globaux (utilisateurs, annonces, documents, messages, formations)
-- Statistiques détaillées (actifs, importants, récents, non lus, à venir)
-- Tendances sur 7 jours
-- Répartitions par rôle, type, catégorie
-
-#### AnnouncementsController (`Api/AnnouncementsController.php`)
-**Endpoints CRUD:**
-- `GET /api/announcements` → index(): Liste avec pagination
-- `GET /api/announcements/:id` → show(): Détail
-- `POST /api/announcements` → create(): Création
-- `PUT /api/announcements/:id` → update(): Mise à jour
-- `DELETE /api/announcements/:id` → delete(): Suppression
-
-#### ComplaintsController (`Api/ComplaintsController.php`)
-**Endpoints:**
-- CRUD complet pour réclamations
-- Gestion des statuts et priorités
-- Attribution aux modérateurs
-
-#### DocumentsController (`Api/DocumentsController.php`)
-**Endpoints:**
-- CRUD complet pour documents
-- Gestion des catégories et versions
-- Upload et téléchargement
-
-#### EventsController (`Api/EventsController.php`)
-**Endpoints:**
-- CRUD complet pour événements
-- Gestion des participants
-- Calendrier
-
-#### MessagesController (`Api/MessagesController.php`)
-**Endpoints:**
-- CRUD complet pour messages
-- Conversations et threads
-- Statuts de lecture
-
-#### TrainingsController (`Api/TrainingsController.php`)
-**Endpoints:**
-- CRUD complet pour formations
-- Gestion des participants
-- Système de progression
-
-#### UsersController (`Api/UsersController.php`)
-**Endpoints:**
-- CRUD complet pour utilisateurs
-- Gestion des rôles et permissions
-- Annuaire avec recherche
-
-## Modèles (`src/models/`)
-
-### BaseModel (`src/models/BaseModel.php`)
-**Fonctionnalités:**
-- Pattern Active Record
-- Connexion database singleton
-- Méthodes CRUD génériques: `find()`, `findAll()`, `create()`, `update()`, `delete()`
-- Recherche conditionnelle: `where()`
-- Comptage: `count()`
-- Génération UUID: `generateUUID()`
-- Validation abstraite: `validate()`
-
-### User (`src/models/User.php`)
-**Méthodes Spécialisées:**
-- `create()`: Création avec hashage mot de passe
+#### Modèle User (`models/User.php`)
+- `create()`: Création avec hachage automatique
 - `findByUsername()`: Recherche par nom d'utilisateur
 - `findByEmployeeId()`: Recherche par ID employé
-- `authenticate()`: Vérification authentification
+- `authenticate()`: Vérification des identifiants
 - `changePassword()`: Changement de mot de passe
-- `getDirectory()`: Annuaire des employés actifs
-- `search()`: Recherche dans l'annuaire
-- `getStats()`: Statistiques utilisateurs
-- `toggleStatus()`: Activation/désactivation
-- `updateRole()`: Mise à jour du rôle
+- `getDirectory()`: Annuaire des employés
+- `search()`: Recherche d'utilisateurs
+- `getStats()`: Statistiques
 
-**Validation:**
-- Nom d'utilisateur minimum 3 caractères
-- Email valide si fourni
-- Mot de passe minimum 6 caractères
+#### Sécurité PHP
+- `password_hash()`/`password_verify()` pour les mots de passe
+- Prepared statements contre l'injection SQL
+- Validation et sanitisation des entrées
+- Gestion des sessions sécurisée
+- Headers de sécurité
 
-### Announcement (`src/models/Announcement.php`)
-**Méthodes Spécialisées:**
-- `create()`: Création avec valeurs par défaut
-- `findAllWithAuthor()`: Liste avec infos auteur
-- `getImportant()`: Annonces importantes
-- `getByType()`: Filtrage par type
-- `getRecent()`: Annonces récentes (7 jours)
-- `search()`: Recherche textuelle
-- `toggleImportance()`: Basculer importance
-- `getStats()`: Statistiques des annonces
-- `bulkDelete()`: Suppression en masse
+## 🛠️ ROUTES ET ENDPOINTS
 
-### Document (`src/models/Document.php`)
-**Fonctionnalités:**
-- Gestion des catégories
-- Versioning des documents
-- Statistiques d'accès
+### API RESTful (Node.js)
 
-### Message (`src/models/Message.php`)
-**Fonctionnalités:**
-- Conversations entre utilisateurs
-- Statuts de lecture
-- Fil de discussion
+#### Authentification (`/api/auth/`)
+- `POST /login` - Connexion
+- `POST /register` - Inscription  
+- `POST /logout` - Déconnexion
+- `GET /me` - Profil actuel
 
-### Training (`src/models/Training.php`)
-**Fonctionnalités:**
-- Gestion des formations
-- Participants et inscriptions
-- Progression et évaluations
+#### Administration (`/api/admin/`)
+- `GET /stats` - Statistiques générales
+- `GET /users` - Liste utilisateurs (admin)
+- `POST /users/:id/role` - Changer rôle
+- `DELETE /users/:id` - Supprimer utilisateur
+- `GET /permissions` - Gestion permissions
+- `POST /permissions` - Accorder permission
 
-### Event (`src/models/Event.php`)
-**Fonctionnalités:**
-- Gestion du calendrier
-- Participants aux événements
-- Types d'événements
+#### Contenu (`/api/`)
+- **Annonces**: `GET|POST|PUT|DELETE /announcements/:id?`
+- **Documents**: `GET|POST|PUT|DELETE /documents/:id?`
+- **Contenus**: `GET|POST|PUT|DELETE /contents/:id?`
 
-### Complaint (`src/models/Complaint.php`)
-**Fonctionnalités:**
-- Système de réclamations
-- Statuts et priorités
-- Attribution
+#### Messagerie (`/api/`)
+- **Messages**: `GET|POST /messages`, `PUT /messages/:id/read`
+- **Réclamations**: `GET|POST|PUT /complaints/:id?`
+- **Forum**: 
+  - `GET|POST /forum/categories`
+  - `GET|POST /forum/topics`
+  - `GET|POST /forum/posts`
+  - `POST|DELETE /forum/likes`
 
-### Content (`src/models/Content.php`)
-**Fonctionnalités:**
-- Contenu multimédia
-- Métadonnées et tags
-- Système de notation
+#### Formation (`/api/training/`)
+- `GET /` - Liste des formations
+- `POST /` - Créer formation (admin)
+- `GET /:id` - Détails formation
+- `POST /:id/register` - S'inscrire
+- `GET /:id/participants` - Liste participants
+- `POST /:id/complete` - Marquer terminé
 
-### Permission (`src/models/Permission.php`)
-**Fonctionnalités:**
-- Gestion fine des permissions
-- Attribution par utilisateur
-- Vérifications d'accès
+#### Utilisateurs (`/api/users/`)
+- `GET /` - Annuaire
+- `GET /:id` - Profil utilisateur
+- `PUT /:id` - Modifier profil
+- `GET /search` - Recherche utilisateurs
 
-## Vues (`views/`)
+### Routes MVC (PHP)
 
-### Layout Principal (`views/layout/app.php`)
-**Fonctionnalités:**
-- Template HTML5 responsive
-- Intégration Tailwind CSS CDN
-- Thème Glass Morphism complet
-- Variables CSS personnalisées
-- Mode sombre par défaut
-- Navigation avec effet glass
-- Sidebar avec backdrop filter
-- Inputs stylisés
-- Système de grille responsive
+#### Routes principales
+- `GET /` - Dashboard
+- `GET /login` - Page de connexion
+- `POST /auth` - Authentification
+- `GET /logout` - Déconnexion
 
-**Styles Glass Morphism:**
-- `.glass`: Effet de base avec backdrop-filter
-- `.glass-card`: Cartes interactives
-- `.btn-glass`: Boutons avec effet
-- `.nav-glass`: Navigation transparente
-- `.sidebar`: Barre latérale
-- `.input-glass`: Champs de saisie
+#### Routes d'administration
+- `GET /admin` - Panel admin
+- `GET /admin/users` - Gestion utilisateurs
+- `GET /admin/permissions` - Gestion permissions
+- `GET /admin/system` - Configuration système
 
-### Dashboard (`views/dashboard/index.php`)
-**Fonctionnalités:**
-- Interface utilisateur moderne
-- Statistiques visuelles
-- Navigation principale fixe
-- Cartes de statistiques animées
-- Actions rapides
-- Effets d'animation CSS
-- Intégration Font Awesome
-- Responsive design complet
+#### Routes de contenu
+- `GET /announcements` - Liste annonces
+- `GET /announcements/create` - Créer annonce
+- `POST /announcements` - Sauvegarder annonce
+- `GET /documents` - Bibliothèque documents
+- `GET /trainings` - Formations disponibles
 
-**Éléments UI:**
-- Navigation glassmorphism
-- Cartes de statistiques flottantes
-- Actions rapides avec hover effects
-- Animations CSS (floating)
-- Affichage des informations utilisateur
+## 💾 STOCKAGE ET BASE DE DONNÉES
 
-### Autres Vues
-- `auth/login.php`: Formulaire de connexion
-- `announcements/index.php`: Liste des annonces
-- `announcements/create.php`: Création d'annonce
-- `documents/index.php`: Bibliothèque documentaire
-- `messages/index.php`: Interface de messagerie
-- `trainings/index.php`: Catalogue des formations
-- `admin/index.php`: Panneau d'administration
+### Version Node.js (Drizzle ORM)
 
-## Base de Données (`sql/create_tables.sql`)
+#### Configuration (`db.ts`)
+- Pool de connexions PostgreSQL
+- Configuration optimisée pour production
+- SSL/TLS support
+- Connection retry logic
 
-### Tables Principales
+#### Interface IStorage (`data/storage.ts`)
+- Pattern d'interface pour toutes les opérations CRUD
+- MemStorage pour développement/test
+- PostgreSQL storage pour production
+- Méthodes par entité (Users, Announcements, etc.)
 
-#### users
-**Champs:**
-- `id`, `username`, `password`, `name`, `role`
-- `avatar`, `employee_id`, `department`, `position`
-- `is_active`, `phone`, `email`
-- `created_at`, `updated_at`
+#### Migrations (`migrations.ts`)
+- Migration de sécurité des mots de passe
+- Updates de schéma automatiques
+- Backup/restore procedures
 
-#### announcements
-**Champs:**
-- `id`, `title`, `content`, `type`, `author_id`
-- `author_name`, `image_url`, `icon`, `is_important`
-- `created_at`
+### Version PHP (MySQL/PostgreSQL)
 
-#### documents
-**Champs:**
-- `id`, `title`, `description`, `category`
-- `file_name`, `file_url`, `version`
-- `updated_at`
+#### Configuration (`config/database.php`)
+- Support multi-base (MySQL/PostgreSQL)
+- Pool de connexions
+- Configuration par environnement
 
-#### events
-**Champs:**
-- `id`, `title`, `description`, `date`
-- `location`, `type`, `organizer_id`
-- `created_at`
+#### Modèles de base (`models/BaseModel.php`)
+- CRUD operations standardisées
+- Query builder simplifié
+- Validation automatique
+- Relations entre entités
 
-#### messages
-**Champs:**
-- `id`, `sender_id`, `recipient_id`
-- `subject`, `content`, `is_read`
-- `created_at`
+#### Schéma SQL (`sql/create_tables.sql`)
+- Tables relationnelles complètes
+- Contraintes d'intégrité
+- Index de performance
+- Support des deux SGBD
 
-#### complaints
-**Champs:**
-- `id`, `submitter_id`, `assigned_to_id`
-- `title`, `description`, `category`
-- `priority`, `status`
-- `created_at`, `updated_at`
+## 🔧 SERVICES ET UTILITAIRES
 
-#### permissions
-**Champs:**
-- `id`, `user_id`, `permission`
-- `granted_by`, `created_at`
+### Services Node.js
 
-#### contents
-**Champs:**
-- `id`, `title`, `type`, `category`
-- `description`, `file_url`, `thumbnail_url`
-- `duration`, `view_count`, `rating`, `tags`
-- `is_popular`, `is_featured`
-- `created_at`, `updated_at`
+#### EmailService (`services/email.ts`)
+- Configuration Nodemailer
+- Templates d'emails
+- Queue de traitement
+- Retry logic
 
-#### trainings
-**Champs:**
-- `id`, `title`, `description`, `category`
-- `difficulty`, `duration`, `instructor_id`
-- `start_date`, `end_date`, `location`
-- `max_participants`, `current_participants`
-- `is_mandatory`, `is_active`, `thumbnail_url`
-- `created_at`, `updated_at`
+#### RateLimiter (`utils/rate-limiter.ts`)
+- Limitation par endpoint
+- Redis/Memory store
+- Configuration flexible
+- Logging des tentatives
 
-### Tables E-Learning Étendues
-- `courses`: Cours structurés
-- `lessons`: Leçons par cours
-- `quizzes`: Évaluations
-- `enrollments`: Inscriptions
-- `lesson_progress`: Progression
-- `quiz_attempts`: Tentatives de quiz
-- `certificates`: Certificats
+### Utilitaires PHP
 
-### Tables Forum
-- `forum_categories`: Catégories de forum
-- `forum_topics`: Sujets de discussion
-- `forum_posts`: Messages de forum
-- `forum_likes`: Système de likes
-- `forum_user_stats`: Statistiques utilisateur
+#### CacheManager (`utils/CacheManager.php`)
+- Cache en mémoire/fichier
+- Invalidation intelligente
+- TTL configurable
 
-## Utilitaires (`src/utils/`)
+#### Logger (`utils/Logger.php`)
+- Logging structuré
+- Rotation des logs
+- Niveaux de log
 
-### helpers.php
-**Fonctions Globales:**
-- `h()`: Échappement HTML
-- `url()`: Génération d'URLs
-- `asset()`: Génération d'URLs d'assets
-- `csrf_token()`: Génération de tokens CSRF
-- `old()`: Récupération valeurs précédentes
-- `redirect()`: Redirection HTTP
-- `session_flash()`: Messages flash
-- Helpers de formatage de dates
-- Utilitaires de validation
+#### PasswordValidator (`utils/PasswordValidator.php`)
+- Validation complexité
+- Règles configurables
+- Messages localisés
 
-## Sécurité
+#### PermissionManager (`utils/PermissionManager.php`)
+- Vérification des droits
+- Cache des permissions
+- Délégation de rôles
 
-### Mesures Implémentées
-- **Headers sécurisés**: X-Content-Type-Options, X-Frame-Options, X-XSS-Protection, HSTS
-- **Validation des entrées**: Sanitisation et validation stricte
-- **Authentification sécurisée**: Hashage PASSWORD_DEFAULT
-- **Sessions sécurisées**: Configuration httponly, secure, strict mode
-- **Rate limiting**: Protection contre force brute
-- **CSRF protection**: Tokens anti-CSRF
-- **SQL Injection**: Requêtes préparées PDO
-- **File upload**: Validation stricte des types et tailles
+## 🛡️ SÉCURITÉ BACKEND
 
-### Rate Limiting
-- Login: 5 tentatives par 5 minutes
-- Forgot password: 3 tentatives par heure
-- Configuration flexible par endpoint
+### Protections communes
+- Hachage sécurisé des mots de passe
+- Protection contre l'injection SQL
+- Validation stricte des entrées
+- Rate limiting
+- Sessions sécurisées
+- Headers de sécurité
+- CSRF protection
 
-## API REST
+### Spécifique Node.js
+- Helmet.js pour headers HTTP
+- express-rate-limit
+- express-session avec store PostgreSQL
+- Zod validation
+- bcrypt pour les mots de passe
 
-### Standards
-- **Méthodes HTTP**: GET, POST, PUT, DELETE
-- **Réponses JSON**: Structure cohérente
-- **Codes de statut**: Usage approprié (200, 201, 400, 401, 403, 404, 500)
-- **Pagination**: Offset/limit avec métadonnées
-- **Filtrage**: Query parameters pour recherche
-- **Validation**: Schémas de validation Zod-like
+### Spécifique PHP
+- Prepared statements
+- password_hash/password_verify
+- htmlspecialchars pour XSS
+- CSRF tokens
+- Session hijacking protection
 
-### Endpoints Complets
-- `/api/auth/*`: Authentification complète
-- `/api/admin/*`: Administration et statistiques
-- `/api/announcements/*`: CRUD annonces
-- `/api/documents/*`: CRUD documents
-- `/api/events/*`: CRUD événements
-- `/api/messages/*`: CRUD messagerie
-- `/api/complaints/*`: CRUD réclamations
-- `/api/trainings/*`: CRUD formations
-- `/api/users/*`: CRUD utilisateurs
+## 📊 MONITORING ET LOGGING
 
-## Points d'Amélioration Identifiés
-- **Cache**: Implémentation Redis/Memcached
-- **Logs**: Système de logging structuré
-- **API Documentation**: Swagger/OpenAPI
-- **Tests**: PHPUnit pour tests automatisés
-- **Migration**: Système de migrations de base de données
-- **Queue**: Système de queues pour tâches asynchrones
-- **WebSockets**: Temps réel pour messagerie
-- **Docker**: Containerisation pour déploiement
-- **Monitoring**: Métriques et alertes
-- **i18n**: Internationalisation complète
+### Node.js
+- Console logging avec formatage
+- Request logging middleware
+- Performance monitoring
+- Error tracking
+
+### PHP  
+- Logger centralisé
+- Error handling global
+- Performance metrics
+- Debug modes
+
+## 🚀 DÉPLOIEMENT ET CONFIGURATION
+
+### Node.js/Express
+- Variables d'environnement (.env)
+- Configuration par environnement
+- PM2 pour la production
+- Docker support
+
+### PHP
+- Configuration Apache/Nginx
+- PHP-FPM optimization
+- Environment variables
+- Cache OPcache
+
+## 🔄 COMPATIBILITÉ ET MIGRATION
+
+### Équivalences fonctionnelles
+- **Authentification**: Sessions PHP ↔ Express sessions
+- **ORM**: Modèles PHP ↔ Drizzle ORM
+- **Validation**: Validation PHP ↔ Zod schemas
+- **Routage**: Router PHP ↔ Express routes
+- **Cache**: CacheManager ↔ Memory/Redis cache
+
+### Points de migration
+- Conversion des schémas de données
+- Adaptation des endpoints API
+- Migration des sessions utilisateurs
+- Transfert des fichiers uploadés
+- Synchronisation des permissions
+
+---
+*Inventaire généré le 8 août 2025 - Versions Node.js/Express + PHP*
