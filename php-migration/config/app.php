@@ -98,4 +98,16 @@ define('COMPLAINT_STATUSES', [
     'resolved' => 'Résolue',
     'closed' => 'Fermée'
 ]);
+
+// Chemin racine du projet
+define('ROOT_PATH', dirname(__DIR__));
+
+// Types de fichiers autorisés pour l'upload
+define('ALLOWED_FILE_TYPES', [
+    'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
+    'jpg', 'jpeg', 'png', 'gif', 'webp',
+    'mp4', 'avi', 'mov', 'wmv',
+    'mp3', 'wav', 'flac',
+    'txt', 'rtf', 'zip', 'rar'
+]);
 ?>
