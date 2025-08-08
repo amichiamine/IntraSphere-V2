@@ -1,7 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import { registerRoutes } from "./routes/api";
-import { setupVite, serveStatic, log } from "./vite";
+import { setupVite, serveStatic, log } from "./vite.js";
 import { configureSecurity, sanitizeInput, getSessionConfig } from "./middleware/security";
 import { runMigrations } from "./migrations";
 import { ensurePortAvailable, ServerMonitor } from "./utils/process-monitor";
