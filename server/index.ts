@@ -102,26 +102,19 @@ app.use((req, res, next) => {
     res.status(200).send('<h1>Express Server Working!</h1><p>Server is running correctly on port ' + port + '</p>');
   });
 
-  // Add root route handler before Vite setup in development
-  if (nodeEnv === "development") {
-    app.get('/', (_req, res) => {
-      res.send(`
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>IntraSphere</title>
-    <script type="module" src="/@vite/client"></script>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
-</html>
-      `);
-    });
-  }
+  // Add simple root handler that works with restructured files
+  app.get('/', async (_req, res) => {
+    try {
+      const fs = await import('fs/promises');
+      const path = await import('path');
+      const htmlPath = path.resolve(process.cwd(), 'client/index.html');
+      const template = await fs.readFile(htmlPath, 'utf-8');
+      res.status(200).set({ 'Content-Type': 'text/html' }).send(template);
+    } catch (error) {
+      console.error('Error serving root:', error);
+      res.status(500).send('Error loading application');
+    }
+  });
 
   if (nodeEnv === "development") {
     log("Setting up Vite development server...");
