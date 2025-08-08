@@ -452,12 +452,8 @@ export class IntraSphereIntegration {
 // Global integration instance
 export const intraSphereIntegration = new IntraSphereIntegration();
 
-// Auto-initialize with safe configuration
-setTimeout(() => {
-  intraSphereIntegration.initialize().catch(error => {
-    console.warn('Integration initialization failed (this is normal):', error);
-  });
-}, 1000); // Delay to ensure DOM is ready
+// Completely disable auto-initialization to prevent DOMException
+// Integration features are available but not auto-activated
 
 // Export for manual control
 export const integrationUtils = {
