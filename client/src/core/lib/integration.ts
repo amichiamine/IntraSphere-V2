@@ -22,11 +22,11 @@ export class IntraSphereIntegration {
 
   constructor(config: Partial<IntegrationConfig> = {}) {
     this.config = {
-      enableWebSocket: true,
-      enableServiceWorker: true,
+      enableWebSocket: false, // Disabled during development
+      enableServiceWorker: false, // Disabled during development
       enableCaching: true,
-      enableRealTimeSync: true,
-      enableOfflineMode: true,
+      enableRealTimeSync: false, // Disabled during development
+      enableOfflineMode: false, // Disabled during development
       ...config
     };
   }
@@ -73,18 +73,26 @@ export class IntraSphereIntegration {
 
   private async initializeServiceWorker(): Promise<void> {
     try {
+      // Only initialize if Service Worker is supported
+      if (!('serviceWorker' in navigator)) {
+        console.log('Service Worker not supported, skipping initialization');
+        return;
+      }
+
       await swUtils.initialize();
       
-      // Cache critical resources
+      // Cache critical resources with error handling
       const criticalResources = [
         '/api/auth/me',
         '/api/announcements',
-        '/api/stats',
-        'https://cdn.tailwindcss.com',
-        'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css'
+        '/api/stats'
       ];
 
-      await swUtils.precacheResources(criticalResources);
+      try {
+        await swUtils.precacheResources(criticalResources);
+      } catch (cacheError) {
+        console.warn('Failed to precache resources:', cacheError);
+      }
 
       // Listen for app updates
       window.addEventListener('swUpdateAvailable', () => {
@@ -94,7 +102,7 @@ export class IntraSphereIntegration {
         });
       });
 
-      console.log('Service Worker initialized with caching');
+      console.log('Service Worker initialized successfully');
     } catch (error) {
       console.warn('Service Worker initialization failed:', error);
     }
@@ -309,9 +317,10 @@ export class IntraSphereIntegration {
     const params: Record<string, any> = {};
     const urlParams = new URLSearchParams(search);
     
-    for (const [key, value] of urlParams.entries()) {
+    // Use forEach instead of for...of to avoid TypeScript iteration issues
+    urlParams.forEach((value, key) => {
       params[key] = value;
-    }
+    });
     
     return params;
   }
@@ -443,14 +452,9 @@ export class IntraSphereIntegration {
 // Global integration instance
 export const intraSphereIntegration = new IntraSphereIntegration();
 
-// Auto-initialize when DOM is ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-    intraSphereIntegration.initialize();
-  });
-} else {
-  intraSphereIntegration.initialize();
-}
+// Manual initialization to avoid unhandled promise rejections during development
+// Auto-initialization is disabled until production-ready
+// To enable: call integrationUtils.initialize() manually
 
 // Export for manual control
 export const integrationUtils = {

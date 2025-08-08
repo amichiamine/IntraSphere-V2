@@ -32,4 +32,11 @@ window.onerror = (msg) => {
   return false;
 };
 
+// Handle unhandled promise rejections
+window.addEventListener('unhandledrejection', (event) => {
+  console.warn('Unhandled promise rejection:', event.reason);
+  // Prevent the default handling (which logs to console)
+  event.preventDefault();
+});
+
 createRoot(document.getElementById("root")!).render(<App />);
