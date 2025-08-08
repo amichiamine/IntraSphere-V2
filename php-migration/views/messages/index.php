@@ -262,9 +262,16 @@
                 if (search) url += `&search=${encodeURIComponent(search)}`;
                 
                 const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
                 const data = await response.json();
                 
-                renderMessages(data.messages || data);
+                // Ensure safe array operations (equivalent to React safeMessages)
+                const safeMessages = Array.isArray(data.messages) ? data.messages : 
+                                    Array.isArray(data) ? data : [];
+                
+                renderMessages(safeMessages);
                 renderPagination(data.pagination);
                 updateSectionTitle(type);
             } catch (error) {
@@ -285,11 +292,14 @@
             }
         }
         
-        // Rendu des messages
+        // Rendu des messages avec protection contre les erreurs (équivalent React)
         function renderMessages(messages) {
             const container = document.getElementById('messages-container');
             
-            if (!messages || messages.length === 0) {
+            // Ensure messages is always an array to prevent filter errors
+            const safeMessages = Array.isArray(messages) ? messages : [];
+            
+            if (safeMessages.length === 0) {
                 container.innerHTML = `
                     <div class="message-item p-8 text-center">
                         <div class="text-6xl text-white/40 mb-4">
@@ -306,7 +316,7 @@
                 return;
             }
             
-            container.innerHTML = messages.map(message => {
+            container.innerHTML = safeMessages.map(message => {
                 const date = new Date(message.created_at);
                 const isToday = date.toDateString() === new Date().toDateString();
                 const timeStr = isToday ? 

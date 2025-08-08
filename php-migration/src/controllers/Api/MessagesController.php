@@ -1,6 +1,8 @@
 <?php
 namespace Api;
 
+require_once __DIR__ . '/../utils/ArrayGuard.php';
+
 /**
  * Contrôleur API des messages
  * Équivalent aux routes /api/messages/* TypeScript
@@ -37,10 +39,13 @@ class MessagesController extends \BaseController {
                 $messages = $this->messageModel->getInbox($user['id'], $page, $limit);
             }
             
-            $this->json($messages);
+            // Ensure safe JSON response (equivalent to React array protection)
+            $safeMessages = ArrayGuard::safeJsonResponse($messages);
+            $this->json($safeMessages);
             
         } catch (Exception $e) {
-            $this->error('Erreur lors de la récupération des messages');
+            // Return empty array on error to prevent frontend crashes
+            $this->json([]);
         }
     }
     
@@ -237,8 +242,11 @@ class MessagesController extends \BaseController {
         $data = $this->getJsonInput();
         $messageIds = $data['message_ids'] ?? [];
         
-        if (!is_array($messageIds) || empty($messageIds)) {
-            $this->error('Liste d\'IDs de messages invalide');
+        // Use ArrayGuard for safe array operations (equivalent to React fix)
+        try {
+            $messageIds = ArrayGuard::validateMessageIds($messageIds);
+        } catch (InvalidArgumentException $e) {
+            $this->error($e->getMessage(), ['provided' => $data['message_ids'] ?? null]);
         }
         
         try {

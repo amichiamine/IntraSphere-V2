@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/../utils/ArrayGuard.php';
+
 /**
  * Modèle Message
  * Équivalent à la table 'messages' TypeScript
@@ -75,12 +77,17 @@ class Message extends BaseModel {
      * Marquer plusieurs messages comme lus
      */
     public function markMultipleAsRead(array $messageIds): int {
-        if (empty($messageIds)) return 0;
+        // Use ArrayGuard for safe operations (equivalent to React safeMessages)
+        $safeMessageIds = ArrayGuard::filterValidIds($messageIds);
         
-        $placeholders = implode(',', array_fill(0, count($messageIds), '?'));
+        if (empty($safeMessageIds)) {
+            return 0;
+        }
+        
+        $placeholders = implode(',', array_fill(0, count($safeMessageIds), '?'));
         $sql = "UPDATE {$this->table} SET is_read = true WHERE id IN ({$placeholders})";
         
-        $stmt = $this->db->query($sql, $messageIds);
+        $stmt = $this->db->query($sql, array_values($safeMessageIds));
         return $stmt->rowCount();
     }
     

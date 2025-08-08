@@ -65,7 +65,17 @@ export default function ViewsManagement() {
 
   const { data: viewConfigs, isLoading } = useQuery({
     queryKey: [API_ROUTES.VIEWS_CONFIG],
-    queryFn: () => fetch(API_ROUTES.VIEWS_CONFIG, { credentials: 'include' }).then(res => res.json())
+    queryFn: async () => {
+      const res = await fetch(API_ROUTES.VIEWS_CONFIG, { credentials: 'include' });
+      if (!res.ok) {
+        // Return empty array instead of throwing error to prevent crashes
+        console.warn('Failed to fetch view configs:', res.status);
+        return [];
+      }
+      const data = await res.json();
+      // Ensure we always return an array
+      return Array.isArray(data) ? data : [];
+    }
   });
 
   const createConfigMutation = useMutation({
@@ -211,7 +221,7 @@ export default function ViewsManagement() {
             ) : (
               <>
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {viewConfigs?.map((config: ViewConfig) => (
+                  {Array.isArray(viewConfigs) ? viewConfigs.map((config: ViewConfig) => (
                     <Card key={config.id} data-testid={`card-view-config-${config.id}`}>
                       <CardHeader>
                         <div className="flex justify-between items-start">
@@ -273,10 +283,10 @@ export default function ViewsManagement() {
                         </div>
                       </CardContent>
                     </Card>
-                  ))}
+                  )) : null}
                 </div>
 
-                {viewConfigs?.length === 0 && (
+                {Array.isArray(viewConfigs) && viewConfigs.length === 0 && (
                   <div className="text-center py-12">
                     <Layout className="mx-auto h-12 w-12 text-gray-400" />
                     <h3 className="mt-2 text-sm font-medium text-gray-900">Aucune configuration</h3>
