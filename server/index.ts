@@ -192,12 +192,12 @@ app.use((req, res, next) => {
 
   // Handle uncaught exceptions
   process.on('uncaughtException', (error) => {
-    log(`Uncaught Exception: ${error.message}`);
+    console.log(`Uncaught Exception: ${error.message}`);
     gracefulShutdown('uncaughtException');
   });
 
   process.on('unhandledRejection', (reason) => {
-    log(`Unhandled Rejection: ${reason}`);
+    console.log(`Unhandled Rejection: ${reason}`);
     gracefulShutdown('unhandledRejection');
   });
 })().catch((error) => {
