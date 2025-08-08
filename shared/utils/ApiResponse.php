@@ -1,214 +1,223 @@
 <?php
 /**
- * Gestionnaire de réponses API unifié
- * Compatible avec le format TypeScript/Express
+ * Utilitaire de réponse API unifié pour PHP
+ * Compatible avec api-response.ts
  */
 
 class ApiResponse {
     
     /**
-     * Réponse de succès
+     * Créer une réponse de succès
      */
-    public static function success($data = null, string $message = null, int $statusCode = 200): void {
-        http_response_code($statusCode);
-        header('Content-Type: application/json');
-        
-        $response = [];
-        
-        if ($message) {
-            $response['message'] = $message;
-        }
-        
-        if ($data !== null) {
-            if (is_array($data) && isset($data['data']) && isset($data['pagination'])) {
-                // Réponse paginée
-                $response = array_merge($response, $data);
-            } else {
-                $response['data'] = $data;
-            }
-        }
-        
-        echo json_encode($response, JSON_UNESCAPED_UNICODE);
-        exit;
-    }
-    
-    /**
-     * Réponse d'erreur
-     */
-    public static function error(string $message, int $statusCode = 400, array $errors = []): void {
-        http_response_code($statusCode);
-        header('Content-Type: application/json');
-        
-        $response = [
-            'message' => $message
-        ];
-        
-        if (!empty($errors)) {
-            $response['errors'] = $errors;
-        }
-        
-        // Ajouter des détails supplémentaires en mode debug
-        if (APP_DEBUG && $statusCode >= 500) {
-            $response['debug'] = [
-                'file' => debug_backtrace()[1]['file'] ?? 'unknown',
-                'line' => debug_backtrace()[1]['line'] ?? 'unknown',
-                'trace' => array_slice(debug_backtrace(), 1, 5)
-            ];
-        }
-        
-        echo json_encode($response, JSON_UNESCAPED_UNICODE);
-        exit;
-    }
-    
-    /**
-     * Réponse de validation
-     */
-    public static function validationError(array $errors, string $message = "Données invalides"): void {
-        self::error($message, 422, $errors);
-    }
-    
-    /**
-     * Réponse non autorisé
-     */
-    public static function unauthorized(string $message = "Non autorisé"): void {
-        self::error($message, 401);
-    }
-    
-    /**
-     * Réponse interdit
-     */
-    public static function forbidden(string $message = "Accès refusé"): void {
-        self::error($message, 403);
-    }
-    
-    /**
-     * Réponse non trouvé
-     */
-    public static function notFound(string $message = "Ressource non trouvée"): void {
-        self::error($message, 404);
-    }
-    
-    /**
-     * Réponse rate limit
-     */
-    public static function rateLimited(string $message = "Trop de requêtes", int $retryAfter = 60): void {
-        header("Retry-After: {$retryAfter}");
-        self::error($message, 429);
-    }
-    
-    /**
-     * Réponse paginée
-     */
-    public static function paginated(array $data, int $total, int $page, int $limit, string $message = null): void {
-        $response = [
+    public static function success($data = null, string $message = null, array $meta = []): array {
+        return [
+            'success' => true,
             'data' => $data,
-            'pagination' => [
-                'current_page' => $page,
-                'per_page' => $limit,
-                'total' => $total,
-                'total_pages' => ceil($total / $limit),
-                'has_next' => $page < ceil($total / $limit),
-                'has_prev' => $page > 1
+            'message' => $message,
+            'meta' => array_merge($meta, [
+                'timestamp' => date('c'),
+                'version' => '1.0'
+            ])
+        ];
+    }
+    
+    /**
+     * Créer une réponse d'erreur
+     */
+    public static function error(string $message, string $error = null, array $errors = []): array {
+        return [
+            'success' => false,
+            'error' => $error ?: $message,
+            'message' => $message,
+            'errors' => $errors,
+            'meta' => [
+                'timestamp' => date('c'),
+                'version' => '1.0'
             ]
         ];
+    }
+    
+    /**
+     * Créer une réponse paginée
+     */
+    public static function paginated(
+        array $data, 
+        int $total, 
+        int $page, 
+        int $perPage,
+        string $message = null
+    ): array {
+        $hasMore = ($page * $perPage) < $total;
         
-        self::success($response, $message);
+        return [
+            'success' => true,
+            'data' => $data,
+            'message' => $message,
+            'meta' => [
+                'total' => $total,
+                'page' => $page,
+                'perPage' => $perPage,
+                'hasMore' => $hasMore,
+                'timestamp' => date('c'),
+                'version' => '1.0'
+            ]
+        ];
     }
     
     /**
-     * Réponse de création
+     * Créer une réponse de validation échouée
      */
-    public static function created($data, string $message = "Créé avec succès"): void {
-        self::success($data, $message, 201);
+    public static function validationError(array $errors, string $message = "Validation échouée"): array {
+        return [
+            'success' => false,
+            'message' => $message,
+            'error' => 'VALIDATION_FAILED',
+            'errors' => $errors,
+            'meta' => [
+                'timestamp' => date('c'),
+                'version' => '1.0'
+            ]
+        ];
     }
     
     /**
-     * Réponse de mise à jour
+     * Créer une réponse d'authentification requise
      */
-    public static function updated($data = null, string $message = "Mis à jour avec succès"): void {
-        self::success($data, $message);
+    public static function authRequired(string $message = "Authentification requise"): array {
+        return [
+            'success' => false,
+            'message' => $message,
+            'error' => 'AUTH_REQUIRED',
+            'meta' => [
+                'timestamp' => date('c'),
+                'version' => '1.0'
+            ]
+        ];
     }
     
     /**
-     * Réponse de suppression
+     * Créer une réponse de permissions insuffisantes
      */
-    public static function deleted(string $message = "Supprimé avec succès"): void {
-        self::success(null, $message);
+    public static function forbidden(string $message = "Permissions insuffisantes"): array {
+        return [
+            'success' => false,
+            'message' => $message,
+            'error' => 'FORBIDDEN',
+            'meta' => [
+                'timestamp' => date('c'),
+                'version' => '1.0'
+            ]
+        ];
     }
     
     /**
-     * Réponse sans contenu
+     * Créer une réponse de ressource non trouvée
      */
-    public static function noContent(): void {
-        http_response_code(204);
-        exit;
+    public static function notFound(string $message = "Ressource non trouvée"): array {
+        return [
+            'success' => false,
+            'message' => $message,
+            'error' => 'NOT_FOUND',
+            'meta' => [
+                'timestamp' => date('c'),
+                'version' => '1.0'
+            ]
+        ];
     }
     
     /**
-     * Réponse de redirection
+     * Créer une réponse d'erreur serveur
      */
-    public static function redirect(string $url, int $statusCode = 302): void {
+    public static function serverError(string $message = "Erreur serveur interne", string $error = null): array {
+        return [
+            'success' => false,
+            'message' => $message,
+            'error' => $error ?: 'INTERNAL_ERROR',
+            'meta' => [
+                'timestamp' => date('c'),
+                'version' => '1.0'
+            ]
+        ];
+    }
+    
+    /**
+     * Créer une réponse de trop de requêtes
+     */
+    public static function tooManyRequests(string $message = "Trop de requêtes", int $retryAfter = null): array {
+        $meta = [
+            'timestamp' => date('c'),
+            'version' => '1.0'
+        ];
+        
+        if ($retryAfter !== null) {
+            $meta['retryAfter'] = $retryAfter;
+        }
+        
+        return [
+            'success' => false,
+            'message' => $message,
+            'error' => 'TOO_MANY_REQUESTS',
+            'meta' => $meta
+        ];
+    }
+    
+    /**
+     * Envoyer une réponse JSON avec les headers appropriés
+     */
+    public static function send(array $response, int $statusCode = 200): void {
         http_response_code($statusCode);
-        header("Location: {$url}");
+        header('Content-Type: application/json; charset=utf-8');
+        header('Cache-Control: no-cache, must-revalidate');
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+        header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+        
+        echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
         exit;
     }
     
     /**
-     * Formater une erreur d'exception
+     * Envoyer une réponse de succès
      */
-    public static function fromException(Exception $e, int $statusCode = 500): void {
-        $message = APP_DEBUG ? $e->getMessage() : "Erreur interne du serveur";
-        
-        $errors = [];
-        if (APP_DEBUG) {
-            $errors = [
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'trace' => array_slice($e->getTrace(), 0, 5)
-            ];
-        }
-        
-        self::error($message, $statusCode, $errors);
+    public static function sendSuccess($data = null, string $message = null, int $statusCode = 200): void {
+        self::send(self::success($data, $message), $statusCode);
     }
     
     /**
-     * Formater les erreurs de validation
+     * Envoyer une réponse d'erreur
      */
-    public static function formatValidationErrors(array $validationResult): array {
-        if (isset($validationResult['errors'])) {
-            return $validationResult['errors'];
-        }
-        
-        return [];
+    public static function sendError(string $message, int $statusCode = 400, string $error = null): void {
+        self::send(self::error($message, $error), $statusCode);
     }
     
     /**
-     * Middleware pour les en-têtes de sécurité
+     * Envoyer une réponse paginée
      */
-    public static function setSecurityHeaders(): void {
-        header('X-Content-Type-Options: nosniff');
-        header('X-Frame-Options: DENY');
-        header('X-XSS-Protection: 1; mode=block');
-        
-        if (HTTPS_ENABLED) {
-            header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
-        }
-        
-        header('Content-Security-Policy: default-src \'self\'; script-src \'self\' \'unsafe-inline\'; style-src \'self\' \'unsafe-inline\'');
-        
-        // CORS
-        if (API_CORS_ENABLED) {
-            $allowedOrigins = API_CORS_ORIGINS;
-            $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-            
-            if (in_array($origin, $allowedOrigins)) {
-                header("Access-Control-Allow-Origin: {$origin}");
-            }
-            
-            header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-            header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
-            header('Access-Control-Allow-Credentials: true');
-        }
+    public static function sendPaginated(
+        array $data, 
+        int $total, 
+        int $page, 
+        int $perPage,
+        string $message = null,
+        int $statusCode = 200
+    ): void {
+        self::send(self::paginated($data, $total, $page, $perPage, $message), $statusCode);
     }
 }
-?>
+
+/**
+ * Constantes pour les codes de statut HTTP
+ */
+class HttpStatus {
+    const OK = 200;
+    const CREATED = 201;
+    const NO_CONTENT = 204;
+    const BAD_REQUEST = 400;
+    const UNAUTHORIZED = 401;
+    const FORBIDDEN = 403;
+    const NOT_FOUND = 404;
+    const CONFLICT = 409;
+    const UNPROCESSABLE_ENTITY = 422;
+    const TOO_MANY_REQUESTS = 429;
+    const INTERNAL_SERVER_ERROR = 500;
+}

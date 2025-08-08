@@ -1,211 +1,211 @@
 /**
- * Gestionnaire de réponses API unifié (version TypeScript)
- * Compatible avec le format PHP/Express
+ * Utilitaire de réponse API unifié pour TypeScript
+ * Compatible avec ApiResponse.php
  */
 
-import type { Response } from 'express';
-
-export interface ApiSuccessResponse<T = any> {
-  message?: string;
+export interface ApiResponse<T = any> {
+  success: boolean;
   data?: T;
-}
-
-export interface ApiErrorResponse {
-  message: string;
-  errors?: string[];
-  debug?: any;
-}
-
-export interface PaginatedResponse<T = any> {
-  data: T[];
-  pagination: {
-    current_page: number;
-    per_page: number;
-    total: number;
-    total_pages: number;
-    has_next: boolean;
-    has_prev: boolean;
+  message?: string;
+  error?: string;
+  errors?: any[];
+  meta?: {
+    total?: number;
+    page?: number;
+    perPage?: number;
+    hasMore?: boolean;
+    timestamp?: string;
+    version?: string;
+    retryAfter?: number;
+    [key: string]: any;
   };
 }
 
-export class ApiResponse {
-  
+export class ApiResponseBuilder {
   /**
-   * Réponse de succès
+   * Créer une réponse de succès
    */
-  static success<T>(res: Response, data?: T, message?: string, statusCode: number = 200): void {
-    const response: ApiSuccessResponse<T> = {};
-    
-    if (message) {
-      response.message = message;
-    }
-    
-    if (data !== undefined) {
-      if (data && typeof data === 'object' && 'data' in data && 'pagination' in data) {
-        // Réponse paginée
-        res.status(statusCode).json(data);
-        return;
-      } else {
-        response.data = data;
+  static success<T>(data?: T, message?: string, meta?: any): ApiResponse<T> {
+    return {
+      success: true,
+      data,
+      message,
+      meta: {
+        ...meta,
+        timestamp: new Date().toISOString(),
+        version: "1.0"
       }
-    }
-    
-    res.status(statusCode).json(response);
+    };
   }
-  
+
   /**
-   * Réponse d'erreur
+   * Créer une réponse d'erreur
    */
-  static error(res: Response, message: string, statusCode: number = 400, errors?: string[]): void {
-    const response: ApiErrorResponse = { message };
-    
-    if (errors && errors.length > 0) {
-      response.errors = errors;
-    }
-    
-    // Ajouter des détails supplémentaires en mode debug
-    if (process.env.NODE_ENV === 'development' && statusCode >= 500) {
-      const stack = new Error().stack;
-      response.debug = {
-        stack: stack?.split('\n').slice(1, 6)
-      };
-    }
-    
-    res.status(statusCode).json(response);
+  static error(message: string, error?: string, errors?: any[]): ApiResponse {
+    return {
+      success: false,
+      error: error || message,
+      message,
+      errors,
+      meta: {
+        timestamp: new Date().toISOString(),
+        version: "1.0"
+      }
+    };
   }
-  
+
   /**
-   * Réponse de validation
-   */
-  static validationError(res: Response, errors: string[], message: string = "Données invalides"): void {
-    this.error(res, message, 422, errors);
-  }
-  
-  /**
-   * Réponse non autorisé
-   */
-  static unauthorized(res: Response, message: string = "Non autorisé"): void {
-    this.error(res, message, 401);
-  }
-  
-  /**
-   * Réponse interdit
-   */
-  static forbidden(res: Response, message: string = "Accès refusé"): void {
-    this.error(res, message, 403);
-  }
-  
-  /**
-   * Réponse non trouvé
-   */
-  static notFound(res: Response, message: string = "Ressource non trouvée"): void {
-    this.error(res, message, 404);
-  }
-  
-  /**
-   * Réponse rate limit
-   */
-  static rateLimited(res: Response, message: string = "Trop de requêtes", retryAfter: number = 60): void {
-    res.set('Retry-After', retryAfter.toString());
-    this.error(res, message, 429);
-  }
-  
-  /**
-   * Réponse paginée
+   * Créer une réponse paginée
    */
   static paginated<T>(
-    res: Response, 
     data: T[], 
     total: number, 
     page: number, 
-    limit: number, 
+    perPage: number,
     message?: string
-  ): void {
-    const response: PaginatedResponse<T> = {
+  ): ApiResponse<T[]> {
+    const hasMore = (page * perPage) < total;
+    
+    return {
+      success: true,
       data,
-      pagination: {
-        current_page: page,
-        per_page: limit,
+      message,
+      meta: {
         total,
-        total_pages: Math.ceil(total / limit),
-        has_next: page < Math.ceil(total / limit),
-        has_prev: page > 1
+        page,
+        perPage,
+        hasMore,
+        timestamp: new Date().toISOString(),
+        version: "1.0"
       }
     };
-    
-    this.success(res, response, message);
   }
-  
+
   /**
-   * Réponse de création
+   * Créer une réponse de validation échouée
    */
-  static created<T>(res: Response, data: T, message: string = "Créé avec succès"): void {
-    this.success(res, data, message, 201);
+  static validationError(errors: any[], message = "Validation échouée"): ApiResponse {
+    return {
+      success: false,
+      message,
+      error: "VALIDATION_FAILED",
+      errors,
+      meta: {
+        timestamp: new Date().toISOString(),
+        version: "1.0"
+      }
+    };
   }
-  
+
   /**
-   * Réponse de mise à jour
+   * Créer une réponse d'authentification requise
    */
-  static updated<T>(res: Response, data?: T, message: string = "Mis à jour avec succès"): void {
-    this.success(res, data, message);
+  static authRequired(message = "Authentification requise"): ApiResponse {
+    return {
+      success: false,
+      message,
+      error: "AUTH_REQUIRED",
+      meta: {
+        timestamp: new Date().toISOString(),
+        version: "1.0"
+      }
+    };
   }
-  
+
   /**
-   * Réponse de suppression
+   * Créer une réponse de permissions insuffisantes
    */
-  static deleted(res: Response, message: string = "Supprimé avec succès"): void {
-    this.success(res, undefined, message);
+  static forbidden(message = "Permissions insuffisantes"): ApiResponse {
+    return {
+      success: false,
+      message,
+      error: "FORBIDDEN",
+      meta: {
+        timestamp: new Date().toISOString(),
+        version: "1.0"
+      }
+    };
   }
-  
+
   /**
-   * Réponse sans contenu
+   * Créer une réponse de ressource non trouvée
    */
-  static noContent(res: Response): void {
-    res.status(204).end();
+  static notFound(message = "Ressource non trouvée"): ApiResponse {
+    return {
+      success: false,
+      message,
+      error: "NOT_FOUND",
+      meta: {
+        timestamp: new Date().toISOString(),
+        version: "1.0"
+      }
+    };
   }
-  
+
   /**
-   * Réponse de redirection
+   * Créer une réponse d'erreur serveur
    */
-  static redirect(res: Response, url: string, statusCode: number = 302): void {
-    res.redirect(statusCode, url);
+  static serverError(message = "Erreur serveur interne", error?: string): ApiResponse {
+    return {
+      success: false,
+      message,
+      error: error || "INTERNAL_ERROR",
+      meta: {
+        timestamp: new Date().toISOString(),
+        version: "1.0"
+      }
+    };
   }
-  
+
   /**
-   * Formater une erreur d'exception
+   * Créer une réponse de trop de requêtes
    */
-  static fromException(res: Response, error: Error, statusCode: number = 500): void {
-    const message = process.env.NODE_ENV === 'development' ? error.message : "Erreur interne du serveur";
-    
-    const errors: string[] = [];
-    if (process.env.NODE_ENV === 'development') {
-      errors.push(error.stack || error.message);
-    }
-    
-    this.error(res, message, statusCode, errors);
-  }
-  
-  /**
-   * Formater les erreurs de validation
-   */
-  static formatValidationErrors(validationResult: { errors?: string[] }): string[] {
-    return validationResult.errors || [];
-  }
-  
-  /**
-   * Middleware pour les en-têtes de sécurité
-   */
-  static setSecurityHeaders(res: Response): void {
-    res.set({
-      'X-Content-Type-Options': 'nosniff',
-      'X-Frame-Options': 'DENY',
-      'X-XSS-Protection': '1; mode=block',
-      'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
-    });
-    
-    // HTTPS uniquement en production
-    if (process.env.NODE_ENV === 'production') {
-      res.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-    }
+  static tooManyRequests(message = "Trop de requêtes", retryAfter?: number): ApiResponse {
+    return {
+      success: false,
+      message,
+      error: "TOO_MANY_REQUESTS",
+      meta: {
+        timestamp: new Date().toISOString(),
+        version: "1.0",
+        retryAfter
+      }
+    };
   }
 }
+
+/**
+ * Helper pour les codes de statut HTTP
+ */
+export const HttpStatus = {
+  OK: 200,
+  CREATED: 201,
+  NO_CONTENT: 204,
+  BAD_REQUEST: 400,
+  UNAUTHORIZED: 401,
+  FORBIDDEN: 403,
+  NOT_FOUND: 404,
+  CONFLICT: 409,
+  UNPROCESSABLE_ENTITY: 422,
+  TOO_MANY_REQUESTS: 429,
+  INTERNAL_SERVER_ERROR: 500
+} as const;
+
+/**
+ * Middleware Express pour formater les réponses
+ */
+export const formatResponse = (req: any, res: any, next: any) => {
+  res.apiSuccess = <T>(data?: T, message?: string, statusCode = HttpStatus.OK) => {
+    res.status(statusCode).json(ApiResponseBuilder.success(data, message));
+  };
+
+  res.apiError = (message: string, statusCode = HttpStatus.BAD_REQUEST, error?: string) => {
+    res.status(statusCode).json(ApiResponseBuilder.error(message, error));
+  };
+
+  res.apiPaginated = <T>(data: T[], total: number, page: number, perPage: number, message?: string) => {
+    res.status(HttpStatus.OK).json(ApiResponseBuilder.paginated(data, total, page, perPage, message));
+  };
+
+  next();
+};

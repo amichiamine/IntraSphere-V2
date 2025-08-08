@@ -36,6 +36,7 @@ export interface IStorage {
   getMessageById(id: string): Promise<Message | undefined>;
   createMessage(message: InsertMessage): Promise<Message>;
   markMessageAsRead(id: string): Promise<void>;
+  deleteMessage(id: string): Promise<void>;
   
   // Complaints
   getComplaints(): Promise<Complaint[]>;
@@ -43,6 +44,7 @@ export interface IStorage {
   getComplaintsByUser(userId: string): Promise<Complaint[]>;
   createComplaint(complaint: InsertComplaint): Promise<Complaint>;
   updateComplaint(id: string, complaint: Partial<Complaint>): Promise<Complaint>;
+  deleteComplaint(id: string): Promise<void>;
   
   // Permissions
   getPermissions(userId: string): Promise<Permission[]>;
@@ -182,6 +184,7 @@ export interface IStorage {
   // Forum Likes/Reactions
   getForumPostLikes(postId: string): Promise<ForumLike[]>;
   toggleForumPostLike(like: InsertForumLike): Promise<ForumLike | null>;
+  createForumLike(like: InsertForumLike): Promise<ForumLike>;
   
   // Forum User Stats
   getForumUserStats(userId: string): Promise<ForumUserStats | undefined>;
@@ -975,6 +978,10 @@ export class MemStorage implements IStorage {
     }
   }
 
+  async deleteMessage(id: string): Promise<void> {
+    this.messages.delete(id);
+  }
+
   // Complaints
   async getComplaints(): Promise<Complaint[]> {
     return Array.from(this.complaints.values()).sort(
@@ -1013,6 +1020,10 @@ export class MemStorage implements IStorage {
     const updatedComplaint = { ...complaint, ...updates, updatedAt: new Date() };
     this.complaints.set(id, updatedComplaint);
     return updatedComplaint;
+  }
+
+  async deleteComplaint(id: string): Promise<void> {
+    this.complaints.delete(id);
   }
 
   // Permissions
@@ -2294,6 +2305,26 @@ export class MemStorage implements IStorage {
 
       return like;
     }
+  }
+
+  async createForumLike(insertLike: InsertForumLike): Promise<ForumLike> {
+    const id = randomUUID();
+    const like: ForumLike = {
+      ...insertLike,
+      id,
+      reactionType: insertLike.reactionType || "like",
+      createdAt: new Date()
+    };
+    this.forumLikes.set(id, like);
+
+    // Update post like count
+    const post = this.forumPosts.get(insertLike.postId);
+    if (post) {
+      post.likeCount = (post.likeCount || 0) + 1;
+      this.forumPosts.set(insertLike.postId, post);
+    }
+
+    return like;
   }
 
   // Forum User Stats
