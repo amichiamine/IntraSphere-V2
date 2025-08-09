@@ -57,7 +57,7 @@ var init_testData = __esm({
       {
         id: "admin-1",
         username: "admin",
-        password: "admin123",
+        password: "Admin123!",
         name: "Marie Dupont",
         email: "marie.dupont@intrasphere.fr",
         department: "Direction",
@@ -73,7 +73,7 @@ var init_testData = __esm({
       {
         id: "mod-1",
         username: "moderator",
-        password: "mod123",
+        password: "Mod123!",
         name: "Pierre Martin",
         email: "pierre.martin@intrasphere.fr",
         department: "Ressources Humaines",
@@ -89,7 +89,7 @@ var init_testData = __esm({
       {
         id: "emp-1",
         username: "employee",
-        password: "emp123",
+        password: "Emp123!",
         name: "Sophie Bernard",
         email: "sophie.bernard@intrasphere.fr",
         department: "Informatique",
@@ -357,411 +357,56 @@ var init_testData = __esm({
   }
 });
 
-// shared/schema.ts
-var schema_exports = {};
-__export(schema_exports, {
-  announcements: () => announcements,
-  categories: () => categories,
-  certificates: () => certificates,
-  complaints: () => complaints,
-  contents: () => contents,
-  courses: () => courses,
-  documents: () => documents,
-  enrollments: () => enrollments,
-  events: () => events,
-  insertAnnouncementSchema: () => insertAnnouncementSchema,
-  insertCategorySchema: () => insertCategorySchema,
-  insertComplaintSchema: () => insertComplaintSchema,
-  insertContentSchema: () => insertContentSchema,
-  insertCourseSchema: () => insertCourseSchema,
-  insertDocumentSchema: () => insertDocumentSchema,
-  insertEventSchema: () => insertEventSchema,
-  insertLessonSchema: () => insertLessonSchema,
-  insertMessageSchema: () => insertMessageSchema,
-  insertPermissionSchema: () => insertPermissionSchema,
-  insertQuizSchema: () => insertQuizSchema,
-  insertResourceSchema: () => insertResourceSchema,
-  insertUserSchema: () => insertUserSchema,
-  lessonProgress: () => lessonProgress,
-  lessons: () => lessons,
-  messages: () => messages,
-  permissions: () => permissions,
-  quizAttempts: () => quizAttempts,
-  quizzes: () => quizzes,
-  resources: () => resources,
-  users: () => users
+// server/services/auth.ts
+var auth_exports = {};
+__export(auth_exports, {
+  AuthService: () => AuthService
 });
-import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, boolean, integer, real } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
-import { z } from "zod";
-var users, announcements, documents, events, messages, complaints, permissions, insertUserSchema, insertAnnouncementSchema, insertDocumentSchema, insertEventSchema, insertMessageSchema, insertComplaintSchema, contents, categories, insertPermissionSchema, insertContentSchema, insertCategorySchema, courses, lessons, quizzes, enrollments, lessonProgress, quizAttempts, certificates, resources, insertCourseSchema, insertLessonSchema, insertQuizSchema, insertResourceSchema;
-var init_schema = __esm({
-  "shared/schema.ts"() {
+import bcrypt from "bcrypt";
+var SALT_ROUNDS, AuthService;
+var init_auth = __esm({
+  "server/services/auth.ts"() {
     "use strict";
-    users = pgTable("users", {
-      id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-      username: text("username").notNull().unique(),
-      password: text("password").notNull(),
-      name: text("name").notNull(),
-      role: text("role").notNull().default("employee"),
-      // employee, admin, moderator
-      avatar: text("avatar"),
-      // Extended fields for employee management
-      employeeId: varchar("employee_id").unique(),
-      // Unique identifier for internal communication
-      department: varchar("department"),
-      position: varchar("position"),
-      isActive: boolean("is_active").default(true),
-      phone: varchar("phone"),
-      email: varchar("email"),
-      createdAt: timestamp("created_at").defaultNow(),
-      updatedAt: timestamp("updated_at").defaultNow()
-    });
-    announcements = pgTable("announcements", {
-      id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-      title: text("title").notNull(),
-      content: text("content").notNull(),
-      type: text("type").notNull().default("info"),
-      // info, important, event, formation
-      authorId: varchar("author_id").references(() => users.id),
-      authorName: text("author_name").notNull(),
-      imageUrl: text("image_url"),
-      icon: text("icon").default("\u{1F4E2}"),
-      createdAt: timestamp("created_at").defaultNow().notNull(),
-      isImportant: boolean("is_important").default(false)
-    });
-    documents = pgTable("documents", {
-      id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-      title: text("title").notNull(),
-      description: text("description"),
-      category: text("category").notNull(),
-      // regulation, policy, guide, procedure
-      fileName: text("file_name").notNull(),
-      fileUrl: text("file_url").notNull(),
-      updatedAt: timestamp("updated_at").defaultNow().notNull(),
-      version: text("version").default("1.0")
-    });
-    events = pgTable("events", {
-      id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-      title: text("title").notNull(),
-      description: text("description"),
-      date: timestamp("date").notNull(),
-      location: text("location"),
-      type: text("type").notNull().default("meeting"),
-      // meeting, training, social, other
-      organizerId: varchar("organizer_id").references(() => users.id),
-      createdAt: timestamp("created_at").defaultNow()
-    });
-    messages = pgTable("messages", {
-      id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-      senderId: varchar("sender_id").references(() => users.id).notNull(),
-      recipientId: varchar("recipient_id").references(() => users.id).notNull(),
-      subject: text("subject").notNull(),
-      content: text("content").notNull(),
-      isRead: boolean("is_read").default(false),
-      createdAt: timestamp("created_at").defaultNow()
-    });
-    complaints = pgTable("complaints", {
-      id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-      submitterId: varchar("submitter_id").references(() => users.id).notNull(),
-      assignedToId: varchar("assigned_to_id").references(() => users.id),
-      title: text("title").notNull(),
-      description: text("description").notNull(),
-      category: text("category").notNull(),
-      // hr, it, facilities, other
-      priority: text("priority").default("medium"),
-      // low, medium, high, urgent
-      status: text("status").default("open"),
-      // open, in_progress, resolved, closed
-      createdAt: timestamp("created_at").defaultNow(),
-      updatedAt: timestamp("updated_at").defaultNow()
-    });
-    permissions = pgTable("permissions", {
-      id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-      userId: varchar("user_id").references(() => users.id).notNull(),
-      grantedBy: varchar("granted_by").references(() => users.id).notNull(),
-      permission: text("permission").notNull(),
-      // manage_announcements, manage_documents, manage_events, manage_users
-      createdAt: timestamp("created_at").defaultNow()
-    });
-    insertUserSchema = createInsertSchema(users).pick({
-      username: true,
-      password: true,
-      name: true,
-      role: true,
-      avatar: true,
-      employeeId: true,
-      department: true,
-      position: true,
-      phone: true,
-      email: true
-    });
-    insertAnnouncementSchema = createInsertSchema(announcements).pick({
-      title: true,
-      content: true,
-      type: true,
-      authorName: true,
-      isImportant: true
-    }).extend({
-      imageUrl: z.string().optional(),
-      icon: z.string().optional()
-    });
-    insertDocumentSchema = createInsertSchema(documents).pick({
-      title: true,
-      description: true,
-      category: true,
-      fileName: true,
-      fileUrl: true,
-      version: true
-    });
-    insertEventSchema = createInsertSchema(events).pick({
-      title: true,
-      description: true,
-      date: true,
-      location: true,
-      type: true,
-      organizerId: true
-    });
-    insertMessageSchema = createInsertSchema(messages).pick({
-      senderId: true,
-      recipientId: true,
-      subject: true,
-      content: true
-    });
-    insertComplaintSchema = createInsertSchema(complaints).pick({
-      submitterId: true,
-      assignedToId: true,
-      title: true,
-      description: true,
-      category: true,
-      priority: true
-    });
-    contents = pgTable("contents", {
-      id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-      title: text("title").notNull(),
-      type: text("type").notNull(),
-      // video, image, document, audio
-      category: text("category").notNull(),
-      description: text("description"),
-      fileUrl: text("file_url").notNull(),
-      thumbnailUrl: text("thumbnail_url"),
-      duration: text("duration"),
-      viewCount: integer("view_count").default(0),
-      rating: integer("rating").default(0),
-      tags: text("tags").array(),
-      isPopular: boolean("is_popular").default(false),
-      isFeatured: boolean("is_featured").default(false),
-      createdAt: timestamp("created_at").defaultNow().notNull(),
-      updatedAt: timestamp("updated_at").defaultNow().notNull()
-    });
-    categories = pgTable("categories", {
-      id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-      name: text("name").notNull().unique(),
-      description: text("description"),
-      icon: text("icon").default("\u{1F4C1}"),
-      color: text("color").default("#3B82F6"),
-      isVisible: boolean("is_visible").default(true),
-      sortOrder: integer("sort_order").default(0),
-      createdAt: timestamp("created_at").defaultNow().notNull()
-    });
-    insertPermissionSchema = createInsertSchema(permissions).pick({
-      userId: true,
-      grantedBy: true,
-      permission: true
-    });
-    insertContentSchema = createInsertSchema(contents).pick({
-      title: true,
-      type: true,
-      category: true,
-      description: true,
-      thumbnailUrl: true,
-      fileUrl: true,
-      duration: true,
-      isPopular: true,
-      isFeatured: true,
-      tags: true
-    });
-    insertCategorySchema = createInsertSchema(categories).pick({
-      name: true,
-      color: true,
-      icon: true,
-      description: true,
-      isVisible: true,
-      sortOrder: true
-    });
-    courses = pgTable("courses", {
-      id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-      title: text("title").notNull(),
-      description: text("description"),
-      category: text("category").notNull(),
-      // technical, compliance, soft-skills, leadership
-      difficulty: text("difficulty").notNull().default("beginner"),
-      // beginner, intermediate, advanced
-      duration: integer("duration"),
-      // in minutes
-      thumbnailUrl: text("thumbnail_url"),
-      authorId: varchar("author_id").references(() => users.id),
-      authorName: text("author_name").notNull(),
-      isPublished: boolean("is_published").default(false),
-      isMandatory: boolean("is_mandatory").default(false),
-      prerequisites: text("prerequisites"),
-      // JSON array of course IDs
-      tags: text("tags"),
-      // JSON array of tags
-      createdAt: timestamp("created_at").defaultNow(),
-      updatedAt: timestamp("updated_at").defaultNow()
-    });
-    lessons = pgTable("lessons", {
-      id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-      courseId: varchar("course_id").references(() => courses.id).notNull(),
-      title: text("title").notNull(),
-      description: text("description"),
-      content: text("content").notNull(),
-      // HTML content
-      order: integer("order").default(0),
-      duration: integer("duration"),
-      // in minutes
-      videoUrl: text("video_url"),
-      documentUrl: text("document_url"),
-      isRequired: boolean("is_required").default(true),
-      createdAt: timestamp("created_at").defaultNow(),
-      updatedAt: timestamp("updated_at").defaultNow()
-    });
-    quizzes = pgTable("quizzes", {
-      id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-      courseId: varchar("course_id").references(() => courses.id),
-      lessonId: varchar("lesson_id").references(() => lessons.id),
-      title: text("title").notNull(),
-      description: text("description"),
-      questions: text("questions").notNull(),
-      // JSON array of questions
-      passingScore: integer("passing_score").default(70),
-      // percentage
-      timeLimit: integer("time_limit"),
-      // in minutes
-      allowRetries: boolean("allow_retries").default(true),
-      maxAttempts: integer("max_attempts").default(3),
-      isRequired: boolean("is_required").default(false),
-      createdAt: timestamp("created_at").defaultNow(),
-      updatedAt: timestamp("updated_at").defaultNow()
-    });
-    enrollments = pgTable("enrollments", {
-      id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-      userId: varchar("user_id").references(() => users.id).notNull(),
-      courseId: varchar("course_id").references(() => courses.id).notNull(),
-      enrolledAt: timestamp("enrolled_at").defaultNow(),
-      startedAt: timestamp("started_at"),
-      completedAt: timestamp("completed_at"),
-      progress: integer("progress").default(0),
-      // percentage
-      status: text("status").default("enrolled"),
-      // enrolled, in-progress, completed, failed
-      certificateUrl: text("certificate_url")
-    });
-    lessonProgress = pgTable("lesson_progress", {
-      id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-      userId: varchar("user_id").references(() => users.id).notNull(),
-      lessonId: varchar("lesson_id").references(() => lessons.id).notNull(),
-      courseId: varchar("course_id").references(() => courses.id).notNull(),
-      isCompleted: boolean("is_completed").default(false),
-      timeSpent: integer("time_spent").default(0),
-      // in minutes
-      completedAt: timestamp("completed_at"),
-      createdAt: timestamp("created_at").defaultNow()
-    });
-    quizAttempts = pgTable("quiz_attempts", {
-      id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-      userId: varchar("user_id").references(() => users.id).notNull(),
-      quizId: varchar("quiz_id").references(() => quizzes.id).notNull(),
-      courseId: varchar("course_id").references(() => courses.id).notNull(),
-      answers: text("answers").notNull(),
-      // JSON array of answers
-      score: integer("score"),
-      // percentage
-      passed: boolean("passed").default(false),
-      attemptNumber: integer("attempt_number").default(1),
-      timeSpent: integer("time_spent"),
-      // in minutes
-      completedAt: timestamp("completed_at").defaultNow()
-    });
-    certificates = pgTable("certificates", {
-      id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-      userId: varchar("user_id").references(() => users.id).notNull(),
-      courseId: varchar("course_id").references(() => courses.id).notNull(),
-      title: text("title").notNull(),
-      description: text("description"),
-      certificateUrl: text("certificate_url"),
-      validUntil: timestamp("valid_until"),
-      issuedAt: timestamp("issued_at").defaultNow()
-    });
-    resources = pgTable("resources", {
-      id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-      title: text("title").notNull(),
-      description: text("description"),
-      category: text("category").notNull(),
-      // documentation, template, guide, reference
-      type: text("type").notNull(),
-      // pdf, video, link, document
-      url: text("url").notNull(),
-      thumbnailUrl: text("thumbnail_url"),
-      authorId: varchar("author_id").references(() => users.id),
-      authorName: text("author_name").notNull(),
-      tags: text("tags"),
-      // JSON array of tags
-      downloadCount: integer("download_count").default(0),
-      rating: real("rating").default(0),
-      isPublic: boolean("is_public").default(true),
-      createdAt: timestamp("created_at").defaultNow(),
-      updatedAt: timestamp("updated_at").defaultNow()
-    });
-    insertCourseSchema = createInsertSchema(courses).pick({
-      title: true,
-      description: true,
-      category: true,
-      difficulty: true,
-      duration: true,
-      thumbnailUrl: true,
-      authorName: true,
-      isPublished: true,
-      isMandatory: true,
-      prerequisites: true,
-      tags: true
-    });
-    insertLessonSchema = createInsertSchema(lessons).pick({
-      courseId: true,
-      title: true,
-      description: true,
-      content: true,
-      order: true,
-      duration: true,
-      videoUrl: true,
-      documentUrl: true,
-      isRequired: true
-    });
-    insertQuizSchema = createInsertSchema(quizzes).pick({
-      courseId: true,
-      lessonId: true,
-      title: true,
-      description: true,
-      questions: true,
-      passingScore: true,
-      timeLimit: true,
-      allowRetries: true,
-      maxAttempts: true,
-      isRequired: true
-    });
-    insertResourceSchema = createInsertSchema(resources).pick({
-      title: true,
-      description: true,
-      category: true,
-      type: true,
-      url: true,
-      thumbnailUrl: true,
-      authorName: true,
-      tags: true,
-      isPublic: true
-    });
+    SALT_ROUNDS = 12;
+    AuthService = class {
+      /**
+       * Hash a password using bcrypt
+       */
+      static async hashPassword(password) {
+        return bcrypt.hash(password, SALT_ROUNDS);
+      }
+      /**
+       * Verify a password against a hash
+       */
+      static async verifyPassword(password, hash) {
+        return bcrypt.compare(password, hash);
+      }
+      /**
+       * Validate password strength
+       */
+      static validatePasswordStrength(password) {
+        const errors = [];
+        if (password.length < 8) {
+          errors.push("Le mot de passe doit contenir au moins 8 caract\xE8res");
+        }
+        if (!/[A-Z]/.test(password)) {
+          errors.push("Le mot de passe doit contenir au moins une majuscule");
+        }
+        if (!/[a-z]/.test(password)) {
+          errors.push("Le mot de passe doit contenir au moins une minuscule");
+        }
+        if (!/[0-9]/.test(password)) {
+          errors.push("Le mot de passe doit contenir au moins un chiffre");
+        }
+        if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+          errors.push("Le mot de passe doit contenir au moins un caract\xE8re sp\xE9cial");
+        }
+        return {
+          isValid: errors.length === 0,
+          errors
+        };
+      }
+    };
   }
 });
 
@@ -769,10 +414,10 @@ var init_schema = __esm({
 import express2 from "express";
 import session from "express-session";
 
-// server/routes.ts
+// server/routes/index.ts
 import { createServer } from "http";
 
-// server/storage.ts
+// server/data/storage.ts
 import { randomUUID } from "crypto";
 var MemStorage = class {
   users;
@@ -784,6 +429,11 @@ var MemStorage = class {
   permissions;
   contents;
   categories;
+  employeeCategories;
+  systemSettings;
+  // Training storage
+  trainings;
+  trainingParticipants;
   // E-learning storage
   courses;
   lessons;
@@ -793,6 +443,15 @@ var MemStorage = class {
   quizAttempts;
   certificates;
   resources;
+  // Forum system storage
+  forumCategories;
+  forumTopics;
+  forumPosts;
+  forumLikes;
+  forumUserStats;
+  // Configuration storage
+  viewsConfig = /* @__PURE__ */ new Map();
+  userSettings = /* @__PURE__ */ new Map();
   constructor() {
     this.users = /* @__PURE__ */ new Map();
     this.announcements = /* @__PURE__ */ new Map();
@@ -803,6 +462,20 @@ var MemStorage = class {
     this.permissions = /* @__PURE__ */ new Map();
     this.contents = /* @__PURE__ */ new Map();
     this.categories = /* @__PURE__ */ new Map();
+    this.employeeCategories = /* @__PURE__ */ new Map();
+    this.systemSettings = {
+      id: "settings",
+      showAnnouncements: true,
+      showContent: true,
+      showDocuments: true,
+      showForum: true,
+      showMessages: true,
+      showComplaints: true,
+      showTraining: true,
+      updatedAt: /* @__PURE__ */ new Date()
+    };
+    this.trainings = /* @__PURE__ */ new Map();
+    this.trainingParticipants = /* @__PURE__ */ new Map();
     this.courses = /* @__PURE__ */ new Map();
     this.lessons = /* @__PURE__ */ new Map();
     this.quizzes = /* @__PURE__ */ new Map();
@@ -811,6 +484,13 @@ var MemStorage = class {
     this.quizAttempts = /* @__PURE__ */ new Map();
     this.certificates = /* @__PURE__ */ new Map();
     this.resources = /* @__PURE__ */ new Map();
+    this.forumCategories = /* @__PURE__ */ new Map();
+    this.forumTopics = /* @__PURE__ */ new Map();
+    this.forumPosts = /* @__PURE__ */ new Map();
+    this.forumLikes = /* @__PURE__ */ new Map();
+    this.forumUserStats = /* @__PURE__ */ new Map();
+    this.viewsConfig = /* @__PURE__ */ new Map();
+    this.userSettings = /* @__PURE__ */ new Map();
     this.initializeData();
   }
   initializeData() {
@@ -1026,6 +706,236 @@ var MemStorage = class {
         updatedAt: /* @__PURE__ */ new Date("2024-01-10T14:30:00Z")
       }
     ];
+    const sampleForumCategories = [
+      {
+        id: "forum-cat-1",
+        name: "Discussion G\xE9n\xE9rale",
+        description: "Discussions g\xE9n\xE9rales sur l'entreprise et le travail",
+        color: "#3B82F6",
+        icon: "\u{1F4AC}",
+        sortOrder: 1,
+        isActive: true,
+        isModerated: false,
+        accessLevel: "all",
+        moderatorIds: null,
+        createdAt: /* @__PURE__ */ new Date()
+      },
+      {
+        id: "forum-cat-2",
+        name: "Annonces Officielles",
+        description: "Communications importantes de la direction",
+        color: "#EF4444",
+        icon: "\u{1F4E2}",
+        sortOrder: 2,
+        isActive: true,
+        isModerated: true,
+        accessLevel: "all",
+        moderatorIds: '["user-1", "user-2"]',
+        createdAt: /* @__PURE__ */ new Date()
+      },
+      {
+        id: "forum-cat-3",
+        name: "Entraide & Support",
+        description: "Questions techniques et demandes d'aide",
+        color: "#10B981",
+        icon: "\u{1F91D}",
+        sortOrder: 3,
+        isActive: true,
+        isModerated: false,
+        accessLevel: "employee",
+        moderatorIds: null,
+        createdAt: /* @__PURE__ */ new Date()
+      },
+      {
+        id: "forum-cat-4",
+        name: "\xC9v\xE9nements & Social",
+        description: "Organisation d'\xE9v\xE9nements et discussions sociales",
+        color: "#F59E0B",
+        icon: "\u{1F389}",
+        sortOrder: 4,
+        isActive: true,
+        isModerated: false,
+        accessLevel: "all",
+        moderatorIds: null,
+        createdAt: /* @__PURE__ */ new Date()
+      }
+    ];
+    const sampleForumTopics = [
+      {
+        id: "forum-topic-1",
+        categoryId: "forum-cat-1",
+        title: "Bienvenue sur le nouveau forum IntraSphere !",
+        description: "Pr\xE9sentation du nouveau syst\xE8me de forum int\xE9gr\xE9",
+        authorId: "user-1",
+        authorName: "Jean Dupont",
+        isPinned: true,
+        isLocked: false,
+        isAnnouncement: true,
+        viewCount: 125,
+        replyCount: 8,
+        lastReplyAt: new Date(Date.now() - 2 * 60 * 60 * 1e3),
+        lastReplyBy: "user-3",
+        lastReplyByName: "Pierre Dubois",
+        tags: '["bienvenue", "forum", "nouveau"]',
+        createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1e3),
+        updatedAt: new Date(Date.now() - 2 * 60 * 60 * 1e3)
+      },
+      {
+        id: "forum-topic-2",
+        categoryId: "forum-cat-3",
+        title: "Probl\xE8me avec l'imprimante du 2e \xE9tage",
+        description: "L'imprimante ne r\xE9pond plus depuis ce matin",
+        authorId: "user-3",
+        authorName: "Pierre Dubois",
+        isPinned: false,
+        isLocked: false,
+        isAnnouncement: false,
+        viewCount: 42,
+        replyCount: 3,
+        lastReplyAt: new Date(Date.now() - 30 * 60 * 1e3),
+        lastReplyBy: "user-2",
+        lastReplyByName: "Marie Martin",
+        tags: '["technique", "imprimante", "probl\xE8me"]',
+        createdAt: new Date(Date.now() - 8 * 60 * 60 * 1e3),
+        updatedAt: new Date(Date.now() - 30 * 60 * 1e3)
+      },
+      {
+        id: "forum-topic-3",
+        categoryId: "forum-cat-4",
+        title: "Organisation pot de d\xE9part Julie",
+        description: "Julie quitte l'\xE9quipe vendredi, organisons-lui un petit pot !",
+        authorId: "user-2",
+        authorName: "Marie Martin",
+        isPinned: false,
+        isLocked: false,
+        isAnnouncement: false,
+        viewCount: 67,
+        replyCount: 12,
+        lastReplyAt: new Date(Date.now() - 15 * 60 * 1e3),
+        lastReplyBy: "user-1",
+        lastReplyByName: "Jean Dupont",
+        tags: '["social", "d\xE9part", "organisation"]',
+        createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1e3),
+        updatedAt: new Date(Date.now() - 15 * 60 * 1e3)
+      }
+    ];
+    const sampleForumPosts = [
+      {
+        id: "forum-post-1",
+        categoryId: "forum-cat-1",
+        topicId: "forum-topic-1",
+        authorId: "user-1",
+        authorName: "Jean Dupont",
+        content: "Bonjour \xE0 tous ! Je suis ravi de vous pr\xE9senter notre nouveau syst\xE8me de forum int\xE9gr\xE9 \xE0 IntraSphere. Cette nouvelle fonctionnalit\xE9 va nous permettre d'\xE9changer plus facilement et de cr\xE9er une vraie communaut\xE9 au sein de l'entreprise. N'h\xE9sitez pas \xE0 poser vos questions et \xE0 partager vos id\xE9es !",
+        isFirstPost: true,
+        parentPostId: null,
+        likeCount: 5,
+        isEdited: false,
+        editedAt: null,
+        editedBy: null,
+        isDeleted: false,
+        deletedAt: null,
+        deletedBy: null,
+        attachments: null,
+        createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1e3),
+        updatedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1e3)
+      },
+      {
+        id: "forum-post-2",
+        categoryId: "forum-cat-1",
+        topicId: "forum-topic-1",
+        authorId: "user-2",
+        authorName: "Marie Martin",
+        content: "Excellente initiative ! Le forum va vraiment am\xE9liorer notre communication interne. J'ai h\xE2te de voir toutes les discussions qui vont na\xEEtre ici.",
+        isFirstPost: false,
+        parentPostId: null,
+        likeCount: 3,
+        isEdited: false,
+        editedAt: null,
+        editedBy: null,
+        isDeleted: false,
+        deletedAt: null,
+        deletedBy: null,
+        attachments: null,
+        createdAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1e3),
+        updatedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1e3)
+      },
+      {
+        id: "forum-post-3",
+        categoryId: "forum-cat-3",
+        topicId: "forum-topic-2",
+        authorId: "user-3",
+        authorName: "Pierre Dubois",
+        content: "Bonjour, j'ai un probl\xE8me avec l'imprimante du 2e \xE9tage. Elle ne r\xE9pond plus depuis ce matin et j'ai plusieurs documents urgents \xE0 imprimer. Est-ce que quelqu'un sait ce qui se passe ?",
+        isFirstPost: true,
+        parentPostId: null,
+        likeCount: 1,
+        isEdited: false,
+        editedAt: null,
+        editedBy: null,
+        isDeleted: false,
+        deletedAt: null,
+        deletedBy: null,
+        attachments: null,
+        createdAt: new Date(Date.now() - 8 * 60 * 60 * 1e3),
+        updatedAt: new Date(Date.now() - 8 * 60 * 60 * 1e3)
+      },
+      {
+        id: "forum-post-4",
+        categoryId: "forum-cat-3",
+        topicId: "forum-topic-2",
+        authorId: "user-2",
+        authorName: "Marie Martin",
+        content: "Salut Pierre, j'ai contact\xE9 le service technique. Ils vont passer dans la matin\xE9e pour r\xE9parer l'imprimante. En attendant, tu peux utiliser celle du 1er \xE9tage si c'est urgent !",
+        isFirstPost: false,
+        parentPostId: null,
+        likeCount: 2,
+        isEdited: false,
+        editedAt: null,
+        editedBy: null,
+        isDeleted: false,
+        deletedAt: null,
+        deletedBy: null,
+        attachments: null,
+        createdAt: new Date(Date.now() - 30 * 60 * 1e3),
+        updatedAt: new Date(Date.now() - 30 * 60 * 1e3)
+      }
+    ];
+    const sampleForumUserStats = [
+      {
+        id: "forum-stats-1",
+        userId: "user-1",
+        postCount: 2,
+        topicCount: 1,
+        likeCount: 5,
+        reputationScore: 25,
+        badges: '["admin", "pioneer"]',
+        joinedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1e3),
+        lastActiveAt: new Date(Date.now() - 60 * 1e3)
+      },
+      {
+        id: "forum-stats-2",
+        userId: "user-2",
+        postCount: 2,
+        topicCount: 1,
+        likeCount: 3,
+        reputationScore: 18,
+        badges: '["moderator", "helper"]',
+        joinedAt: new Date(Date.now() - 25 * 24 * 60 * 60 * 1e3),
+        lastActiveAt: new Date(Date.now() - 30 * 60 * 1e3)
+      },
+      {
+        id: "forum-stats-3",
+        userId: "user-3",
+        postCount: 1,
+        topicCount: 1,
+        likeCount: 1,
+        reputationScore: 5,
+        badges: '["newbie"]',
+        joinedAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1e3),
+        lastActiveAt: new Date(Date.now() - 8 * 60 * 60 * 1e3)
+      }
+    ];
     defaultUsers.forEach((user) => this.users.set(user.id, user));
     sampleAnnouncements.forEach((ann) => this.announcements.set(ann.id, ann));
     sampleDocuments.forEach((doc) => this.documents.set(doc.id, doc));
@@ -1034,6 +944,40 @@ var MemStorage = class {
     sampleComplaints.forEach((complaint) => this.complaints.set(complaint.id, complaint));
     sampleCategories.forEach((cat) => this.categories.set(cat.id, cat));
     sampleContent.forEach((content) => this.contents.set(content.id, content));
+    const sampleEmployeeCategories = [
+      {
+        id: "emp-cat-1",
+        name: "D\xE9veloppeurs",
+        description: "\xC9quipe de d\xE9veloppement logiciel",
+        color: "#3B82F6",
+        permissions: ["validate_posts"],
+        isActive: true,
+        createdAt: /* @__PURE__ */ new Date()
+      },
+      {
+        id: "emp-cat-2",
+        name: "Managers",
+        description: "Personnel d'encadrement",
+        color: "#8B5CF6",
+        permissions: ["validate_topics", "validate_posts", "manage_employee_categories"],
+        isActive: true,
+        createdAt: /* @__PURE__ */ new Date()
+      },
+      {
+        id: "emp-cat-3",
+        name: "RH",
+        description: "Ressources humaines",
+        color: "#10B981",
+        permissions: ["validate_topics", "validate_posts"],
+        isActive: true,
+        createdAt: /* @__PURE__ */ new Date()
+      }
+    ];
+    sampleEmployeeCategories.forEach((cat) => this.employeeCategories.set(cat.id, cat));
+    sampleForumCategories.forEach((cat) => this.forumCategories.set(cat.id, cat));
+    sampleForumTopics.forEach((topic) => this.forumTopics.set(topic.id, topic));
+    sampleForumPosts.forEach((post) => this.forumPosts.set(post.id, post));
+    sampleForumUserStats.forEach((stats) => this.forumUserStats.set(stats.id, stats));
   }
   // Users
   async getUser(id) {
@@ -1198,6 +1142,9 @@ var MemStorage = class {
       this.messages.set(id, message);
     }
   }
+  async deleteMessage(id) {
+    this.messages.delete(id);
+  }
   // Complaints
   async getComplaints() {
     return Array.from(this.complaints.values()).sort(
@@ -1230,6 +1177,9 @@ var MemStorage = class {
     const updatedComplaint = { ...complaint, ...updates, updatedAt: /* @__PURE__ */ new Date() };
     this.complaints.set(id, updatedComplaint);
     return updatedComplaint;
+  }
+  async deleteComplaint(id) {
+    this.complaints.delete(id);
   }
   // Permissions
   async getPermissions(userId) {
@@ -1327,10 +1277,144 @@ var MemStorage = class {
   async deleteCategory(id) {
     this.categories.delete(id);
   }
+  // Employee Categories implementation
+  async getEmployeeCategories() {
+    return Array.from(this.employeeCategories.values()).sort(
+      (a, b) => a.name.localeCompare(b.name)
+    );
+  }
+  async getEmployeeCategoryById(id) {
+    return this.employeeCategories.get(id);
+  }
+  async createEmployeeCategory(insertCategory) {
+    const id = randomUUID();
+    const category = {
+      ...insertCategory,
+      id,
+      description: insertCategory.description || null,
+      color: insertCategory.color || "#10B981",
+      permissions: insertCategory.permissions || [],
+      isActive: insertCategory.isActive ?? true,
+      createdAt: /* @__PURE__ */ new Date()
+    };
+    this.employeeCategories.set(id, category);
+    return category;
+  }
+  async updateEmployeeCategory(id, updates) {
+    const category = this.employeeCategories.get(id);
+    if (!category) throw new Error("Employee category not found");
+    const updatedCategory = { ...category, ...updates };
+    this.employeeCategories.set(id, updatedCategory);
+    return updatedCategory;
+  }
+  async deleteEmployeeCategory(id) {
+    this.employeeCategories.delete(id);
+  }
+  // System Settings implementation
+  async getSystemSettings() {
+    return this.systemSettings;
+  }
+  async updateSystemSettings(settings) {
+    this.systemSettings = {
+      ...this.systemSettings,
+      ...settings,
+      updatedAt: /* @__PURE__ */ new Date()
+    };
+    return this.systemSettings;
+  }
+  // Trainings
+  async getTrainings() {
+    return Array.from(this.trainings.values()).sort(
+      (a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0)
+    );
+  }
+  async getTrainingById(id) {
+    return this.trainings.get(id);
+  }
+  async createTraining(insertTraining) {
+    const id = randomUUID();
+    const training = {
+      ...insertTraining,
+      id,
+      instructorId: null,
+      startDate: insertTraining.startDate || null,
+      endDate: insertTraining.endDate || null,
+      location: insertTraining.location || null,
+      maxParticipants: insertTraining.maxParticipants || null,
+      currentParticipants: 0,
+      isActive: insertTraining.isActive !== void 0 ? insertTraining.isActive : true,
+      isVisible: insertTraining.isVisible !== void 0 ? insertTraining.isVisible : true,
+      isMandatory: insertTraining.isMandatory !== void 0 ? insertTraining.isMandatory : false,
+      difficulty: insertTraining.difficulty || null,
+      description: insertTraining.description || null,
+      thumbnailUrl: insertTraining.thumbnailUrl || null,
+      documentUrls: insertTraining.documentUrls || [],
+      createdAt: /* @__PURE__ */ new Date(),
+      updatedAt: /* @__PURE__ */ new Date()
+    };
+    this.trainings.set(id, training);
+    return training;
+  }
+  async updateTraining(id, updates) {
+    const training = this.trainings.get(id);
+    if (!training) throw new Error("Training not found");
+    const updatedTraining = { ...training, ...updates, updatedAt: /* @__PURE__ */ new Date() };
+    this.trainings.set(id, updatedTraining);
+    return updatedTraining;
+  }
+  async deleteTraining(id) {
+    const participants = Array.from(this.trainingParticipants.values()).filter((p) => p.trainingId === id);
+    participants.forEach((p) => this.trainingParticipants.delete(p.id));
+    this.trainings.delete(id);
+  }
+  // Training Participants
+  async getTrainingParticipants(trainingId) {
+    return Array.from(this.trainingParticipants.values()).filter((p) => p.trainingId === trainingId).sort((a, b) => (b.registeredAt?.getTime() || 0) - (a.registeredAt?.getTime() || 0));
+  }
+  async getUserTrainingParticipations(userId) {
+    return Array.from(this.trainingParticipants.values()).filter((p) => p.userId === userId).sort((a, b) => (b.registeredAt?.getTime() || 0) - (a.registeredAt?.getTime() || 0));
+  }
+  async addTrainingParticipant(insertParticipant) {
+    const id = randomUUID();
+    const participant = {
+      ...insertParticipant,
+      id,
+      registeredAt: /* @__PURE__ */ new Date(),
+      status: insertParticipant.status || "registered",
+      completionDate: insertParticipant.completionDate || null,
+      score: insertParticipant.score || null,
+      feedback: insertParticipant.feedback || null
+    };
+    this.trainingParticipants.set(id, participant);
+    const training = this.trainings.get(insertParticipant.trainingId);
+    if (training) {
+      training.currentParticipants = (training.currentParticipants || 0) + 1;
+      this.trainings.set(training.id, training);
+    }
+    return participant;
+  }
+  async updateTrainingParticipant(id, updates) {
+    const participant = this.trainingParticipants.get(id);
+    if (!participant) throw new Error("Training participant not found");
+    const updatedParticipant = { ...participant, ...updates };
+    this.trainingParticipants.set(id, updatedParticipant);
+    return updatedParticipant;
+  }
+  async removeTrainingParticipant(trainingId, userId) {
+    const participant = Array.from(this.trainingParticipants.values()).find((p) => p.trainingId === trainingId && p.userId === userId);
+    if (participant) {
+      this.trainingParticipants.delete(participant.id);
+      const training = this.trainings.get(trainingId);
+      if (training) {
+        training.currentParticipants = Math.max(0, (training.currentParticipants || 0) - 1);
+        this.trainings.set(training.id, training);
+      }
+    }
+  }
   // Views Configuration Management
-  viewsConfig = /* @__PURE__ */ new Map();
+  viewsConfiguration = /* @__PURE__ */ new Map();
   async getViewsConfig() {
-    if (this.viewsConfig.size === 0) {
+    if (this.viewsConfiguration.size === 0) {
       const defaultViews = [
         {
           id: "dashboard",
@@ -1430,27 +1514,27 @@ var MemStorage = class {
         }
       ];
       defaultViews.forEach((view) => {
-        this.viewsConfig.set(view.id, view);
+        this.viewsConfiguration.set(view.id, view);
       });
     }
-    return Array.from(this.viewsConfig.values()).sort((a, b) => a.sortOrder - b.sortOrder);
+    return Array.from(this.viewsConfiguration.values()).sort((a, b) => a.sortOrder - b.sortOrder);
   }
   async saveViewsConfig(views) {
-    this.viewsConfig.clear();
+    this.viewsConfiguration.clear();
     views.forEach((view) => {
-      this.viewsConfig.set(view.id, view);
+      this.viewsConfiguration.set(view.id, view);
     });
   }
   async updateViewConfig(viewId, updates) {
-    const existingView = this.viewsConfig.get(viewId);
+    const existingView = this.viewsConfiguration.get(viewId);
     if (existingView) {
-      this.viewsConfig.set(viewId, { ...existingView, ...updates });
+      this.viewsConfiguration.set(viewId, { ...existingView, ...updates });
     }
   }
   // User Settings Management
-  userSettings = /* @__PURE__ */ new Map();
+  userConfiguration = /* @__PURE__ */ new Map();
   async getUserSettings(userId) {
-    const settings = this.userSettings.get(userId);
+    const settings = this.userConfiguration.get(userId);
     if (!settings) {
       const defaultSettings = {
         companyName: "IntraSphere",
@@ -1492,7 +1576,7 @@ var MemStorage = class {
         autoSave: true,
         sessionTimeout: 60
       };
-      this.userSettings.set(userId, defaultSettings);
+      this.userConfiguration.set(userId, defaultSettings);
       return defaultSettings;
     }
     return settings;
@@ -1502,7 +1586,7 @@ var MemStorage = class {
       if (!settings || typeof settings !== "object") {
         throw new Error("Invalid settings object");
       }
-      this.userSettings.set(userId, { ...settings, updatedAt: (/* @__PURE__ */ new Date()).toISOString() });
+      this.userConfiguration.set(userId, { ...settings, updatedAt: (/* @__PURE__ */ new Date()).toISOString() });
       console.log("Settings saved successfully for user:", userId);
     } catch (error) {
       console.error("Error saving user settings:", error);
@@ -1952,39 +2036,1182 @@ var MemStorage = class {
   async deleteResource(id) {
     this.resources.delete(id);
   }
+  // Search functionality
+  async searchUsers(query) {
+    const searchTerm = query.toLowerCase();
+    return Array.from(this.users.values()).filter(
+      (user) => user.isActive && (user.name.toLowerCase().includes(searchTerm) || user.position?.toLowerCase().includes(searchTerm) || user.department?.toLowerCase().includes(searchTerm) || user.email?.toLowerCase().includes(searchTerm))
+    );
+  }
+  // Forum System Implementation
+  // Forum Categories
+  async getForumCategories() {
+    return Array.from(this.forumCategories.values()).filter((category) => category.isActive).sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+  }
+  async getForumCategoryById(id) {
+    return this.forumCategories.get(id);
+  }
+  async createForumCategory(insertCategory) {
+    const id = randomUUID();
+    const category = {
+      ...insertCategory,
+      id,
+      description: insertCategory.description || null,
+      color: insertCategory.color || "#3B82F6",
+      icon: insertCategory.icon || "\u{1F4AC}",
+      sortOrder: insertCategory.sortOrder || 0,
+      isActive: insertCategory.isActive !== false,
+      isModerated: insertCategory.isModerated || false,
+      accessLevel: insertCategory.accessLevel || "all",
+      moderatorIds: insertCategory.moderatorIds || null,
+      createdAt: /* @__PURE__ */ new Date()
+    };
+    this.forumCategories.set(id, category);
+    return category;
+  }
+  async updateForumCategory(id, updates) {
+    const category = this.forumCategories.get(id);
+    if (!category) throw new Error("Forum category not found");
+    const updatedCategory = { ...category, ...updates };
+    this.forumCategories.set(id, updatedCategory);
+    return updatedCategory;
+  }
+  async deleteForumCategory(id) {
+    const topics = Array.from(this.forumTopics.values()).filter((t) => t.categoryId === id);
+    for (const topic of topics) {
+      await this.deleteForumTopic(topic.id);
+    }
+    this.forumCategories.delete(id);
+  }
+  // Forum Topics
+  async getForumTopics(categoryId) {
+    let topics = Array.from(this.forumTopics.values());
+    if (categoryId) {
+      topics = topics.filter((topic) => topic.categoryId === categoryId);
+    }
+    return topics.sort((a, b) => {
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      return (b.lastReplyAt?.getTime() || b.createdAt?.getTime() || 0) - (a.lastReplyAt?.getTime() || a.createdAt?.getTime() || 0);
+    });
+  }
+  async getForumTopicById(id) {
+    return this.forumTopics.get(id);
+  }
+  async createForumTopic(insertTopic) {
+    const id = randomUUID();
+    const topic = {
+      ...insertTopic,
+      id,
+      description: insertTopic.description || null,
+      isPinned: insertTopic.isPinned || false,
+      isLocked: insertTopic.isLocked || false,
+      isAnnouncement: insertTopic.isAnnouncement || false,
+      viewCount: 0,
+      replyCount: 0,
+      lastReplyAt: null,
+      lastReplyBy: null,
+      lastReplyByName: null,
+      tags: insertTopic.tags || null,
+      createdAt: /* @__PURE__ */ new Date(),
+      updatedAt: /* @__PURE__ */ new Date()
+    };
+    this.forumTopics.set(id, topic);
+    await this.updateUserTopicCount(insertTopic.authorId, 1);
+    return topic;
+  }
+  async updateForumTopic(id, updates) {
+    const topic = this.forumTopics.get(id);
+    if (!topic) throw new Error("Forum topic not found");
+    const updatedTopic = { ...topic, ...updates, updatedAt: /* @__PURE__ */ new Date() };
+    this.forumTopics.set(id, updatedTopic);
+    return updatedTopic;
+  }
+  async deleteForumTopic(id) {
+    const topic = this.forumTopics.get(id);
+    if (topic) {
+      const posts = Array.from(this.forumPosts.values()).filter((p) => p.topicId === id);
+      for (const post of posts) {
+        this.forumPosts.delete(post.id);
+        const likes = Array.from(this.forumLikes.values()).filter((l) => l.postId === post.id);
+        for (const like of likes) {
+          this.forumLikes.delete(like.id);
+        }
+      }
+      await this.updateUserTopicCount(topic.authorId, -1);
+      this.forumTopics.delete(id);
+    }
+  }
+  async incrementTopicViews(id) {
+    const topic = this.forumTopics.get(id);
+    if (topic) {
+      topic.viewCount = (topic.viewCount || 0) + 1;
+      this.forumTopics.set(id, topic);
+    }
+  }
+  // Forum Posts
+  async getForumPosts(topicId) {
+    return Array.from(this.forumPosts.values()).filter((post) => post.topicId === topicId && !post.isDeleted).sort((a, b) => (a.createdAt?.getTime() || 0) - (b.createdAt?.getTime() || 0));
+  }
+  async getForumPostById(id) {
+    const post = this.forumPosts.get(id);
+    return post && !post.isDeleted ? post : void 0;
+  }
+  async createForumPost(insertPost) {
+    const id = randomUUID();
+    const post = {
+      ...insertPost,
+      id,
+      isFirstPost: insertPost.isFirstPost || false,
+      parentPostId: insertPost.parentPostId || null,
+      likeCount: 0,
+      isEdited: false,
+      editedAt: null,
+      editedBy: null,
+      isDeleted: false,
+      deletedAt: null,
+      deletedBy: null,
+      attachments: insertPost.attachments || null,
+      createdAt: /* @__PURE__ */ new Date(),
+      updatedAt: /* @__PURE__ */ new Date()
+    };
+    this.forumPosts.set(id, post);
+    const topic = this.forumTopics.get(insertPost.topicId);
+    if (topic && !insertPost.isFirstPost) {
+      topic.replyCount = (topic.replyCount || 0) + 1;
+      topic.lastReplyAt = post.createdAt;
+      topic.lastReplyBy = insertPost.authorId;
+      topic.lastReplyByName = insertPost.authorName;
+      this.forumTopics.set(insertPost.topicId, topic);
+    }
+    await this.updateUserPostCount(insertPost.authorId, 1);
+    return post;
+  }
+  async updateForumPost(id, updates) {
+    const post = this.forumPosts.get(id);
+    if (!post || post.isDeleted) throw new Error("Forum post not found");
+    const updatedPost = {
+      ...post,
+      ...updates,
+      isEdited: true,
+      editedAt: /* @__PURE__ */ new Date(),
+      updatedAt: /* @__PURE__ */ new Date()
+    };
+    this.forumPosts.set(id, updatedPost);
+    return updatedPost;
+  }
+  async deleteForumPost(id, deletedBy) {
+    const post = this.forumPosts.get(id);
+    if (post && !post.isDeleted) {
+      post.isDeleted = true;
+      post.deletedAt = /* @__PURE__ */ new Date();
+      post.deletedBy = deletedBy;
+      this.forumPosts.set(id, post);
+      const topic = this.forumTopics.get(post.topicId);
+      if (topic && !post.isFirstPost) {
+        topic.replyCount = Math.max((topic.replyCount || 0) - 1, 0);
+        this.forumTopics.set(post.topicId, topic);
+      }
+      await this.updateUserPostCount(post.authorId, -1);
+      const likes = Array.from(this.forumLikes.values()).filter((l) => l.postId === id);
+      for (const like of likes) {
+        this.forumLikes.delete(like.id);
+      }
+    }
+  }
+  // Forum Likes/Reactions
+  async getForumPostLikes(postId) {
+    return Array.from(this.forumLikes.values()).filter((like) => like.postId === postId);
+  }
+  async toggleForumPostLike(insertLike) {
+    const existingLike = Array.from(this.forumLikes.values()).find((like) => like.postId === insertLike.postId && like.userId === insertLike.userId);
+    if (existingLike) {
+      this.forumLikes.delete(existingLike.id);
+      const post = this.forumPosts.get(insertLike.postId);
+      if (post) {
+        post.likeCount = Math.max((post.likeCount || 0) - 1, 0);
+        this.forumPosts.set(insertLike.postId, post);
+      }
+      return null;
+    } else {
+      const id = randomUUID();
+      const like = {
+        ...insertLike,
+        id,
+        reactionType: insertLike.reactionType || "like",
+        createdAt: /* @__PURE__ */ new Date()
+      };
+      this.forumLikes.set(id, like);
+      const post = this.forumPosts.get(insertLike.postId);
+      if (post) {
+        post.likeCount = (post.likeCount || 0) + 1;
+        this.forumPosts.set(insertLike.postId, post);
+      }
+      return like;
+    }
+  }
+  async createForumLike(insertLike) {
+    const id = randomUUID();
+    const like = {
+      ...insertLike,
+      id,
+      reactionType: insertLike.reactionType || "like",
+      createdAt: /* @__PURE__ */ new Date()
+    };
+    this.forumLikes.set(id, like);
+    const post = this.forumPosts.get(insertLike.postId);
+    if (post) {
+      post.likeCount = (post.likeCount || 0) + 1;
+      this.forumPosts.set(insertLike.postId, post);
+    }
+    return like;
+  }
+  // Forum User Stats
+  async getForumUserStats(userId) {
+    let stats = Array.from(this.forumUserStats.values()).find((s) => s.userId === userId);
+    if (!stats) {
+      const id = randomUUID();
+      stats = {
+        id,
+        userId,
+        postCount: 0,
+        topicCount: 0,
+        likeCount: 0,
+        reputationScore: 0,
+        badges: "[]",
+        joinedAt: /* @__PURE__ */ new Date(),
+        lastActiveAt: /* @__PURE__ */ new Date()
+      };
+      this.forumUserStats.set(id, stats);
+    }
+    return stats;
+  }
+  async updateForumUserStats(userId, updates) {
+    let stats = await this.getForumUserStats(userId);
+    if (!stats) throw new Error("User stats not found");
+    const updatedStats = { ...stats, ...updates, lastActiveAt: /* @__PURE__ */ new Date() };
+    this.forumUserStats.set(stats.id, updatedStats);
+    return updatedStats;
+  }
+  // Helper methods for forum stats
+  async updateUserPostCount(userId, change) {
+    const stats = await this.getForumUserStats(userId);
+    if (stats) {
+      stats.postCount = Math.max((stats.postCount || 0) + change, 0);
+      this.forumUserStats.set(stats.id, stats);
+    }
+  }
+  async updateUserTopicCount(userId, change) {
+    const stats = await this.getForumUserStats(userId);
+    if (stats) {
+      stats.topicCount = Math.max((stats.topicCount || 0) + change, 0);
+      this.forumUserStats.set(stats.id, stats);
+    }
+  }
+  // Additional Forum Methods for 100% compatibility
+  async updateForumTopicActivity(topicId) {
+    const topic = this.forumTopics.get(topicId);
+    if (topic) {
+      const posts = Array.from(this.forumPosts.values()).filter((p) => p.topicId === topicId);
+      const updatedTopic = {
+        ...topic,
+        postsCount: posts.length,
+        lastPostAt: /* @__PURE__ */ new Date(),
+        lastActivity: /* @__PURE__ */ new Date()
+      };
+      this.forumTopics.set(topicId, updatedTopic);
+    }
+  }
+  async getForumLike(postId, userId) {
+    return Array.from(this.forumLikes.values()).find(
+      (like) => like.postId === postId && like.userId === userId
+    );
+  }
+  async deleteForumLike(postId, userId) {
+    const like = await this.getForumLike(postId, userId);
+    if (like) {
+      this.forumLikes.delete(like.id);
+    }
+  }
 };
 var storage = new MemStorage();
 
-// server/routes.ts
-init_schema();
-async function registerRoutes(app2) {
-  const requireAuth = (req, res, next) => {
-    if (!req.session?.userId) {
-      return res.status(401).json({ message: "Authentication required" });
+// server/routes/auth.ts
+init_auth();
+
+// server/services/email.ts
+import nodemailer from "nodemailer";
+var EmailService = class {
+  transporter = null;
+  isConfigured = false;
+  /**
+   * Configure email service with SMTP settings
+   */
+  configure(config) {
+    try {
+      this.transporter = nodemailer.createTransport({
+        host: config.host,
+        port: config.port,
+        secure: config.secure,
+        auth: config.auth
+      });
+      this.isConfigured = true;
+      console.log("Email service configured successfully");
+    } catch (error) {
+      console.error("Failed to configure email service:", error);
+      this.isConfigured = false;
     }
-    next();
-  };
-  const requireRole = (roles) => {
-    return async (req, res, next) => {
-      if (!req.session?.userId) {
-        return res.status(401).json({ message: "Authentication required" });
+  }
+  /**
+   * Send an email
+   */
+  async sendEmail(options) {
+    if (!this.isConfigured || !this.transporter) {
+      console.warn("Email service not configured. Email not sent.");
+      return false;
+    }
+    try {
+      const mailOptions = {
+        from: options.from || process.env.EMAIL_FROM || "noreply@intrasphere.com",
+        to: Array.isArray(options.to) ? options.to.join(", ") : options.to,
+        subject: options.subject,
+        text: options.text,
+        html: options.html || options.text
+      };
+      const result = await this.transporter.sendMail(mailOptions);
+      console.log("Email sent successfully:", result.messageId);
+      return true;
+    } catch (error) {
+      console.error("Failed to send email:", error);
+      return false;
+    }
+  }
+  /**
+   * Send welcome email to new user
+   */
+  async sendWelcomeEmail(userEmail, userName, tempPassword) {
+    const subject = "Bienvenue sur IntraSphere";
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #8B5CF6;">Bienvenue sur IntraSphere !</h2>
+        <p>Bonjour <strong>${userName}</strong>,</p>
+        <p>Votre compte IntraSphere a \xE9t\xE9 cr\xE9\xE9 avec succ\xE8s. Vous pouvez maintenant acc\xE9der \xE0 votre portail d'entreprise.</p>
+        ${tempPassword ? `
+          <div style="background: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p><strong>Mot de passe temporaire :</strong> <code>${tempPassword}</code></p>
+            <p style="color: #ef4444; font-size: 14px;">\u26A0\uFE0F Veuillez changer votre mot de passe lors de votre premi\xE8re connexion.</p>
+          </div>
+        ` : ""}
+        <p>Fonctionnalit\xE9s disponibles :</p>
+        <ul>
+          <li>\u{1F4E2} Annonces et communications</li>
+          <li>\u{1F4C1} Biblioth\xE8que documentaire</li>
+          <li>\u{1F4AC} Forum et discussions</li>
+          <li>\u{1F4E7} Messagerie interne</li>
+          <li>\u{1F4DA} Plateforme e-learning</li>
+        </ul>
+        <p>Cordialement,<br>L'\xE9quipe IntraSphere</p>
+      </div>
+    `;
+    return this.sendEmail({
+      to: userEmail,
+      subject,
+      html
+    });
+  }
+  /**
+   * Send password reset email
+   */
+  async sendPasswordResetEmail(userEmail, userName, resetLink) {
+    const subject = "R\xE9initialisation de votre mot de passe IntraSphere";
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #8B5CF6;">R\xE9initialisation de mot de passe</h2>
+        <p>Bonjour <strong>${userName}</strong>,</p>
+        <p>Vous avez demand\xE9 la r\xE9initialisation de votre mot de passe IntraSphere.</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${resetLink}" style="background: #8B5CF6; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block;">
+            R\xE9initialiser mon mot de passe
+          </a>
+        </div>
+        <p style="color: #6b7280; font-size: 14px;">
+          Ce lien expire dans 1 heure. Si vous n'avez pas demand\xE9 cette r\xE9initialisation, ignorez cet email.
+        </p>
+        <p>Cordialement,<br>L'\xE9quipe IntraSphere</p>
+      </div>
+    `;
+    return this.sendEmail({
+      to: userEmail,
+      subject,
+      html
+    });
+  }
+  /**
+   * Send notification email
+   */
+  async sendNotificationEmail(userEmail, userName, notificationType, content) {
+    const subject = `IntraSphere - ${notificationType}`;
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #8B5CF6;">${notificationType}</h2>
+        <p>Bonjour <strong>${userName}</strong>,</p>
+        <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          ${content}
+        </div>
+        <p>Connectez-vous \xE0 IntraSphere pour plus de d\xE9tails.</p>
+        <p>Cordialement,<br>L'\xE9quipe IntraSphere</p>
+      </div>
+    `;
+    return this.sendEmail({
+      to: userEmail,
+      subject,
+      html
+    });
+  }
+  /**
+   * Test email configuration
+   */
+  async testConfiguration() {
+    if (!this.isConfigured || !this.transporter) {
+      return false;
+    }
+    try {
+      await this.transporter.verify();
+      console.log("Email configuration test successful");
+      return true;
+    } catch (error) {
+      console.error("Email configuration test failed:", error);
+      return false;
+    }
+  }
+};
+var emailService = new EmailService();
+if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+  emailService.configure({
+    host: process.env.SMTP_HOST,
+    port: parseInt(process.env.SMTP_PORT || "587"),
+    secure: process.env.SMTP_SECURE === "true",
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS
+    }
+  });
+}
+
+// shared/schema.ts
+import { sql } from "drizzle-orm";
+import { pgTable, text, varchar, timestamp, boolean, integer, real } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
+var users = pgTable("users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  username: text("username").notNull().unique(),
+  password: text("password").notNull(),
+  name: text("name").notNull(),
+  role: text("role").notNull().default("employee"),
+  // employee, admin, moderator
+  avatar: text("avatar"),
+  // Extended fields for employee management
+  employeeId: varchar("employee_id").unique(),
+  // Unique identifier for internal communication
+  department: varchar("department"),
+  position: varchar("position"),
+  isActive: boolean("is_active").default(true),
+  phone: varchar("phone"),
+  email: varchar("email"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+});
+var announcements = pgTable("announcements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  type: text("type").notNull().default("info"),
+  // info, important, event, formation
+  authorId: varchar("author_id").references(() => users.id),
+  authorName: text("author_name").notNull(),
+  imageUrl: text("image_url"),
+  icon: text("icon").default("\u{1F4E2}"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  isImportant: boolean("is_important").default(false)
+});
+var documents = pgTable("documents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  description: text("description"),
+  category: text("category").notNull(),
+  // regulation, policy, guide, procedure
+  fileName: text("file_name").notNull(),
+  fileUrl: text("file_url").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  version: text("version").default("1.0")
+});
+var events = pgTable("events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  description: text("description"),
+  date: timestamp("date").notNull(),
+  location: text("location"),
+  type: text("type").notNull().default("meeting"),
+  // meeting, training, social, other
+  organizerId: varchar("organizer_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow()
+});
+var messages = pgTable("messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  senderId: varchar("sender_id").references(() => users.id).notNull(),
+  recipientId: varchar("recipient_id").references(() => users.id).notNull(),
+  subject: text("subject").notNull(),
+  content: text("content").notNull(),
+  isRead: boolean("is_read").default(false),
+  createdAt: timestamp("created_at").defaultNow()
+});
+var complaints = pgTable("complaints", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  submitterId: varchar("submitter_id").references(() => users.id).notNull(),
+  assignedToId: varchar("assigned_to_id").references(() => users.id),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  category: text("category").notNull(),
+  // hr, it, facilities, other
+  priority: text("priority").default("medium"),
+  // low, medium, high, urgent
+  status: text("status").default("open"),
+  // open, in_progress, resolved, closed
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+});
+var permissions = pgTable("permissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  grantedBy: varchar("granted_by").references(() => users.id).notNull(),
+  permission: text("permission").notNull(),
+  // manage_announcements, manage_documents, manage_events, manage_users, validate_topics, validate_posts, manage_employee_categories, manage_trainings
+  createdAt: timestamp("created_at").defaultNow()
+});
+var trainings = pgTable("trainings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  description: text("description"),
+  category: text("category").notNull(),
+  // technical, management, safety, compliance, other
+  difficulty: text("difficulty").default("beginner"),
+  // beginner, intermediate, advanced
+  duration: integer("duration").notNull(),
+  // duration in minutes
+  instructorId: varchar("instructor_id").references(() => users.id),
+  instructorName: text("instructor_name").notNull(),
+  startDate: timestamp("start_date"),
+  endDate: timestamp("end_date"),
+  location: text("location"),
+  maxParticipants: integer("max_participants"),
+  currentParticipants: integer("current_participants").default(0),
+  isMandatory: boolean("is_mandatory").default(false),
+  isActive: boolean("is_active").default(true),
+  isVisible: boolean("is_visible").default(true),
+  thumbnailUrl: text("thumbnail_url"),
+  documentUrls: text("document_urls").array().default(sql`ARRAY[]::text[]`),
+  // Array of document URLs
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow()
+});
+var trainingParticipants = pgTable("training_participants", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  trainingId: varchar("training_id").references(() => trainings.id, { onDelete: "cascade" }).notNull(),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  registeredAt: timestamp("registered_at").defaultNow(),
+  status: text("status").default("registered"),
+  // registered, completed, cancelled
+  completionDate: timestamp("completion_date"),
+  score: integer("score"),
+  // 0-100
+  feedback: text("feedback")
+});
+var insertUserSchema = createInsertSchema(users).pick({
+  username: true,
+  password: true,
+  name: true,
+  role: true,
+  avatar: true,
+  employeeId: true,
+  department: true,
+  position: true,
+  phone: true,
+  email: true
+});
+var insertAnnouncementSchema = createInsertSchema(announcements).pick({
+  title: true,
+  content: true,
+  type: true,
+  authorName: true,
+  isImportant: true
+}).extend({
+  imageUrl: z.string().optional(),
+  icon: z.string().optional()
+});
+var insertDocumentSchema = createInsertSchema(documents).pick({
+  title: true,
+  description: true,
+  category: true,
+  fileName: true,
+  fileUrl: true,
+  version: true
+});
+var insertEventSchema = createInsertSchema(events).pick({
+  title: true,
+  description: true,
+  date: true,
+  location: true,
+  type: true,
+  organizerId: true
+});
+var insertMessageSchema = createInsertSchema(messages).pick({
+  senderId: true,
+  recipientId: true,
+  subject: true,
+  content: true
+});
+var insertComplaintSchema = createInsertSchema(complaints).pick({
+  submitterId: true,
+  assignedToId: true,
+  title: true,
+  description: true,
+  category: true,
+  priority: true
+});
+var contents = pgTable("contents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  type: text("type").notNull(),
+  // video, image, document, audio
+  category: text("category").notNull(),
+  description: text("description"),
+  fileUrl: text("file_url").notNull(),
+  thumbnailUrl: text("thumbnail_url"),
+  duration: text("duration"),
+  viewCount: integer("view_count").default(0),
+  rating: integer("rating").default(0),
+  tags: text("tags").array(),
+  isPopular: boolean("is_popular").default(false),
+  isFeatured: boolean("is_featured").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
+});
+var categories = pgTable("categories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique(),
+  description: text("description"),
+  icon: text("icon").default("\u{1F4C1}"),
+  color: text("color").default("#3B82F6"),
+  isVisible: boolean("is_visible").default(true),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull()
+});
+var employeeCategories = pgTable("employee_categories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique(),
+  description: text("description"),
+  color: text("color").default("#10B981"),
+  permissions: text("permissions").array().default(sql`ARRAY[]::text[]`),
+  // Array of permission codes
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull()
+});
+var systemSettings = pgTable("system_settings", {
+  id: varchar("id").primaryKey().default("settings"),
+  showAnnouncements: boolean("show_announcements").default(true),
+  showContent: boolean("show_content").default(true),
+  showDocuments: boolean("show_documents").default(true),
+  showForum: boolean("show_forum").default(true),
+  showMessages: boolean("show_messages").default(true),
+  showComplaints: boolean("show_complaints").default(true),
+  showTraining: boolean("show_training").default(true),
+  updatedAt: timestamp("updated_at").defaultNow()
+});
+var insertPermissionSchema = createInsertSchema(permissions).pick({
+  userId: true,
+  grantedBy: true,
+  permission: true
+});
+var insertContentSchema = createInsertSchema(contents).pick({
+  title: true,
+  type: true,
+  category: true,
+  description: true,
+  thumbnailUrl: true,
+  fileUrl: true,
+  duration: true,
+  isPopular: true,
+  isFeatured: true,
+  tags: true
+});
+var insertCategorySchema = createInsertSchema(categories).pick({
+  name: true,
+  color: true,
+  icon: true,
+  description: true,
+  isVisible: true,
+  sortOrder: true
+});
+var insertEmployeeCategorySchema = createInsertSchema(employeeCategories).pick({
+  name: true,
+  description: true,
+  color: true,
+  permissions: true,
+  isActive: true
+});
+var insertSystemSettingsSchema = createInsertSchema(systemSettings).pick({
+  showAnnouncements: true,
+  showContent: true,
+  showDocuments: true,
+  showForum: true,
+  showMessages: true,
+  showComplaints: true,
+  showTraining: true
+});
+var insertTrainingSchema = createInsertSchema(trainings).pick({
+  title: true,
+  description: true,
+  category: true,
+  difficulty: true,
+  duration: true,
+  instructorName: true,
+  startDate: true,
+  endDate: true,
+  location: true,
+  maxParticipants: true,
+  isMandatory: true,
+  isActive: true,
+  isVisible: true,
+  thumbnailUrl: true,
+  documentUrls: true
+});
+var insertTrainingParticipantSchema = createInsertSchema(trainingParticipants).pick({
+  trainingId: true,
+  userId: true,
+  status: true,
+  completionDate: true,
+  score: true,
+  feedback: true
+});
+var courses = pgTable("courses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  description: text("description"),
+  category: text("category").notNull(),
+  // technical, compliance, soft-skills, leadership
+  difficulty: text("difficulty").notNull().default("beginner"),
+  // beginner, intermediate, advanced
+  duration: integer("duration"),
+  // in minutes
+  thumbnailUrl: text("thumbnail_url"),
+  authorId: varchar("author_id").references(() => users.id),
+  authorName: text("author_name").notNull(),
+  isPublished: boolean("is_published").default(false),
+  isMandatory: boolean("is_mandatory").default(false),
+  prerequisites: text("prerequisites"),
+  // JSON array of course IDs
+  tags: text("tags"),
+  // JSON array of tags
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+});
+var lessons = pgTable("lessons", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  courseId: varchar("course_id").references(() => courses.id).notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  content: text("content").notNull(),
+  // HTML content
+  order: integer("order").default(0),
+  duration: integer("duration"),
+  // in minutes
+  videoUrl: text("video_url"),
+  documentUrl: text("document_url"),
+  isRequired: boolean("is_required").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+});
+var quizzes = pgTable("quizzes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  courseId: varchar("course_id").references(() => courses.id),
+  lessonId: varchar("lesson_id").references(() => lessons.id),
+  title: text("title").notNull(),
+  description: text("description"),
+  questions: text("questions").notNull(),
+  // JSON array of questions
+  passingScore: integer("passing_score").default(70),
+  // percentage
+  timeLimit: integer("time_limit"),
+  // in minutes
+  allowRetries: boolean("allow_retries").default(true),
+  maxAttempts: integer("max_attempts").default(3),
+  isRequired: boolean("is_required").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+});
+var enrollments = pgTable("enrollments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  courseId: varchar("course_id").references(() => courses.id).notNull(),
+  enrolledAt: timestamp("enrolled_at").defaultNow(),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  progress: integer("progress").default(0),
+  // percentage
+  status: text("status").default("enrolled"),
+  // enrolled, in-progress, completed, failed
+  certificateUrl: text("certificate_url")
+});
+var lessonProgress = pgTable("lesson_progress", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  lessonId: varchar("lesson_id").references(() => lessons.id).notNull(),
+  courseId: varchar("course_id").references(() => courses.id).notNull(),
+  isCompleted: boolean("is_completed").default(false),
+  timeSpent: integer("time_spent").default(0),
+  // in minutes
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow()
+});
+var quizAttempts = pgTable("quiz_attempts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  quizId: varchar("quiz_id").references(() => quizzes.id).notNull(),
+  courseId: varchar("course_id").references(() => courses.id).notNull(),
+  answers: text("answers").notNull(),
+  // JSON array of answers
+  score: integer("score"),
+  // percentage
+  passed: boolean("passed").default(false),
+  attemptNumber: integer("attempt_number").default(1),
+  timeSpent: integer("time_spent"),
+  // in minutes
+  completedAt: timestamp("completed_at").defaultNow()
+});
+var certificates = pgTable("certificates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  courseId: varchar("course_id").references(() => courses.id).notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  certificateUrl: text("certificate_url"),
+  validUntil: timestamp("valid_until"),
+  issuedAt: timestamp("issued_at").defaultNow()
+});
+var resources = pgTable("resources", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  description: text("description"),
+  category: text("category").notNull(),
+  // documentation, template, guide, reference
+  type: text("type").notNull(),
+  // pdf, video, link, document
+  url: text("url").notNull(),
+  thumbnailUrl: text("thumbnail_url"),
+  authorId: varchar("author_id").references(() => users.id),
+  authorName: text("author_name").notNull(),
+  tags: text("tags"),
+  // JSON array of tags
+  downloadCount: integer("download_count").default(0),
+  rating: real("rating").default(0),
+  isPublic: boolean("is_public").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+});
+var insertCourseSchema = createInsertSchema(courses).pick({
+  title: true,
+  description: true,
+  category: true,
+  difficulty: true,
+  duration: true,
+  thumbnailUrl: true,
+  authorName: true,
+  isPublished: true,
+  isMandatory: true,
+  prerequisites: true,
+  tags: true
+});
+var insertLessonSchema = createInsertSchema(lessons).pick({
+  courseId: true,
+  title: true,
+  description: true,
+  content: true,
+  order: true,
+  duration: true,
+  videoUrl: true,
+  documentUrl: true,
+  isRequired: true
+});
+var insertQuizSchema = createInsertSchema(quizzes).pick({
+  courseId: true,
+  lessonId: true,
+  title: true,
+  description: true,
+  questions: true,
+  passingScore: true,
+  timeLimit: true,
+  allowRetries: true,
+  maxAttempts: true,
+  isRequired: true
+});
+var insertResourceSchema = createInsertSchema(resources).pick({
+  title: true,
+  description: true,
+  category: true,
+  type: true,
+  url: true,
+  thumbnailUrl: true,
+  authorName: true,
+  tags: true,
+  isPublic: true
+});
+var forumCategories = pgTable("forum_categories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  color: text("color").default("#3B82F6"),
+  icon: text("icon").default("\u{1F4AC}"),
+  sortOrder: integer("sort_order").default(0),
+  isActive: boolean("is_active").default(true),
+  isModerated: boolean("is_moderated").default(false),
+  accessLevel: text("access_level").default("all"),
+  // all, employee, moderator, admin
+  moderatorIds: text("moderator_ids"),
+  // JSON array of user IDs
+  createdAt: timestamp("created_at").defaultNow()
+});
+var forumTopics = pgTable("forum_topics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  categoryId: varchar("category_id").references(() => forumCategories.id).notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  authorId: varchar("author_id").references(() => users.id).notNull(),
+  authorName: text("author_name").notNull(),
+  isPinned: boolean("is_pinned").default(false),
+  isLocked: boolean("is_locked").default(false),
+  isAnnouncement: boolean("is_announcement").default(false),
+  viewCount: integer("view_count").default(0),
+  replyCount: integer("reply_count").default(0),
+  lastReplyAt: timestamp("last_reply_at"),
+  lastReplyBy: varchar("last_reply_by").references(() => users.id),
+  lastReplyByName: text("last_reply_by_name"),
+  tags: text("tags"),
+  // JSON array of tags
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+});
+var forumPosts = pgTable("forum_posts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  topicId: varchar("topic_id").references(() => forumTopics.id).notNull(),
+  categoryId: varchar("category_id").references(() => forumCategories.id).notNull(),
+  authorId: varchar("author_id").references(() => users.id).notNull(),
+  authorName: text("author_name").notNull(),
+  content: text("content").notNull(),
+  isFirstPost: boolean("is_first_post").default(false),
+  // Original topic post
+  parentPostId: varchar("parent_post_id"),
+  // For threaded replies - self-reference handled separately
+  likeCount: integer("like_count").default(0),
+  isEdited: boolean("is_edited").default(false),
+  editedAt: timestamp("edited_at"),
+  editedBy: varchar("edited_by").references(() => users.id),
+  isDeleted: boolean("is_deleted").default(false),
+  deletedAt: timestamp("deleted_at"),
+  deletedBy: varchar("deleted_by").references(() => users.id),
+  attachments: text("attachments"),
+  // JSON array of file URLs
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+});
+var forumLikes = pgTable("forum_likes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  postId: varchar("post_id").references(() => forumPosts.id).notNull(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  reactionType: text("reaction_type").default("like"),
+  // like, love, laugh, angry, sad
+  createdAt: timestamp("created_at").defaultNow()
+});
+var forumUserStats = pgTable("forum_user_stats", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull().unique(),
+  postCount: integer("post_count").default(0),
+  topicCount: integer("topic_count").default(0),
+  likeCount: integer("like_count").default(0),
+  reputationScore: integer("reputation_score").default(0),
+  badges: text("badges"),
+  // JSON array of earned badges
+  joinedAt: timestamp("joined_at").defaultNow(),
+  lastActiveAt: timestamp("last_active_at")
+});
+var insertForumCategorySchema = createInsertSchema(forumCategories).pick({
+  name: true,
+  description: true,
+  color: true,
+  icon: true,
+  sortOrder: true,
+  isActive: true,
+  isModerated: true,
+  accessLevel: true,
+  moderatorIds: true
+});
+var insertForumTopicSchema = createInsertSchema(forumTopics).pick({
+  categoryId: true,
+  title: true,
+  description: true,
+  authorId: true,
+  authorName: true,
+  isPinned: true,
+  isLocked: true,
+  isAnnouncement: true,
+  tags: true
+});
+var insertForumPostSchema = createInsertSchema(forumPosts).pick({
+  topicId: true,
+  categoryId: true,
+  authorId: true,
+  authorName: true,
+  content: true,
+  isFirstPost: true,
+  parentPostId: true,
+  attachments: true
+});
+var insertForumLikeSchema = createInsertSchema(forumLikes).pick({
+  postId: true,
+  userId: true,
+  reactionType: true
+});
+
+// server/utils/rate-limiter.ts
+var RateLimiter = class {
+  static storage = /* @__PURE__ */ new Map();
+  /**
+   * Vérifier et enregistrer une tentative
+   */
+  static checkRateLimit(key, maxAttempts = 5, windowSeconds = 300) {
+    const now = Date.now();
+    const windowStart = now - windowSeconds * 1e3;
+    let data = this.storage.get(key);
+    if (!data) {
+      data = { attempts: [], lastReset: now };
+      this.storage.set(key, data);
+    }
+    data.attempts = data.attempts.filter((timestamp2) => timestamp2 > windowStart);
+    if (data.attempts.length >= maxAttempts) {
+      return false;
+    }
+    data.attempts.push(now);
+    return true;
+  }
+  /**
+   * Obtenir le nombre de tentatives restantes
+   */
+  static getRemainingAttempts(key, maxAttempts = 5, windowSeconds = 300) {
+    const now = Date.now();
+    const windowStart = now - windowSeconds * 1e3;
+    const data = this.storage.get(key);
+    if (!data) {
+      return maxAttempts;
+    }
+    const recentAttempts = data.attempts.filter((timestamp2) => timestamp2 > windowStart);
+    return Math.max(0, maxAttempts - recentAttempts.length);
+  }
+  /**
+   * Obtenir le temps d'attente avant la prochaine tentative
+   */
+  static getRetryAfter(key, windowSeconds = 300) {
+    const data = this.storage.get(key);
+    if (!data || data.attempts.length === 0) {
+      return 0;
+    }
+    const oldestAttempt = Math.min(...data.attempts);
+    const nextAllowedTime = oldestAttempt + windowSeconds * 1e3;
+    return Math.max(0, Math.ceil((nextAllowedTime - Date.now()) / 1e3));
+  }
+  /**
+   * Réinitialiser les tentatives pour une clé
+   */
+  static resetAttempts(key) {
+    this.storage.delete(key);
+  }
+  /**
+   * Configurations prédéfinies (harmonisées avec PHP)
+   */
+  static getConfig(endpoint) {
+    const configs = {
+      "login": { maxAttempts: 5, windowSeconds: 300 },
+      // 5 tentatives en 5 minutes
+      "forgot_password": { maxAttempts: 3, windowSeconds: 3600 },
+      // 3 tentatives en 1 heure
+      "register": { maxAttempts: 3, windowSeconds: 900 },
+      // 3 tentatives en 15 minutes
+      "api_general": { maxAttempts: 100, windowSeconds: 3600 },
+      // 100 requêtes par heure
+      "upload": { maxAttempts: 10, windowSeconds: 600 }
+      // 10 uploads en 10 minutes
+    };
+    return configs[endpoint] ?? { maxAttempts: 50, windowSeconds: 3600 };
+  }
+  /**
+   * Middleware Express pour rate limiting
+   */
+  static middleware(endpoint, identifier) {
+    return (req, res, next) => {
+      const config = this.getConfig(endpoint);
+      const key = `${endpoint}_${identifier ?? req.ip ?? "unknown"}`;
+      if (!this.checkRateLimit(key, config.maxAttempts, config.windowSeconds)) {
+        const retryAfter = this.getRetryAfter(key, config.windowSeconds);
+        return res.status(429).json({
+          message: `Trop de tentatives. R\xE9essayez dans ${retryAfter} secondes.`,
+          retryAfter
+        });
       }
-      const user = await storage.getUser(req.session.userId);
-      if (!user || !roles.includes(user.role)) {
-        return res.status(403).json({ message: "Insufficient permissions" });
-      }
-      req.user = user;
       next();
     };
-  };
-  app2.post("/api/auth/login", async (req, res) => {
+  }
+  /**
+   * Nettoyer les entrées expirées
+   */
+  static cleanup() {
+    let cleaned = 0;
+    const now = Date.now();
+    for (const [key, data] of Array.from(this.storage.entries())) {
+      if (now - data.lastReset > 24 * 60 * 60 * 1e3) {
+        this.storage.delete(key);
+        cleaned++;
+      }
+    }
+    return cleaned;
+  }
+  /**
+   * Obtenir les statistiques du rate limiter
+   */
+  static getStats() {
+    this.cleanup();
+    return {
+      totalKeys: this.storage.size,
+      memoryUsage: process.memoryUsage().heapUsed
+    };
+  }
+};
+setInterval(() => {
+  RateLimiter.cleanup();
+}, 60 * 60 * 1e3);
+
+// server/routes/auth.ts
+function registerAuthRoutes(app2) {
+  app2.post("/api/auth/login", RateLimiter.middleware("login"), async (req, res) => {
     try {
       const { username, password } = req.body;
       if (!username || !password) {
         return res.status(400).json({ message: "Username and password required" });
       }
       const user = await storage.getUserByUsername(username);
-      if (!user || user.password !== password) {
+      if (!user) {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+      const isValidPassword = await AuthService.verifyPassword(password, user.password);
+      if (!isValidPassword) {
         return res.status(401).json({ message: "Invalid credentials" });
       }
       if (!user.isActive) {
@@ -1999,8 +3226,15 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Internal server error" });
     }
   });
-  app2.post("/api/auth/register", async (req, res) => {
+  app2.post("/api/auth/register", RateLimiter.middleware("register"), async (req, res) => {
     try {
+      const passwordValidation = AuthService.validatePasswordStrength(req.body.password);
+      if (!passwordValidation.isValid) {
+        return res.status(400).json({
+          message: "Mot de passe invalide",
+          errors: passwordValidation.errors
+        });
+      }
       const result = insertUserSchema.safeParse(req.body);
       if (!result.success) {
         return res.status(400).json({
@@ -2012,12 +3246,15 @@ async function registerRoutes(app2) {
       if (existingUser) {
         return res.status(409).json({ message: "Username already exists" });
       }
+      const hashedPassword = await AuthService.hashPassword(result.data.password);
       const newUser = await storage.createUser({
         ...result.data,
+        password: hashedPassword,
         role: "employee"
       });
-      req.session.userId = newUser.id;
-      req.session.user = newUser;
+      if (result.data.email) {
+        await emailService.sendWelcomeEmail(result.data.email, result.data.name);
+      }
       const { password: _, ...userWithoutPassword } = newUser;
       res.status(201).json(userWithoutPassword);
     } catch (error) {
@@ -2027,30 +3264,29 @@ async function registerRoutes(app2) {
   });
   app2.get("/api/auth/me", async (req, res) => {
     try {
-      const userId = req.session?.userId;
-      if (!userId) {
+      if (!req.session?.userId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
-      const user = await storage.getUser(userId);
-      if (!user || !user.isActive) {
-        return res.status(401).json({ message: "User not found or inactive" });
+      const user = await storage.getUser(req.session.userId);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
       }
       const { password: _, ...userWithoutPassword } = user;
       res.json(userWithoutPassword);
     } catch (error) {
-      console.error("Get user error:", error);
+      console.error("Auth check error:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
   app2.post("/api/auth/logout", (req, res) => {
     req.session.destroy((err) => {
       if (err) {
-        console.error("Session destroy error:", err);
+        return res.status(500).json({ message: "Could not log out" });
       }
+      res.json({ message: "Logged out successfully" });
     });
-    res.json({ message: "Logged out successfully" });
   });
-  app2.get("/api/stats", async (_req, res) => {
+  app2.get("/api/stats", async (req, res) => {
     try {
       const stats = await storage.getStats();
       res.json(stats);
@@ -2058,6 +3294,485 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to fetch stats" });
     }
   });
+}
+
+// server/routes/users.ts
+var requireAuth = (req, res, next) => {
+  if (!req.session?.userId) {
+    return res.status(401).json({ message: "Authentication required" });
+  }
+  next();
+};
+var requireRole = (roles) => {
+  return async (req, res, next) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    const user = await storage.getUser(req.session.userId);
+    if (!user || !roles.includes(user.role)) {
+      return res.status(403).json({ message: "Insufficient permissions" });
+    }
+    req.user = user;
+    next();
+  };
+};
+function registerUsersRoutes(app2) {
+  app2.get("/api/users", requireAuth, async (req, res) => {
+    try {
+      const users2 = await storage.getUsers();
+      res.json(users2);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ error: "Failed to fetch users" });
+    }
+  });
+  app2.get("/api/users/:id", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.params.id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      const { password: _, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ error: "Failed to fetch user" });
+    }
+  });
+  app2.post("/api/users", requireRole(["admin"]), async (req, res) => {
+    try {
+      const result = insertUserSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid user data", errors: result.error.issues });
+      }
+      const user = await storage.createUser(result.data);
+      res.status(201).json(user);
+    } catch (error) {
+      console.error("Error creating user:", error);
+      res.status(500).json({ error: "Failed to create user" });
+    }
+  });
+  app2.patch("/api/users/:id", requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const currentUserId = req.session.userId;
+      if (id !== currentUserId) {
+        const currentUser = await storage.getUser(currentUserId);
+        if (!currentUser || currentUser.role !== "admin") {
+          return res.status(403).json({ message: "Insufficient permissions" });
+        }
+      }
+      const updatedUser = await storage.updateUser(id, req.body);
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating user:", error);
+      res.status(500).json({ error: "Failed to update user" });
+    }
+  });
+  app2.delete("/api/users/:id", requireRole(["admin"]), async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.updateUser(id, { isActive: false });
+      res.json({ message: "User deactivated successfully" });
+    } catch (error) {
+      console.error("Error deactivating user:", error);
+      res.status(500).json({ error: "Failed to deactivate user" });
+    }
+  });
+  app2.put("/api/users/:id/status", requireRole(["admin"]), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { isActive } = req.body;
+      await storage.updateUser(id, { isActive });
+      res.json({ message: `User ${isActive ? "activated" : "deactivated"} successfully` });
+    } catch (error) {
+      console.error("Error updating user status:", error);
+      res.status(500).json({ error: "Failed to update user status" });
+    }
+  });
+  app2.put("/api/users/:id/password", requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { currentPassword, newPassword } = req.body;
+      const currentUserId = req.session.userId;
+      if (id !== currentUserId) {
+        const currentUser = await storage.getUser(currentUserId);
+        if (!currentUser || currentUser.role !== "admin") {
+          return res.status(403).json({ message: "Insufficient permissions" });
+        }
+      }
+      if (id === currentUserId && currentPassword) {
+        const user = await storage.getUser(id);
+        if (!user) {
+          return res.status(404).json({ message: "User not found" });
+        }
+        const { AuthService: AuthService3 } = await Promise.resolve().then(() => (init_auth(), auth_exports));
+        const isValidPassword = await AuthService3.verifyPassword(currentPassword, user.password);
+        if (!isValidPassword) {
+          return res.status(400).json({ message: "Current password is incorrect" });
+        }
+      }
+      const { AuthService: AuthService2 } = await Promise.resolve().then(() => (init_auth(), auth_exports));
+      const hashedPassword = await AuthService2.hashPassword(newPassword);
+      await storage.updateUser(id, { password: hashedPassword });
+      res.json({ message: "Password updated successfully" });
+    } catch (error) {
+      console.error("Error updating password:", error);
+      res.status(500).json({ error: "Failed to update password" });
+    }
+  });
+}
+
+// server/services/upload.ts
+import multer from "multer";
+import path from "path";
+import { randomUUID as randomUUID2 } from "crypto";
+import fs from "fs/promises";
+var storage2 = multer.diskStorage({
+  destination: async (req, file, cb) => {
+    const uploadDir = "server/public/uploads";
+    try {
+      await fs.mkdir(uploadDir, { recursive: true });
+      cb(null, uploadDir);
+    } catch (error) {
+      cb(error, uploadDir);
+    }
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = `${Date.now()}-${randomUUID2()}`;
+    const ext = path.extname(file.originalname);
+    const baseName = path.basename(file.originalname, ext);
+    const sanitizedName = baseName.replace(/[^a-zA-Z0-9]/g, "_");
+    cb(null, `${sanitizedName}-${uniqueSuffix}${ext}`);
+  }
+});
+var fileFilter = (req, file, cb) => {
+  const allowedTypes = {
+    image: ["image/jpeg", "image/png", "image/gif", "image/webp"],
+    document: ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+    video: ["video/mp4", "video/webm", "video/ogg"],
+    audio: ["audio/mpeg", "audio/wav", "audio/ogg"]
+  };
+  const allAllowedTypes = [
+    ...allowedTypes.image,
+    ...allowedTypes.document,
+    ...allowedTypes.video,
+    ...allowedTypes.audio
+  ];
+  if (allAllowedTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error(`Type de fichier non autoris\xE9: ${file.mimetype}`));
+  }
+};
+var upload = multer({
+  storage: storage2,
+  fileFilter,
+  limits: {
+    fileSize: 50 * 1024 * 1024,
+    // 50MB max
+    files: 5
+    // Maximum 5 fichiers par upload
+  }
+});
+var FileManager = class {
+  static async deleteFile(filePath) {
+    try {
+      await fs.unlink(filePath);
+    } catch (error) {
+      console.error("Erreur lors de la suppression du fichier:", error);
+    }
+  }
+  static async getFileInfo(filePath) {
+    try {
+      const stats = await fs.stat(filePath);
+      return { size: stats.size, exists: true };
+    } catch (error) {
+      return { size: 0, exists: false };
+    }
+  }
+  static getFileUrl(filename) {
+    return `/uploads/${filename}`;
+  }
+  static getFileType(mimetype) {
+    if (mimetype.startsWith("image/")) return "image";
+    if (mimetype.startsWith("video/")) return "video";
+    if (mimetype.startsWith("audio/")) return "audio";
+    if (mimetype.includes("pdf") || mimetype.includes("document") || mimetype.includes("word")) return "document";
+    return "other";
+  }
+  static formatFileSize(bytes) {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  }
+};
+var handleUpload = (fieldName, multiple = false) => {
+  return multiple ? upload.array(fieldName, 5) : upload.single(fieldName);
+};
+var handleMultipleUploads = upload.fields([
+  { name: "documents", maxCount: 5 },
+  { name: "images", maxCount: 10 },
+  { name: "avatar", maxCount: 1 }
+]);
+function processUploadedFile(file, userId) {
+  return {
+    id: randomUUID2(),
+    originalName: file.originalname,
+    fileName: file.filename,
+    filePath: file.path,
+    fileUrl: FileManager.getFileUrl(file.filename),
+    mimeType: file.mimetype,
+    fileType: FileManager.getFileType(file.mimetype),
+    size: file.size,
+    formattedSize: FileManager.formatFileSize(file.size),
+    uploadedAt: /* @__PURE__ */ new Date(),
+    uploadedBy: userId
+  };
+}
+
+// server/services/websocket.ts
+import { WebSocketServer, WebSocket } from "ws";
+var WebSocketManager = class {
+  wss;
+  clients = /* @__PURE__ */ new Map();
+  channels = /* @__PURE__ */ new Map();
+  heartbeatInterval;
+  constructor(server) {
+    this.wss = new WebSocketServer({
+      server,
+      path: "/ws"
+    });
+    this.wss.on("connection", this.handleConnection.bind(this));
+    this.heartbeatInterval = setInterval(this.heartbeat.bind(this), 3e4);
+  }
+  handleConnection(ws) {
+    const clientId = this.generateClientId();
+    this.clients.set(clientId, ws);
+    ws.channels = /* @__PURE__ */ new Set();
+    ws.lastHeartbeat = Date.now();
+    ws.on("message", (data) => {
+      try {
+        const message = JSON.parse(data);
+        this.handleMessage(clientId, ws, message);
+      } catch (error) {
+        console.error("WebSocket message parse error:", error);
+      }
+    });
+    ws.on("close", () => {
+      this.handleDisconnect(clientId, ws);
+    });
+    ws.on("pong", () => {
+      ws.lastHeartbeat = Date.now();
+    });
+    this.sendToClient(clientId, {
+      type: "CONNECTED",
+      payload: { clientId, timestamp: Date.now() }
+    });
+  }
+  handleMessage(clientId, ws, message) {
+    switch (message.type) {
+      case "AUTHENTICATE":
+        this.authenticateClient(clientId, ws, message.payload?.userId);
+        break;
+      case "JOIN_CHANNEL":
+        this.joinChannel(clientId, ws, message.payload?.channel);
+        break;
+      case "LEAVE_CHANNEL":
+        this.leaveChannel(clientId, ws, message.payload?.channel);
+        break;
+      case "HEARTBEAT":
+        ws.lastHeartbeat = Date.now();
+        this.sendToClient(clientId, { type: "HEARTBEAT_ACK" });
+        break;
+      case "TYPING_START":
+        this.broadcastToChannel(message.payload?.channel, {
+          type: "USER_TYPING",
+          payload: { userId: ws.userId, isTyping: true }
+        }, clientId);
+        break;
+      case "TYPING_STOP":
+        this.broadcastToChannel(message.payload?.channel, {
+          type: "USER_TYPING",
+          payload: { userId: ws.userId, isTyping: false }
+        }, clientId);
+        break;
+    }
+  }
+  authenticateClient(clientId, ws, userId) {
+    if (!userId) return;
+    ws.userId = userId;
+    this.joinChannel(clientId, ws, `user_${userId}`);
+    this.broadcastUserStatus(userId, true);
+    this.sendToClient(clientId, {
+      type: "AUTHENTICATED",
+      payload: { userId, timestamp: Date.now() }
+    });
+  }
+  joinChannel(clientId, ws, channel) {
+    if (!channel || !ws.channels) return;
+    ws.channels.add(channel);
+    if (!this.channels.has(channel)) {
+      this.channels.set(channel, /* @__PURE__ */ new Set());
+    }
+    this.channels.get(channel).add(clientId);
+    this.sendToClient(clientId, {
+      type: "CHANNEL_JOINED",
+      payload: { channel, timestamp: Date.now() }
+    });
+  }
+  leaveChannel(clientId, ws, channel) {
+    if (!channel || !ws.channels) return;
+    ws.channels.delete(channel);
+    this.channels.get(channel)?.delete(clientId);
+    if (this.channels.get(channel)?.size === 0) {
+      this.channels.delete(channel);
+    }
+    this.sendToClient(clientId, {
+      type: "CHANNEL_LEFT",
+      payload: { channel, timestamp: Date.now() }
+    });
+  }
+  handleDisconnect(clientId, ws) {
+    if (ws.channels) {
+      ws.channels.forEach((channel) => {
+        this.channels.get(channel)?.delete(clientId);
+        if (this.channels.get(channel)?.size === 0) {
+          this.channels.delete(channel);
+        }
+      });
+    }
+    if (ws.userId) {
+      this.broadcastUserStatus(ws.userId, false);
+    }
+    this.clients.delete(clientId);
+  }
+  heartbeat() {
+    const now = Date.now();
+    this.clients.forEach((ws, clientId) => {
+      if (ws.lastHeartbeat && now - ws.lastHeartbeat > 35e3) {
+        ws.terminate();
+        this.clients.delete(clientId);
+      } else {
+        ws.ping();
+      }
+    });
+  }
+  generateClientId() {
+    return Math.random().toString(36).substr(2, 9);
+  }
+  sendToClient(clientId, message) {
+    const client = this.clients.get(clientId);
+    if (client && client.readyState === WebSocket.OPEN) {
+      client.send(JSON.stringify(message));
+    }
+  }
+  broadcastToChannel(channel, message, excludeClientId) {
+    const channelClients = this.channels.get(channel);
+    if (!channelClients) return;
+    channelClients.forEach((clientId) => {
+      if (clientId !== excludeClientId) {
+        this.sendToClient(clientId, message);
+      }
+    });
+  }
+  broadcastUserStatus(userId, isOnline) {
+    this.broadcast({
+      type: "USER_STATUS",
+      payload: { userId, isOnline, timestamp: Date.now() }
+    });
+  }
+  // Public methods for broadcasting events
+  broadcast(message) {
+    this.clients.forEach((_, clientId) => {
+      this.sendToClient(clientId, message);
+    });
+  }
+  broadcastToUsers(userIds, message) {
+    userIds.forEach((userId) => {
+      this.broadcastToChannel(`user_${userId}`, message);
+    });
+  }
+  broadcastNewAnnouncement(announcement) {
+    this.broadcast({
+      type: "NEW_ANNOUNCEMENT",
+      payload: announcement
+    });
+  }
+  broadcastNewMessage(message) {
+    this.broadcastToChannel(`user_${message.recipientId}`, {
+      type: "NEW_MESSAGE",
+      payload: message
+    });
+  }
+  broadcastForumUpdate(update) {
+    this.broadcast({
+      type: "FORUM_UPDATE",
+      payload: update
+    });
+  }
+  broadcastTrainingUpdate(update) {
+    this.broadcast({
+      type: "TRAINING_UPDATE",
+      payload: update
+    });
+  }
+  broadcastComplaintUpdate(complaint) {
+    this.broadcast({
+      type: "COMPLAINT_UPDATE",
+      payload: complaint
+    });
+  }
+  getConnectedUsers() {
+    const users2 = [];
+    this.clients.forEach((client) => {
+      if (client.userId) {
+        users2.push(client.userId);
+      }
+    });
+    return [...new Set(users2)];
+  }
+  getConnectedUserCount() {
+    return this.getConnectedUsers().length;
+  }
+  isUserOnline(userId) {
+    return this.getConnectedUsers().includes(userId);
+  }
+  close() {
+    clearInterval(this.heartbeatInterval);
+    this.wss.close();
+  }
+};
+var wsManager;
+function initializeWebSocket(server) {
+  wsManager = new WebSocketManager(server);
+  console.log("WebSocket server initialized on /ws");
+  return wsManager;
+}
+
+// server/routes/content.ts
+var requireAuth2 = (req, res, next) => {
+  if (!req.session?.userId) {
+    return res.status(401).json({ message: "Authentication required" });
+  }
+  next();
+};
+var requireRole2 = (roles) => {
+  return async (req, res, next) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    const user = await storage.getUser(req.session.userId);
+    if (!user || !roles.includes(user.role)) {
+      return res.status(403).json({ message: "Insufficient permissions" });
+    }
+    req.user = user;
+    next();
+  };
+};
+function registerContentRoutes(app2) {
   app2.get("/api/announcements", async (_req, res) => {
     try {
       const announcements2 = await storage.getAnnouncements();
@@ -2077,12 +3792,38 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to fetch announcement" });
     }
   });
-  app2.post("/api/announcements", async (req, res) => {
+  app2.post("/api/announcements", requireRole2(["admin", "moderator"]), async (req, res) => {
     try {
-      const announcement = await storage.createAnnouncement(req.body);
+      const result = insertAnnouncementSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid announcement data", errors: result.error.issues });
+      }
+      const announcement = await storage.createAnnouncement(result.data);
       res.status(201).json(announcement);
     } catch (error) {
       res.status(500).json({ message: "Failed to create announcement" });
+    }
+  });
+  app2.put("/api/announcements/:id", requireRole2(["admin", "moderator"]), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const result = insertAnnouncementSchema.partial().safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid announcement data", errors: result.error.issues });
+      }
+      const announcement = await storage.updateAnnouncement(id, result.data);
+      res.json(announcement);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update announcement" });
+    }
+  });
+  app2.delete("/api/announcements/:id", requireRole2(["admin", "moderator"]), async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteAnnouncement(id);
+      res.json({ message: "Announcement deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete announcement" });
     }
   });
   app2.get("/api/documents", async (_req, res) => {
@@ -2104,7 +3845,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to fetch document" });
     }
   });
-  app2.post("/api/documents", async (req, res) => {
+  app2.post("/api/documents", requireRole2(["admin", "moderator"]), async (req, res) => {
     try {
       const result = insertDocumentSchema.safeParse(req.body);
       if (!result.success) {
@@ -2116,7 +3857,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to create document" });
     }
   });
-  app2.patch("/api/documents/:id", async (req, res) => {
+  app2.patch("/api/documents/:id", requireRole2(["admin", "moderator"]), async (req, res) => {
     try {
       const { id } = req.params;
       const updatedDocument = await storage.updateDocument(id, req.body);
@@ -2126,7 +3867,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ error: "Failed to update document" });
     }
   });
-  app2.delete("/api/documents/:id", async (req, res) => {
+  app2.delete("/api/documents/:id", requireRole2(["admin", "moderator"]), async (req, res) => {
     try {
       const { id } = req.params;
       await storage.deleteDocument(id);
@@ -2155,7 +3896,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to fetch event" });
     }
   });
-  app2.post("/api/events", async (req, res) => {
+  app2.post("/api/events", requireRole2(["admin", "moderator"]), async (req, res) => {
     try {
       const result = insertEventSchema.safeParse(req.body);
       if (!result.success) {
@@ -2167,150 +3908,26 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to create event" });
     }
   });
-  app2.get("/api/users", async (req, res) => {
+  app2.put("/api/events/:id", requireRole2(["admin", "moderator"]), async (req, res) => {
     try {
-      const users2 = await storage.getUsers();
-      res.json(users2);
-    } catch (error) {
-      console.error("Error fetching users:", error);
-      res.status(500).json({ error: "Failed to fetch users" });
-    }
-  });
-  app2.post("/api/users", async (req, res) => {
-    try {
-      const result = insertUserSchema.safeParse(req.body);
+      const { id } = req.params;
+      const result = insertEventSchema.partial().safeParse(req.body);
       if (!result.success) {
-        return res.status(400).json({ message: "Invalid user data", errors: result.error.issues });
+        return res.status(400).json({ message: "Invalid event data", errors: result.error.issues });
       }
-      const user = await storage.createUser(result.data);
-      res.status(201).json(user);
+      const event = await storage.updateEvent(id, result.data);
+      res.json(event);
     } catch (error) {
-      console.error("Error creating user:", error);
-      res.status(500).json({ error: "Failed to create user" });
+      res.status(500).json({ message: "Failed to update event" });
     }
   });
-  app2.patch("/api/users/:id", async (req, res) => {
+  app2.delete("/api/events/:id", requireRole2(["admin", "moderator"]), async (req, res) => {
     try {
       const { id } = req.params;
-      const updatedUser = await storage.updateUser(id, req.body);
-      res.json(updatedUser);
+      await storage.deleteEvent(id);
+      res.json({ message: "Event deleted successfully" });
     } catch (error) {
-      console.error("Error updating user:", error);
-      res.status(500).json({ error: "Failed to update user" });
-    }
-  });
-  app2.delete("/api/users/:id", async (req, res) => {
-    try {
-      const { id } = req.params;
-      await storage.updateUser(id, { isActive: false });
-      res.json({ message: "User deactivated successfully" });
-    } catch (error) {
-      console.error("Error deactivating user:", error);
-      res.status(500).json({ error: "Failed to deactivate user" });
-    }
-  });
-  app2.get("/api/messages/:userId", async (req, res) => {
-    try {
-      const { userId } = req.params;
-      const messages2 = await storage.getMessages(userId);
-      res.json(messages2);
-    } catch (error) {
-      console.error("Error fetching messages:", error);
-      res.status(500).json({ error: "Failed to fetch messages" });
-    }
-  });
-  app2.post("/api/messages", async (req, res) => {
-    try {
-      const message = await storage.createMessage(req.body);
-      res.status(201).json(message);
-    } catch (error) {
-      console.error("Error creating message:", error);
-      res.status(500).json({ error: "Failed to create message" });
-    }
-  });
-  app2.patch("/api/messages/:id/read", async (req, res) => {
-    try {
-      const { id } = req.params;
-      await storage.markMessageAsRead(id);
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error marking message as read:", error);
-      res.status(500).json({ error: "Failed to mark message as read" });
-    }
-  });
-  app2.get("/api/complaints", async (req, res) => {
-    try {
-      const complaints2 = await storage.getComplaints();
-      res.json(complaints2);
-    } catch (error) {
-      console.error("Error fetching complaints:", error);
-      res.status(500).json({ error: "Failed to fetch complaints" });
-    }
-  });
-  app2.post("/api/complaints", async (req, res) => {
-    try {
-      const complaint = await storage.createComplaint(req.body);
-      res.status(201).json(complaint);
-    } catch (error) {
-      console.error("Error creating complaint:", error);
-      res.status(500).json({ error: "Failed to create complaint" });
-    }
-  });
-  app2.patch("/api/complaints/:id", async (req, res) => {
-    try {
-      const { id } = req.params;
-      const updatedComplaint = await storage.updateComplaint(id, req.body);
-      res.json(updatedComplaint);
-    } catch (error) {
-      console.error("Error updating complaint:", error);
-      res.status(500).json({ error: "Failed to update complaint" });
-    }
-  });
-  app2.get("/api/permissions", async (req, res) => {
-    try {
-      const users2 = await storage.getUsers();
-      const allPermissions = [];
-      for (const user of users2) {
-        const userPermissions = await storage.getPermissions(user.id);
-        allPermissions.push(...userPermissions);
-      }
-      res.json(allPermissions);
-    } catch (error) {
-      console.error("Error fetching permissions:", error);
-      res.status(500).json({ error: "Failed to fetch permissions" });
-    }
-  });
-  app2.get("/api/permissions/:userId", async (req, res) => {
-    try {
-      const { userId } = req.params;
-      const permissions2 = await storage.getPermissions(userId);
-      res.json(permissions2);
-    } catch (error) {
-      console.error("Error fetching user permissions:", error);
-      res.status(500).json({ error: "Failed to fetch user permissions" });
-    }
-  });
-  app2.post("/api/permissions", async (req, res) => {
-    try {
-      const result = insertPermissionSchema.safeParse(req.body);
-      if (!result.success) {
-        return res.status(400).json({ message: "Invalid permission data", errors: result.error.issues });
-      }
-      const permission = await storage.createPermission(result.data);
-      res.status(201).json(permission);
-    } catch (error) {
-      console.error("Error creating permission:", error);
-      res.status(500).json({ error: "Failed to create permission" });
-    }
-  });
-  app2.delete("/api/permissions/:id", async (req, res) => {
-    try {
-      const { id } = req.params;
-      await storage.revokePermission(id);
-      res.json({ message: "Permission revoked successfully" });
-    } catch (error) {
-      console.error("Error revoking permission:", error);
-      res.status(500).json({ error: "Failed to revoke permission" });
+      res.status(500).json({ message: "Failed to delete event" });
     }
   });
   app2.get("/api/contents", async (req, res) => {
@@ -2322,7 +3939,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ error: "Failed to fetch contents" });
     }
   });
-  app2.post("/api/contents", async (req, res) => {
+  app2.post("/api/contents", requireRole2(["admin", "moderator"]), async (req, res) => {
     try {
       const result = insertContentSchema.safeParse(req.body);
       if (!result.success) {
@@ -2335,7 +3952,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ error: "Failed to create content" });
     }
   });
-  app2.patch("/api/contents/:id", async (req, res) => {
+  app2.patch("/api/contents/:id", requireRole2(["admin", "moderator"]), async (req, res) => {
     try {
       const { id } = req.params;
       const updatedContent = await storage.updateContent(id, req.body);
@@ -2345,7 +3962,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ error: "Failed to update content" });
     }
   });
-  app2.delete("/api/contents/:id", async (req, res) => {
+  app2.delete("/api/contents/:id", requireRole2(["admin", "moderator"]), async (req, res) => {
     try {
       const { id } = req.params;
       await storage.deleteContent(id);
@@ -2364,7 +3981,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ error: "Failed to fetch categories" });
     }
   });
-  app2.post("/api/categories", async (req, res) => {
+  app2.post("/api/categories", requireRole2(["admin", "moderator"]), async (req, res) => {
     try {
       const result = insertCategorySchema.safeParse(req.body);
       if (!result.success) {
@@ -2377,7 +3994,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ error: "Failed to create category" });
     }
   });
-  app2.patch("/api/categories/:id", async (req, res) => {
+  app2.patch("/api/categories/:id", requireRole2(["admin", "moderator"]), async (req, res) => {
     try {
       const { id } = req.params;
       const updatedCategory = await storage.updateCategory(id, req.body);
@@ -2387,7 +4004,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ error: "Failed to update category" });
     }
   });
-  app2.delete("/api/categories/:id", async (req, res) => {
+  app2.delete("/api/categories/:id", requireRole2(["admin", "moderator"]), async (req, res) => {
     try {
       const { id } = req.params;
       await storage.deleteCategory(id);
@@ -2397,15 +4014,1116 @@ async function registerRoutes(app2) {
       res.status(500).json({ error: "Failed to delete category" });
     }
   });
-  app2.post("/api/admin/bulk-permissions", async (req, res) => {
+  app2.post("/api/upload", requireAuth2, handleUpload("file"), async (req, res) => {
+    try {
+      const file = req.file;
+      if (!file) {
+        return res.status(400).json({ message: "Aucun fichier fourni" });
+      }
+      const userId = req.session.userId;
+      const uploadedFile = processUploadedFile(file, userId);
+      res.status(201).json({
+        message: "Fichier upload\xE9 avec succ\xE8s",
+        file: uploadedFile
+      });
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      res.status(500).json({ message: "Erreur lors de l'upload" });
+    }
+  });
+  app2.post("/api/upload/avatar", requireAuth2, handleUpload("avatar"), async (req, res) => {
+    try {
+      const file = req.file;
+      if (!file) {
+        return res.status(400).json({ message: "Aucune image fournie" });
+      }
+      if (!file.mimetype.startsWith("image/")) {
+        await FileManager.deleteFile(file.path);
+        return res.status(400).json({ message: "Le fichier doit \xEAtre une image" });
+      }
+      const userId = req.session.userId;
+      const uploadedFile = processUploadedFile(file, userId);
+      await storage.updateUser(userId, { avatar: uploadedFile.fileUrl });
+      if (wsManager) {
+        wsManager.broadcast({
+          type: "USER_AVATAR_UPDATE",
+          payload: { userId, avatarUrl: uploadedFile.fileUrl }
+        });
+      }
+      res.status(201).json({
+        message: "Avatar mis \xE0 jour avec succ\xE8s",
+        file: uploadedFile,
+        avatarUrl: uploadedFile.fileUrl
+      });
+    } catch (error) {
+      console.error("Error uploading avatar:", error);
+      res.status(500).json({ message: "Erreur lors de l'upload de l'avatar" });
+    }
+  });
+  app2.post("/api/upload/document", requireRole2(["admin", "moderator"]), handleUpload("document"), async (req, res) => {
+    try {
+      const file = req.file;
+      if (!file) {
+        return res.status(400).json({ message: "Aucun document fourni" });
+      }
+      const { title, description, category } = req.body;
+      if (!title || !category) {
+        await FileManager.deleteFile(file.path);
+        return res.status(400).json({ message: "Titre et cat\xE9gorie requis" });
+      }
+      const userId = req.session.userId;
+      const uploadedFile = processUploadedFile(file, userId);
+      const document = await storage.createDocument({
+        title,
+        description: description || "",
+        category,
+        fileName: uploadedFile.originalName,
+        fileUrl: uploadedFile.fileUrl,
+        version: "1.0"
+      });
+      if (wsManager) {
+        wsManager.broadcast({
+          type: "NEW_DOCUMENT",
+          payload: document
+        });
+      }
+      res.status(201).json({
+        message: "Document upload\xE9 avec succ\xE8s",
+        document,
+        file: uploadedFile
+      });
+    } catch (error) {
+      console.error("Error uploading document:", error);
+      if (req.file) {
+        await FileManager.deleteFile(req.file.path);
+      }
+      res.status(500).json({ message: "Erreur lors de l'upload du document" });
+    }
+  });
+  app2.get("/api/files/:filename", async (req, res) => {
+    try {
+      const { filename } = req.params;
+      const filePath = `server/public/uploads/${filename}`;
+      const fileInfo = await FileManager.getFileInfo(filePath);
+      if (!fileInfo.exists) {
+        return res.status(404).json({ message: "Fichier non trouv\xE9" });
+      }
+      res.json({
+        filename,
+        size: fileInfo.size,
+        formattedSize: FileManager.formatFileSize(fileInfo.size),
+        exists: fileInfo.exists
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Erreur lors de la r\xE9cup\xE9ration des infos du fichier" });
+    }
+  });
+  app2.delete("/api/files/:filename", requireAuth2, async (req, res) => {
+    try {
+      const { filename } = req.params;
+      const filePath = `server/public/uploads/${filename}`;
+      await FileManager.deleteFile(filePath);
+      res.json({
+        message: "Fichier supprim\xE9 avec succ\xE8s",
+        filename
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Erreur lors de la suppression du fichier" });
+    }
+  });
+}
+
+// server/routes/messaging.ts
+var requireAuth3 = (req, res, next) => {
+  if (!req.session?.userId) {
+    return res.status(401).json({ message: "Authentication required" });
+  }
+  next();
+};
+var requireRole3 = (roles) => {
+  return async (req, res, next) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    const user = await storage.getUser(req.session.userId);
+    if (!user || !roles.includes(user.role)) {
+      return res.status(403).json({ message: "Insufficient permissions" });
+    }
+    req.user = user;
+    next();
+  };
+};
+function registerMessagingRoutes(app2) {
+  app2.get("/api/messages", requireAuth3, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      const messages2 = await storage.getMessages(userId);
+      res.json(messages2);
+    } catch (error) {
+      console.error("Error fetching messages:", error);
+      res.status(500).json({ error: "Failed to fetch messages" });
+    }
+  });
+  app2.get("/api/messages/sent", requireAuth3, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      const allMessages = await storage.getMessages(userId);
+      const sentMessages = allMessages.filter((msg) => msg.senderId === userId);
+      res.json(sentMessages);
+    } catch (error) {
+      console.error("Error fetching sent messages:", error);
+      res.status(500).json({ error: "Failed to fetch sent messages" });
+    }
+  });
+  app2.get("/api/messages/:id", requireAuth3, async (req, res) => {
+    try {
+      const message = await storage.getMessageById(req.params.id);
+      if (!message) {
+        return res.status(404).json({ message: "Message not found" });
+      }
+      const userId = req.session.userId;
+      if (message.senderId !== userId && message.recipientId !== userId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      res.json(message);
+    } catch (error) {
+      console.error("Error fetching message:", error);
+      res.status(500).json({ error: "Failed to fetch message" });
+    }
+  });
+  app2.post("/api/messages", requireAuth3, async (req, res) => {
+    try {
+      const result = insertMessageSchema.safeParse({
+        ...req.body,
+        senderId: req.session.userId
+      });
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid message data", errors: result.error.issues });
+      }
+      const message = await storage.createMessage(result.data);
+      res.status(201).json(message);
+    } catch (error) {
+      console.error("Error creating message:", error);
+      res.status(500).json({ error: "Failed to create message" });
+    }
+  });
+  app2.put("/api/messages/:id/read", requireAuth3, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const message = await storage.getMessageById(id);
+      if (!message) {
+        return res.status(404).json({ message: "Message not found" });
+      }
+      if (message.recipientId !== req.session.userId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      await storage.markMessageAsRead(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error marking message as read:", error);
+      res.status(500).json({ error: "Failed to mark message as read" });
+    }
+  });
+  app2.delete("/api/messages/:id", requireAuth3, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const message = await storage.getMessageById(id);
+      if (!message) {
+        return res.status(404).json({ message: "Message not found" });
+      }
+      if (message.senderId !== req.session.userId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      await storage.deleteMessage(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting message:", error);
+      res.status(500).json({ error: "Failed to delete message" });
+    }
+  });
+  app2.get("/api/forum/categories", async (req, res) => {
+    try {
+      const categories2 = await storage.getForumCategories();
+      res.json(categories2);
+    } catch (error) {
+      console.error("Error fetching forum categories:", error);
+      res.status(500).json({ error: "Failed to fetch forum categories" });
+    }
+  });
+  app2.get("/api/forum/categories/:id", async (req, res) => {
+    try {
+      const category = await storage.getForumCategoryById(req.params.id);
+      if (!category) {
+        return res.status(404).json({ message: "Category not found" });
+      }
+      res.json(category);
+    } catch (error) {
+      console.error("Error fetching forum category:", error);
+      res.status(500).json({ error: "Failed to fetch forum category" });
+    }
+  });
+  app2.post("/api/forum/categories", requireRole3(["admin", "moderator"]), async (req, res) => {
+    try {
+      const result = insertForumCategorySchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid category data", errors: result.error.issues });
+      }
+      const category = await storage.createForumCategory(result.data);
+      res.status(201).json(category);
+    } catch (error) {
+      console.error("Error creating forum category:", error);
+      res.status(500).json({ error: "Failed to create forum category" });
+    }
+  });
+  app2.get("/api/forum/topics", async (req, res) => {
+    try {
+      const { categoryId } = req.query;
+      const topics = await storage.getForumTopics(categoryId);
+      res.json(topics);
+    } catch (error) {
+      console.error("Error fetching forum topics:", error);
+      res.status(500).json({ error: "Failed to fetch forum topics" });
+    }
+  });
+  app2.get("/api/forum/topics/:id", async (req, res) => {
+    try {
+      const topic = await storage.getForumTopicById(req.params.id);
+      if (!topic) {
+        return res.status(404).json({ message: "Topic not found" });
+      }
+      res.json(topic);
+    } catch (error) {
+      console.error("Error fetching forum topic:", error);
+      res.status(500).json({ error: "Failed to fetch forum topic" });
+    }
+  });
+  app2.get("/api/forum/topics/:id/posts", async (req, res) => {
+    try {
+      const posts = await storage.getForumPosts(req.params.id);
+      res.json(posts);
+    } catch (error) {
+      console.error("Error fetching forum posts:", error);
+      res.status(500).json({ error: "Failed to fetch forum posts" });
+    }
+  });
+  app2.post("/api/forum/topics", requireAuth3, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+      const result = insertForumTopicSchema.safeParse({
+        ...req.body,
+        authorId: user.id,
+        authorName: user.name
+      });
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid topic data", errors: result.error.issues });
+      }
+      const topic = await storage.createForumTopic(result.data);
+      res.status(201).json(topic);
+    } catch (error) {
+      console.error("Error creating forum topic:", error);
+      res.status(500).json({ error: "Failed to create forum topic" });
+    }
+  });
+  app2.post("/api/forum/posts", requireAuth3, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+      const result = insertForumPostSchema.safeParse({
+        ...req.body,
+        authorId: user.id,
+        authorName: user.name
+      });
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid post data", errors: result.error.issues });
+      }
+      const post = await storage.createForumPost(result.data);
+      await storage.updateForumTopicActivity(result.data.topicId);
+      res.status(201).json(post);
+    } catch (error) {
+      console.error("Error creating forum post:", error);
+      res.status(500).json({ error: "Failed to create forum post" });
+    }
+  });
+  app2.put("/api/forum/posts/:id", requireAuth3, async (req, res) => {
+    try {
+      const post = await storage.getForumPostById(req.params.id);
+      if (!post) {
+        return res.status(404).json({ message: "Post not found" });
+      }
+      const user = await storage.getUser(req.session.userId);
+      if (!user || post.authorId !== user.id && user.role !== "admin" && user.role !== "moderator") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const updatedPost = await storage.updateForumPost(req.params.id, {
+        content: req.body.content,
+        isEdited: true
+      });
+      res.json(updatedPost);
+    } catch (error) {
+      console.error("Error updating forum post:", error);
+      res.status(500).json({ error: "Failed to update forum post" });
+    }
+  });
+  app2.delete("/api/forum/posts/:id", requireAuth3, async (req, res) => {
+    try {
+      const post = await storage.getForumPostById(req.params.id);
+      if (!post) {
+        return res.status(404).json({ message: "Post not found" });
+      }
+      const user = await storage.getUser(req.session.userId);
+      if (!user || post.authorId !== user.id && user.role !== "admin" && user.role !== "moderator") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      await storage.deleteForumPost(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting forum post:", error);
+      res.status(500).json({ error: "Failed to delete forum post" });
+    }
+  });
+  app2.post("/api/forum/posts/:id/like", requireAuth3, async (req, res) => {
+    try {
+      const { id: postId } = req.params;
+      const userId = req.session.userId;
+      const post = await storage.getForumPostById(postId);
+      if (!post) {
+        return res.status(404).json({ message: "Post not found" });
+      }
+      const existingLike = await storage.getForumLike(postId, userId);
+      if (existingLike) {
+        await storage.deleteForumLike(postId, userId);
+        res.json({ liked: false, message: "Like removed" });
+      } else {
+        await storage.createForumLike({
+          postId,
+          userId,
+          reactionType: req.body.reactionType || "like"
+        });
+        res.json({ liked: true, message: "Post liked" });
+      }
+    } catch (error) {
+      console.error("Error handling forum like:", error);
+      res.status(500).json({ error: "Failed to handle like" });
+    }
+  });
+  app2.delete("/api/messages/:id", requireAuth3, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const message = await storage.getMessageById(id);
+      if (!message) {
+        return res.status(404).json({ message: "Message not found" });
+      }
+      const userId = req.session.userId;
+      if (message.senderId !== userId && message.recipientId !== userId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      await storage.deleteMessage(id);
+      res.json({ message: "Message deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting message:", error);
+      res.status(500).json({ error: "Failed to delete message" });
+    }
+  });
+  app2.get("/api/complaints", requireAuth3, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+      let complaints2;
+      if (user.role === "admin" || user.role === "moderator") {
+        complaints2 = await storage.getComplaints();
+      } else {
+        complaints2 = await storage.getComplaintsByUser(userId);
+      }
+      res.json(complaints2);
+    } catch (error) {
+      console.error("Error fetching complaints:", error);
+      res.status(500).json({ error: "Failed to fetch complaints" });
+    }
+  });
+  app2.get("/api/complaints/:id", requireAuth3, async (req, res) => {
+    try {
+      const complaint = await storage.getComplaintById(req.params.id);
+      if (!complaint) {
+        return res.status(404).json({ message: "Complaint not found" });
+      }
+      const userId = req.session.userId;
+      const user = await storage.getUser(userId);
+      if (user?.role !== "admin" && user?.role !== "moderator" && complaint.submitterId !== userId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      res.json(complaint);
+    } catch (error) {
+      console.error("Error fetching complaint:", error);
+      res.status(500).json({ error: "Failed to fetch complaint" });
+    }
+  });
+  app2.post("/api/complaints", requireAuth3, async (req, res) => {
+    try {
+      const result = insertComplaintSchema.safeParse({
+        ...req.body,
+        submitterId: req.session.userId
+      });
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid complaint data", errors: result.error.issues });
+      }
+      const complaint = await storage.createComplaint(result.data);
+      res.status(201).json(complaint);
+    } catch (error) {
+      console.error("Error creating complaint:", error);
+      res.status(500).json({ error: "Failed to create complaint" });
+    }
+  });
+  app2.patch("/api/complaints/:id", requireRole3(["admin", "moderator"]), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updatedComplaint = await storage.updateComplaint(id, req.body);
+      res.json(updatedComplaint);
+    } catch (error) {
+      console.error("Error updating complaint:", error);
+      res.status(500).json({ error: "Failed to update complaint" });
+    }
+  });
+  app2.put("/api/complaints/:id/assign", requireRole3(["admin", "moderator"]), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { assignedToId } = req.body;
+      const updatedComplaint = await storage.updateComplaint(id, { assignedToId });
+      res.json(updatedComplaint);
+    } catch (error) {
+      console.error("Error assigning complaint:", error);
+      res.status(500).json({ error: "Failed to assign complaint" });
+    }
+  });
+  app2.put("/api/complaints/:id/status", requireRole3(["admin", "moderator"]), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      const updatedComplaint = await storage.updateComplaint(id, {
+        status,
+        updatedAt: /* @__PURE__ */ new Date()
+      });
+      res.json(updatedComplaint);
+    } catch (error) {
+      console.error("Error updating complaint status:", error);
+      res.status(500).json({ error: "Failed to update complaint status" });
+    }
+  });
+  app2.delete("/api/complaints/:id", requireRole3(["admin"]), async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteComplaint(id);
+      res.json({ message: "Complaint deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting complaint:", error);
+      res.status(500).json({ error: "Failed to delete complaint" });
+    }
+  });
+  app2.get("/api/forum/categories", async (req, res) => {
+    try {
+      const categories2 = await storage.getForumCategories();
+      res.json(categories2);
+    } catch (error) {
+      console.error("Error fetching forum categories:", error);
+      res.status(500).json({ error: "Failed to fetch forum categories" });
+    }
+  });
+  app2.post("/api/forum/categories", requireRole3(["admin", "moderator"]), async (req, res) => {
+    try {
+      const result = insertForumCategorySchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid category data", errors: result.error.issues });
+      }
+      const category = await storage.createForumCategory(result.data);
+      res.status(201).json(category);
+    } catch (error) {
+      console.error("Error creating forum category:", error);
+      res.status(500).json({ error: "Failed to create forum category" });
+    }
+  });
+  app2.get("/api/forum/topics", async (req, res) => {
+    try {
+      const { categoryId } = req.query;
+      const topics = await storage.getForumTopics(categoryId);
+      res.json(topics);
+    } catch (error) {
+      console.error("Error fetching forum topics:", error);
+      res.status(500).json({ error: "Failed to fetch forum topics" });
+    }
+  });
+  app2.get("/api/forum/topics/:id", async (req, res) => {
+    try {
+      const topic = await storage.getForumTopicById(req.params.id);
+      if (!topic) {
+        return res.status(404).json({ error: "Topic not found" });
+      }
+      res.json(topic);
+    } catch (error) {
+      console.error("Error fetching forum topic:", error);
+      res.status(500).json({ error: "Failed to fetch forum topic" });
+    }
+  });
+  app2.post("/api/forum/topics", requireAuth3, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+      const result = insertForumTopicSchema.safeParse({
+        ...req.body,
+        authorId: user.id,
+        authorName: user.name
+      });
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid topic data", errors: result.error.issues });
+      }
+      const topic = await storage.createForumTopic(result.data);
+      res.status(201).json(topic);
+    } catch (error) {
+      console.error("Error creating forum topic:", error);
+      res.status(500).json({ error: "Failed to create forum topic" });
+    }
+  });
+  app2.get("/api/forum/topics/:id/posts", async (req, res) => {
+    try {
+      const posts = await storage.getForumPosts(req.params.id);
+      res.json(posts);
+    } catch (error) {
+      console.error("Error fetching forum posts:", error);
+      res.status(500).json({ error: "Failed to fetch forum posts" });
+    }
+  });
+  app2.post("/api/forum/posts", requireAuth3, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+      const result = insertForumPostSchema.safeParse({
+        ...req.body,
+        authorId: user.id,
+        authorName: user.name
+      });
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid post data", errors: result.error.issues });
+      }
+      const post = await storage.createForumPost(result.data);
+      res.status(201).json(post);
+    } catch (error) {
+      console.error("Error creating forum post:", error);
+      res.status(500).json({ error: "Failed to create forum post" });
+    }
+  });
+  app2.post("/api/forum/posts/:id/like", requireAuth3, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      const postId = req.params.id;
+      const result = insertForumLikeSchema.safeParse({
+        postId,
+        userId
+      });
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid like data", errors: result.error.issues });
+      }
+      const like = await storage.createForumLike(result.data);
+      res.status(201).json(like);
+    } catch (error) {
+      console.error("Error liking forum post:", error);
+      res.status(500).json({ error: "Failed to like forum post" });
+    }
+  });
+}
+
+// server/routes/training.ts
+var requireAuth4 = (req, res, next) => {
+  if (!req.session?.userId) {
+    return res.status(401).json({ message: "Authentication required" });
+  }
+  next();
+};
+var requireRole4 = (roles) => {
+  return async (req, res, next) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    const user = await storage.getUser(req.session.userId);
+    if (!user || !roles.includes(user.role)) {
+      return res.status(403).json({ message: "Insufficient permissions" });
+    }
+    req.user = user;
+    next();
+  };
+};
+function registerTrainingRoutes(app2) {
+  app2.get("/api/trainings", async (req, res) => {
+    try {
+      const trainings2 = await storage.getTrainings();
+      res.json(trainings2);
+    } catch (error) {
+      console.error("Error fetching trainings:", error);
+      res.status(500).json({ error: "Failed to fetch trainings" });
+    }
+  });
+  app2.get("/api/trainings/:id", async (req, res) => {
+    try {
+      const training = await storage.getTrainingById(req.params.id);
+      if (!training) {
+        return res.status(404).json({ error: "Training not found" });
+      }
+      res.json(training);
+    } catch (error) {
+      console.error("Error fetching training:", error);
+      res.status(500).json({ error: "Failed to fetch training" });
+    }
+  });
+  app2.post("/api/trainings", requireAuth4, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+      const hasPermission = await storage.hasPermission(user.id, "manage_trainings") || user.role === "admin";
+      if (!hasPermission) {
+        return res.status(403).json({ message: "Insufficient permissions to create trainings" });
+      }
+      const result = insertTrainingSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid training data", errors: result.error.issues });
+      }
+      const training = await storage.createTraining(result.data);
+      res.status(201).json(training);
+    } catch (error) {
+      console.error("Error creating training:", error);
+      res.status(500).json({ error: "Failed to create training" });
+    }
+  });
+  app2.put("/api/trainings/:id", requireAuth4, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+      const hasPermission = await storage.hasPermission(user.id, "manage_trainings") || user.role === "admin";
+      if (!hasPermission) {
+        return res.status(403).json({ message: "Insufficient permissions to update trainings" });
+      }
+      const result = insertTrainingSchema.partial().safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid training data", errors: result.error.issues });
+      }
+      const training = await storage.updateTraining(req.params.id, result.data);
+      res.json(training);
+    } catch (error) {
+      console.error("Error updating training:", error);
+      if (error.message === "Training not found") {
+        return res.status(404).json({ error: "Training not found" });
+      }
+      res.status(500).json({ error: "Failed to update training" });
+    }
+  });
+  app2.delete("/api/trainings/:id", requireAuth4, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+      const hasPermission = await storage.hasPermission(user.id, "manage_trainings") || user.role === "admin";
+      if (!hasPermission) {
+        return res.status(403).json({ message: "Insufficient permissions to delete trainings" });
+      }
+      await storage.deleteTraining(req.params.id);
+      res.json({ message: "Training deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting training:", error);
+      res.status(500).json({ error: "Failed to delete training" });
+    }
+  });
+  app2.get("/api/trainings/:id/participants", async (req, res) => {
+    try {
+      const participants = await storage.getTrainingParticipants(req.params.id);
+      res.json(participants);
+    } catch (error) {
+      console.error("Error fetching training participants:", error);
+      res.status(500).json({ error: "Failed to fetch training participants" });
+    }
+  });
+  app2.post("/api/trainings/:id/participants", requireAuth4, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      const trainingId = req.params.id;
+      const participant = await storage.addTrainingParticipant({
+        trainingId,
+        userId,
+        status: "registered"
+      });
+      res.status(201).json(participant);
+    } catch (error) {
+      console.error("Error adding training participant:", error);
+      res.status(500).json({ error: "Failed to register for training" });
+    }
+  });
+  app2.delete("/api/trainings/:id/participants/:userId", requireAuth4, async (req, res) => {
+    try {
+      const currentUserId = req.session.userId;
+      const { id: trainingId, userId } = req.params;
+      if (currentUserId !== userId) {
+        const user = await storage.getUser(currentUserId);
+        if (!user) {
+          return res.status(401).json({ message: "User not found" });
+        }
+        const hasPermission = await storage.hasPermission(user.id, "manage_trainings") || user.role === "admin";
+        if (!hasPermission) {
+          return res.status(403).json({ message: "Insufficient permissions to remove participant" });
+        }
+      }
+      await storage.removeTrainingParticipant(trainingId, userId);
+      res.json({ message: "Participant removed successfully" });
+    } catch (error) {
+      console.error("Error removing training participant:", error);
+      res.status(500).json({ error: "Failed to remove participant" });
+    }
+  });
+  app2.get("/api/users/:userId/trainings", requireAuth4, async (req, res) => {
+    try {
+      const currentUserId = req.session.userId;
+      const { userId } = req.params;
+      if (currentUserId !== userId) {
+        const user = await storage.getUser(currentUserId);
+        if (!user) {
+          return res.status(401).json({ message: "User not found" });
+        }
+        const hasPermission = await storage.hasPermission(user.id, "manage_trainings") || user.role === "admin";
+        if (!hasPermission) {
+          return res.status(403).json({ message: "Insufficient permissions to view user trainings" });
+        }
+      }
+      const participations = await storage.getUserTrainingParticipations(userId);
+      res.json(participations);
+    } catch (error) {
+      console.error("Error fetching user trainings:", error);
+      res.status(500).json({ error: "Failed to fetch user trainings" });
+    }
+  });
+  app2.get("/api/courses", requireAuth4, async (req, res) => {
+    try {
+      const courses2 = await storage.getCourses();
+      res.json(courses2);
+    } catch (error) {
+      console.error("Error fetching courses:", error);
+      res.status(500).json({ error: "Failed to fetch courses" });
+    }
+  });
+  app2.get("/api/courses/:id", requireAuth4, async (req, res) => {
+    try {
+      const course = await storage.getCourseById(req.params.id);
+      if (!course) {
+        return res.status(404).json({ error: "Course not found" });
+      }
+      res.json(course);
+    } catch (error) {
+      console.error("Error fetching course:", error);
+      res.status(500).json({ error: "Failed to fetch course" });
+    }
+  });
+  app2.post("/api/courses", requireRole4(["admin", "moderator"]), async (req, res) => {
+    try {
+      const validatedData = insertCourseSchema.parse(req.body);
+      const course = await storage.createCourse(validatedData);
+      res.status(201).json(course);
+    } catch (error) {
+      console.error("Error creating course:", error);
+      if (error instanceof Error && error.name === "ZodError") {
+        return res.status(400).json({ error: "Invalid course data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create course" });
+    }
+  });
+  app2.put("/api/courses/:id", requireRole4(["admin", "moderator"]), async (req, res) => {
+    try {
+      const validatedData = insertCourseSchema.parse(req.body);
+      const course = await storage.updateCourse(req.params.id, validatedData);
+      if (!course) {
+        return res.status(404).json({ error: "Course not found" });
+      }
+      res.json(course);
+    } catch (error) {
+      console.error("Error updating course:", error);
+      if (error instanceof Error && error.name === "ZodError") {
+        return res.status(400).json({ error: "Invalid course data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to update course" });
+    }
+  });
+  app2.delete("/api/courses/:id", requireRole4(["admin"]), async (req, res) => {
+    try {
+      await storage.deleteCourse(req.params.id);
+      res.json({ message: "Course deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting course:", error);
+      res.status(500).json({ error: "Failed to delete course" });
+    }
+  });
+  app2.get("/api/courses/:courseId/lessons", requireAuth4, async (req, res) => {
+    try {
+      const lessons2 = await storage.getLessons(req.params.courseId);
+      res.json(lessons2);
+    } catch (error) {
+      console.error("Error fetching lessons:", error);
+      res.status(500).json({ error: "Failed to fetch lessons" });
+    }
+  });
+  app2.get("/api/lessons/:id", requireAuth4, async (req, res) => {
+    try {
+      const lesson = await storage.getLessonById(req.params.id);
+      if (!lesson) {
+        return res.status(404).json({ error: "Lesson not found" });
+      }
+      res.json(lesson);
+    } catch (error) {
+      console.error("Error fetching lesson:", error);
+      res.status(500).json({ error: "Failed to fetch lesson" });
+    }
+  });
+  app2.post("/api/lessons", requireRole4(["admin", "moderator"]), async (req, res) => {
+    try {
+      const validatedData = insertLessonSchema.parse(req.body);
+      const lesson = await storage.createLesson(validatedData);
+      res.status(201).json(lesson);
+    } catch (error) {
+      console.error("Error creating lesson:", error);
+      if (error instanceof Error && error.name === "ZodError") {
+        return res.status(400).json({ error: "Invalid lesson data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create lesson" });
+    }
+  });
+  app2.put("/api/lessons/:id", requireRole4(["admin", "moderator"]), async (req, res) => {
+    try {
+      const validatedData = insertLessonSchema.omit({ courseId: true }).parse(req.body);
+      const lesson = await storage.updateLesson(req.params.id, validatedData);
+      if (!lesson) {
+        return res.status(404).json({ error: "Lesson not found" });
+      }
+      res.json(lesson);
+    } catch (error) {
+      console.error("Error updating lesson:", error);
+      if (error instanceof Error && error.name === "ZodError") {
+        return res.status(400).json({ error: "Invalid lesson data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to update lesson" });
+    }
+  });
+  app2.delete("/api/lessons/:id", requireRole4(["admin", "moderator"]), async (req, res) => {
+    try {
+      await storage.deleteLesson(req.params.id);
+      res.json({ message: "Lesson deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting lesson:", error);
+      res.status(500).json({ error: "Failed to delete lesson" });
+    }
+  });
+  app2.get("/api/my-enrollments", requireAuth4, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      const enrollments2 = await storage.getUserEnrollments(userId);
+      res.json(enrollments2);
+    } catch (error) {
+      console.error("Error fetching enrollments:", error);
+      res.status(500).json({ error: "Failed to fetch enrollments" });
+    }
+  });
+  app2.post("/api/enroll/:courseId", requireAuth4, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      const courseId = req.params.courseId;
+      const existingEnrollments = await storage.getUserEnrollments(userId);
+      const existingEnrollment = existingEnrollments.find((e) => e.courseId === courseId);
+      if (existingEnrollment) {
+        return res.status(400).json({ error: "Already enrolled in this course" });
+      }
+      const enrollment = await storage.enrollUser(userId, courseId);
+      res.status(201).json(enrollment);
+    } catch (error) {
+      console.error("Error enrolling user:", error);
+      res.status(500).json({ error: "Failed to enroll in course" });
+    }
+  });
+  app2.post("/api/lessons/:lessonId/complete", requireAuth4, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      const lessonId = req.params.lessonId;
+      const { courseId } = req.body;
+      const progress = await storage.updateLessonProgress(userId, lessonId, courseId, true);
+      res.json(progress);
+    } catch (error) {
+      console.error("Error updating lesson progress:", error);
+      res.status(500).json({ error: "Failed to update lesson progress" });
+    }
+  });
+  app2.get("/api/courses/:courseId/my-progress", requireAuth4, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      const courseId = req.params.courseId;
+      const progress = await storage.getUserLessonProgress(userId, courseId);
+      res.json(progress);
+    } catch (error) {
+      console.error("Error fetching progress:", error);
+      res.status(500).json({ error: "Failed to fetch progress" });
+    }
+  });
+  app2.get("/api/resources", requireAuth4, async (req, res) => {
+    try {
+      const resources2 = await storage.getResources();
+      res.json(resources2);
+    } catch (error) {
+      console.error("Error fetching resources:", error);
+      res.status(500).json({ error: "Failed to fetch resources" });
+    }
+  });
+  app2.post("/api/resources", requireRole4(["admin", "moderator"]), async (req, res) => {
+    try {
+      const validatedData = insertResourceSchema.parse(req.body);
+      const resource = await storage.createResource(validatedData);
+      res.status(201).json(resource);
+    } catch (error) {
+      console.error("Error creating resource:", error);
+      if (error instanceof Error && error.name === "ZodError") {
+        return res.status(400).json({ error: "Invalid resource data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create resource" });
+    }
+  });
+  app2.put("/api/resources/:id", requireRole4(["admin", "moderator"]), async (req, res) => {
+    try {
+      const validatedData = insertResourceSchema.parse(req.body);
+      const resource = await storage.updateResource(req.params.id, validatedData);
+      if (!resource) {
+        return res.status(404).json({ error: "Resource not found" });
+      }
+      res.json(resource);
+    } catch (error) {
+      console.error("Error updating resource:", error);
+      if (error instanceof Error && error.name === "ZodError") {
+        return res.status(400).json({ error: "Invalid resource data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to update resource" });
+    }
+  });
+  app2.delete("/api/resources/:id", requireRole4(["admin", "moderator"]), async (req, res) => {
+    try {
+      await storage.deleteResource(req.params.id);
+      res.json({ message: "Resource deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting resource:", error);
+      res.status(500).json({ error: "Failed to delete resource" });
+    }
+  });
+  app2.get("/api/my-certificates", requireAuth4, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      const certificates2 = await storage.getUserCertificates(userId);
+      res.json(certificates2);
+    } catch (error) {
+      console.error("Error fetching certificates:", error);
+      res.status(500).json({ error: "Failed to fetch certificates" });
+    }
+  });
+}
+
+// server/routes/admin.ts
+var requireAuth5 = (req, res, next) => {
+  if (!req.session?.userId) {
+    return res.status(401).json({ message: "Authentication required" });
+  }
+  next();
+};
+var requireRole5 = (roles) => {
+  return async (req, res, next) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    const user = await storage.getUser(req.session.userId);
+    if (!user || !roles.includes(user.role)) {
+      return res.status(403).json({ message: "Insufficient permissions" });
+    }
+    req.user = user;
+    next();
+  };
+};
+function registerAdminRoutes(app2) {
+  app2.get("/api/permissions", requireRole5(["admin", "moderator"]), async (req, res) => {
+    try {
+      const users2 = await storage.getUsers();
+      const allPermissions = [];
+      for (const user of users2) {
+        const userPermissions = await storage.getPermissions(user.id);
+        allPermissions.push(...userPermissions);
+      }
+      res.json(allPermissions);
+    } catch (error) {
+      console.error("Error fetching permissions:", error);
+      res.status(500).json({ error: "Failed to fetch permissions" });
+    }
+  });
+  app2.get("/api/permissions/:userId", requireAuth5, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const currentUserId = req.session.userId;
+      if (userId !== currentUserId) {
+        const currentUser = await storage.getUser(currentUserId);
+        if (!currentUser || currentUser.role !== "admin" && currentUser.role !== "moderator") {
+          return res.status(403).json({ message: "Access denied" });
+        }
+      }
+      const permissions2 = await storage.getPermissions(userId);
+      res.json(permissions2);
+    } catch (error) {
+      console.error("Error fetching user permissions:", error);
+      res.status(500).json({ error: "Failed to fetch user permissions" });
+    }
+  });
+  app2.post("/api/permissions", requireRole5(["admin"]), async (req, res) => {
+    try {
+      const result = insertPermissionSchema.safeParse({
+        ...req.body,
+        grantedBy: req.session.userId
+      });
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid permission data", errors: result.error.issues });
+      }
+      const permission = await storage.createPermission(result.data);
+      res.status(201).json(permission);
+    } catch (error) {
+      console.error("Error creating permission:", error);
+      res.status(500).json({ error: "Failed to create permission" });
+    }
+  });
+  app2.delete("/api/permissions/:id", requireRole5(["admin"]), async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.revokePermission(id);
+      res.json({ message: "Permission revoked successfully" });
+    } catch (error) {
+      console.error("Error revoking permission:", error);
+      res.status(500).json({ error: "Failed to revoke permission" });
+    }
+  });
+  app2.post("/api/admin/bulk-permissions", requireRole5(["admin"]), async (req, res) => {
     try {
       const { userId, permissions: permissions2, action } = req.body;
+      const grantedBy = req.session.userId;
       if (action === "grant") {
         for (const permission of permissions2) {
           await storage.createPermission({
             userId,
-            grantedBy: "user-1",
-            // Current admin user
+            grantedBy,
             permission
           });
         }
@@ -2424,7 +5142,81 @@ async function registerRoutes(app2) {
       res.status(500).json({ error: "Failed to manage permissions" });
     }
   });
-  app2.get("/api/views-config", async (req, res) => {
+  app2.get("/api/admin/permission-check/:userId/:permission", requireRole5(["admin", "moderator"]), async (req, res) => {
+    try {
+      const { userId, permission } = req.params;
+      const hasPermission = await storage.hasPermission(userId, permission);
+      res.json({ hasPermission });
+    } catch (error) {
+      console.error("Error checking permission:", error);
+      res.status(500).json({ error: "Failed to check permission" });
+    }
+  });
+  app2.get("/api/employee-categories", requireRole5(["admin", "moderator"]), async (req, res) => {
+    try {
+      const categories2 = await storage.getEmployeeCategories();
+      res.json(categories2);
+    } catch (error) {
+      console.error("Error fetching employee categories:", error);
+      res.status(500).json({ error: "Failed to fetch employee categories" });
+    }
+  });
+  app2.post("/api/employee-categories", requireRole5(["admin"]), async (req, res) => {
+    try {
+      const result = insertEmployeeCategorySchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid employee category data", errors: result.error.issues });
+      }
+      const category = await storage.createEmployeeCategory(result.data);
+      res.status(201).json(category);
+    } catch (error) {
+      console.error("Error creating employee category:", error);
+      res.status(500).json({ error: "Failed to create employee category" });
+    }
+  });
+  app2.patch("/api/employee-categories/:id", requireRole5(["admin"]), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updatedCategory = await storage.updateEmployeeCategory(id, req.body);
+      res.json(updatedCategory);
+    } catch (error) {
+      console.error("Error updating employee category:", error);
+      res.status(500).json({ error: "Failed to update employee category" });
+    }
+  });
+  app2.delete("/api/employee-categories/:id", requireRole5(["admin"]), async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteEmployeeCategory(id);
+      res.json({ message: "Employee category deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting employee category:", error);
+      res.status(500).json({ error: "Failed to delete employee category" });
+    }
+  });
+  app2.get("/api/system-settings", requireRole5(["admin", "moderator"]), async (req, res) => {
+    try {
+      const settings = await storage.getSystemSettings();
+      res.json(settings);
+    } catch (error) {
+      console.error("Error fetching system settings:", error);
+      res.status(500).json({ error: "Failed to fetch system settings" });
+    }
+  });
+  app2.patch("/api/system-settings", requireRole5(["admin"]), async (req, res) => {
+    try {
+      const result = insertSystemSettingsSchema.partial().safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid system settings data", errors: result.error.issues });
+      }
+      const updatedSettings = await storage.updateSystemSettings(result.data);
+      res.json(updatedSettings);
+    } catch (error) {
+      console.error("Error updating system settings:", error);
+      res.status(500).json({ error: "Failed to update system settings" });
+    }
+  });
+  app2.get("/api/views-config", requireRole5(["admin"]), async (req, res) => {
     try {
       const viewsConfig = await storage.getViewsConfig();
       res.json(viewsConfig);
@@ -2433,7 +5225,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ error: "Failed to fetch views configuration" });
     }
   });
-  app2.post("/api/views-config", async (req, res) => {
+  app2.post("/api/views-config", requireRole5(["admin"]), async (req, res) => {
     try {
       const { views } = req.body;
       await storage.saveViewsConfig(views);
@@ -2443,7 +5235,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ error: "Failed to save views configuration" });
     }
   });
-  app2.patch("/api/views-config/:viewId", async (req, res) => {
+  app2.patch("/api/views-config/:viewId", requireRole5(["admin"]), async (req, res) => {
     try {
       const { viewId } = req.params;
       const updates = req.body;
@@ -2454,23 +5246,25 @@ async function registerRoutes(app2) {
       res.status(500).json({ error: "Failed to update view configuration" });
     }
   });
-  app2.get("/api/user/settings", async (req, res) => {
+  app2.get("/api/user/settings", requireAuth5, async (req, res) => {
     try {
-      const userSettings = await storage.getUserSettings("user-1");
+      const userId = req.session.userId;
+      const userSettings = await storage.getUserSettings(userId);
       res.json(userSettings);
     } catch (error) {
       console.error("Error fetching user settings:", error);
       res.status(500).json({ error: "Failed to fetch user settings" });
     }
   });
-  app2.post("/api/user/settings", async (req, res) => {
+  app2.post("/api/user/settings", requireAuth5, async (req, res) => {
     try {
+      const userId = req.session.userId;
       const settings = req.body;
       console.log("Received settings:", JSON.stringify(settings, null, 2));
       if (!settings || typeof settings !== "object") {
         return res.status(400).json({ error: "Invalid settings data" });
       }
-      await storage.saveUserSettings("user-1", settings);
+      await storage.saveUserSettings(userId, settings);
       res.json({
         message: "User settings saved successfully",
         timestamp: (/* @__PURE__ */ new Date()).toISOString()
@@ -2483,7 +5277,55 @@ async function registerRoutes(app2) {
       });
     }
   });
-  app2.post("/api/admin/reset-test-data", async (req, res) => {
+  app2.get("/api/admin/analytics/overview", requireRole5(["admin", "moderator"]), async (req, res) => {
+    try {
+      const stats = await storage.getStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching analytics overview:", error);
+      res.status(500).json({ error: "Failed to fetch analytics overview" });
+    }
+  });
+  app2.get("/api/admin/analytics/users", requireRole5(["admin", "moderator"]), async (req, res) => {
+    try {
+      const users2 = await storage.getUsers();
+      const totalUsers = users2.length;
+      const activeUsers = users2.filter((u) => u.isActive).length;
+      const usersByRole = users2.reduce((acc, user) => {
+        acc[user.role] = (acc[user.role] || 0) + 1;
+        return acc;
+      }, {});
+      res.json({
+        totalUsers,
+        activeUsers,
+        inactiveUsers: totalUsers - activeUsers,
+        usersByRole
+      });
+    } catch (error) {
+      console.error("Error fetching user analytics:", error);
+      res.status(500).json({ error: "Failed to fetch user analytics" });
+    }
+  });
+  app2.get("/api/admin/analytics/content", requireRole5(["admin", "moderator"]), async (req, res) => {
+    try {
+      const [announcements2, documents2, events2, trainings2] = await Promise.all([
+        storage.getAnnouncements(),
+        storage.getDocuments(),
+        storage.getEvents(),
+        storage.getTrainings()
+      ]);
+      res.json({
+        announcements: announcements2.length,
+        documents: documents2.length,
+        events: events2.length,
+        trainings: trainings2.length
+      });
+    } catch (error) {
+      console.error("Error fetching content analytics:", error);
+      res.status(500).json({ error: "Failed to fetch content analytics" });
+    }
+  });
+  app2.post("/api/admin/reset-test-data", requireRole5(["admin"]), async (req, res) => {
     try {
       await storage.resetToTestData();
       res.json({
@@ -2497,250 +5339,74 @@ async function registerRoutes(app2) {
       });
     }
   });
-  app2.get("/api/courses", requireAuth, async (req, res) => {
+  app2.get("/api/search/users", requireAuth5, async (req, res) => {
     try {
-      const courses2 = await storage.getCourses();
-      res.json(courses2);
-    } catch (error) {
-      console.error("Error fetching courses:", error);
-      res.status(500).json({ error: "Failed to fetch courses" });
-    }
-  });
-  app2.get("/api/courses/:id", requireAuth, async (req, res) => {
-    try {
-      const course = await storage.getCourseById(req.params.id);
-      if (!course) {
-        return res.status(404).json({ error: "Course not found" });
+      const { q } = req.query;
+      if (!q || typeof q !== "string") {
+        return res.status(400).json({ error: "Search query required" });
       }
-      res.json(course);
+      const users2 = await storage.getUsers();
+      const searchResults = users2.filter(
+        (user) => user.name.toLowerCase().includes(q.toLowerCase()) || user.username.toLowerCase().includes(q.toLowerCase()) || user.email?.toLowerCase().includes(q.toLowerCase()) || user.department?.toLowerCase().includes(q.toLowerCase())
+      );
+      const safeResults = searchResults.map(({ password, ...user }) => user);
+      res.json(safeResults);
     } catch (error) {
-      console.error("Error fetching course:", error);
-      res.status(500).json({ error: "Failed to fetch course" });
+      console.error("Error searching users:", error);
+      res.status(500).json({ error: "Failed to search users" });
     }
   });
-  app2.post("/api/courses", requireAuth, requireRole(["admin"]), async (req, res) => {
+  app2.get("/api/search/content", requireAuth5, async (req, res) => {
     try {
-      const { insertCourseSchema: insertCourseSchema2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-      const validatedData = insertCourseSchema2.parse(req.body);
-      const course = await storage.createCourse(validatedData);
-      res.status(201).json(course);
-    } catch (error) {
-      console.error("Error creating course:", error);
-      if (error instanceof Error && error.name === "ZodError") {
-        return res.status(400).json({ error: "Invalid course data", details: error.errors });
+      const { q } = req.query;
+      if (!q || typeof q !== "string") {
+        return res.status(400).json({ error: "Search query required" });
       }
-      res.status(500).json({ error: "Failed to create course" });
-    }
-  });
-  app2.get("/api/courses/:courseId/lessons", requireAuth, async (req, res) => {
-    try {
-      const lessons2 = await storage.getLessons(req.params.courseId);
-      res.json(lessons2);
+      const [announcements2, documents2, events2] = await Promise.all([
+        storage.getAnnouncements(),
+        storage.getDocuments(),
+        storage.getEvents()
+      ]);
+      const results = {
+        announcements: announcements2.filter(
+          (item) => item.title.toLowerCase().includes(q.toLowerCase()) || item.content?.toLowerCase().includes(q.toLowerCase())
+        ),
+        documents: documents2.filter(
+          (item) => item.title.toLowerCase().includes(q.toLowerCase()) || item.description?.toLowerCase().includes(q.toLowerCase())
+        ),
+        events: events2.filter(
+          (item) => item.title.toLowerCase().includes(q.toLowerCase()) || item.description?.toLowerCase().includes(q.toLowerCase())
+        )
+      };
+      res.json(results);
     } catch (error) {
-      console.error("Error fetching lessons:", error);
-      res.status(500).json({ error: "Failed to fetch lessons" });
+      console.error("Error searching content:", error);
+      res.status(500).json({ error: "Failed to search content" });
     }
   });
-  app2.get("/api/lessons/:id", requireAuth, async (req, res) => {
-    try {
-      const lesson = await storage.getLessonById(req.params.id);
-      if (!lesson) {
-        return res.status(404).json({ error: "Lesson not found" });
-      }
-      res.json(lesson);
-    } catch (error) {
-      console.error("Error fetching lesson:", error);
-      res.status(500).json({ error: "Failed to fetch lesson" });
-    }
-  });
-  app2.get("/api/my-enrollments", requireAuth, async (req, res) => {
-    try {
-      const userId = req.userId;
-      const enrollments2 = await storage.getUserEnrollments(userId);
-      res.json(enrollments2);
-    } catch (error) {
-      console.error("Error fetching enrollments:", error);
-      res.status(500).json({ error: "Failed to fetch enrollments" });
-    }
-  });
-  app2.post("/api/enroll/:courseId", requireAuth, async (req, res) => {
-    try {
-      const userId = req.userId;
-      const courseId = req.params.courseId;
-      const existingEnrollments = await storage.getUserEnrollments(userId);
-      const existingEnrollment = existingEnrollments.find((e) => e.courseId === courseId);
-      if (existingEnrollment) {
-        return res.status(400).json({ error: "Already enrolled in this course" });
-      }
-      const enrollment = await storage.enrollUser(userId, courseId);
-      res.status(201).json(enrollment);
-    } catch (error) {
-      console.error("Error enrolling user:", error);
-      res.status(500).json({ error: "Failed to enroll in course" });
-    }
-  });
-  app2.post("/api/lessons/:lessonId/complete", requireAuth, async (req, res) => {
-    try {
-      const userId = req.userId;
-      const lessonId = req.params.lessonId;
-      const { courseId } = req.body;
-      const progress = await storage.updateLessonProgress(userId, lessonId, courseId, true);
-      res.json(progress);
-    } catch (error) {
-      console.error("Error updating lesson progress:", error);
-      res.status(500).json({ error: "Failed to update lesson progress" });
-    }
-  });
-  app2.get("/api/courses/:courseId/my-progress", requireAuth, async (req, res) => {
-    try {
-      const userId = req.userId;
-      const courseId = req.params.courseId;
-      const progress = await storage.getUserLessonProgress(userId, courseId);
-      res.json(progress);
-    } catch (error) {
-      console.error("Error fetching progress:", error);
-      res.status(500).json({ error: "Failed to fetch progress" });
-    }
-  });
-  app2.get("/api/resources", requireAuth, async (req, res) => {
-    try {
-      const resources2 = await storage.getResources();
-      res.json(resources2);
-    } catch (error) {
-      console.error("Error fetching resources:", error);
-      res.status(500).json({ error: "Failed to fetch resources" });
-    }
-  });
-  app2.post("/api/resources", requireAuth, requireRole(["admin", "moderator"]), async (req, res) => {
-    try {
-      const { insertResourceSchema: insertResourceSchema2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-      const validatedData = insertResourceSchema2.parse(req.body);
-      const resource = await storage.createResource(validatedData);
-      res.status(201).json(resource);
-    } catch (error) {
-      console.error("Error creating resource:", error);
-      if (error instanceof Error && error.name === "ZodError") {
-        return res.status(400).json({ error: "Invalid resource data", details: error.errors });
-      }
-      res.status(500).json({ error: "Failed to create resource" });
-    }
-  });
-  app2.get("/api/my-certificates", requireAuth, async (req, res) => {
-    try {
-      const userId = req.userId;
-      const certificates2 = await storage.getUserCertificates(userId);
-      res.json(certificates2);
-    } catch (error) {
-      console.error("Error fetching certificates:", error);
-      res.status(500).json({ error: "Failed to fetch certificates" });
-    }
-  });
-  app2.post("/api/lessons", requireAuth, requireRole(["admin", "moderator"]), async (req, res) => {
-    try {
-      const { insertLessonSchema: insertLessonSchema2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-      const validatedData = insertLessonSchema2.parse(req.body);
-      const lesson = await storage.createLesson(validatedData);
-      res.status(201).json(lesson);
-    } catch (error) {
-      console.error("Error creating lesson:", error);
-      if (error instanceof Error && error.name === "ZodError") {
-        return res.status(400).json({ error: "Invalid lesson data", details: error.errors });
-      }
-      res.status(500).json({ error: "Failed to create lesson" });
-    }
-  });
-  app2.put("/api/courses/:id", requireAuth, requireRole(["admin", "moderator"]), async (req, res) => {
-    try {
-      const { insertCourseSchema: insertCourseSchema2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-      const validatedData = insertCourseSchema2.parse(req.body);
-      const course = await storage.updateCourse(req.params.id, validatedData);
-      if (!course) {
-        return res.status(404).json({ error: "Course not found" });
-      }
-      res.json(course);
-    } catch (error) {
-      console.error("Error updating course:", error);
-      if (error instanceof Error && error.name === "ZodError") {
-        return res.status(400).json({ error: "Invalid course data", details: error.errors });
-      }
-      res.status(500).json({ error: "Failed to update course" });
-    }
-  });
-  app2.delete("/api/courses/:id", requireAuth, requireRole(["admin"]), async (req, res) => {
-    try {
-      await storage.deleteCourse(req.params.id);
-      res.json({ message: "Course deleted successfully" });
-    } catch (error) {
-      console.error("Error deleting course:", error);
-      res.status(500).json({ error: "Failed to delete course" });
-    }
-  });
-  app2.put("/api/lessons/:id", requireAuth, requireRole(["admin", "moderator"]), async (req, res) => {
-    try {
-      const { insertLessonSchema: insertLessonSchema2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-      const validatedData = insertLessonSchema2.omit({ courseId: true }).parse(req.body);
-      const lesson = await storage.updateLesson(req.params.id, validatedData);
-      if (!lesson) {
-        return res.status(404).json({ error: "Lesson not found" });
-      }
-      res.json(lesson);
-    } catch (error) {
-      console.error("Error updating lesson:", error);
-      if (error instanceof Error && error.name === "ZodError") {
-        return res.status(400).json({ error: "Invalid lesson data", details: error.errors });
-      }
-      res.status(500).json({ error: "Failed to update lesson" });
-    }
-  });
-  app2.delete("/api/lessons/:id", requireAuth, requireRole(["admin", "moderator"]), async (req, res) => {
-    try {
-      await storage.deleteLesson(req.params.id);
-      res.json({ message: "Lesson deleted successfully" });
-    } catch (error) {
-      console.error("Error deleting lesson:", error);
-      res.status(500).json({ error: "Failed to delete lesson" });
-    }
-  });
-  app2.put("/api/resources/:id", requireAuth, requireRole(["admin", "moderator"]), async (req, res) => {
-    try {
-      const { insertResourceSchema: insertResourceSchema2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-      const validatedData = insertResourceSchema2.parse(req.body);
-      const resource = await storage.updateResource(req.params.id, validatedData);
-      if (!resource) {
-        return res.status(404).json({ error: "Resource not found" });
-      }
-      res.json(resource);
-    } catch (error) {
-      console.error("Error updating resource:", error);
-      if (error instanceof Error && error.name === "ZodError") {
-        return res.status(400).json({ error: "Invalid resource data", details: error.errors });
-      }
-      res.status(500).json({ error: "Failed to update resource" });
-    }
-  });
-  app2.delete("/api/resources/:id", requireAuth, requireRole(["admin", "moderator"]), async (req, res) => {
-    try {
-      await storage.deleteResource(req.params.id);
-      res.json({ message: "Resource deleted successfully" });
-    } catch (error) {
-      console.error("Error deleting resource:", error);
-      res.status(500).json({ error: "Failed to delete resource" });
-    }
-  });
-  const httpServer = createServer(app2);
-  return httpServer;
+}
+
+// server/routes/index.ts
+async function registerRoutes(app2) {
+  registerAuthRoutes(app2);
+  registerUsersRoutes(app2);
+  registerContentRoutes(app2);
+  registerMessagingRoutes(app2);
+  registerTrainingRoutes(app2);
+  registerAdminRoutes(app2);
+  return createServer(app2);
 }
 
 // server/vite.ts
 import express from "express";
-import fs from "fs";
-import path2 from "path";
+import fs2 from "fs";
+import path3 from "path";
 import { createServer as createViteServer, createLogger } from "vite";
 
 // vite.config.ts
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import path from "path";
+import path2 from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 var vite_config_default = defineConfig({
   plugins: [
@@ -2754,14 +5420,14 @@ var vite_config_default = defineConfig({
   ],
   resolve: {
     alias: {
-      "@": path.resolve(import.meta.dirname, "client", "src"),
-      "@shared": path.resolve(import.meta.dirname, "shared"),
-      "@assets": path.resolve(import.meta.dirname, "attached_assets")
+      "@": path2.resolve(import.meta.dirname, "client", "src"),
+      "@shared": path2.resolve(import.meta.dirname, "shared"),
+      "@assets": path2.resolve(import.meta.dirname, "attached_assets")
     }
   },
-  root: path.resolve(import.meta.dirname, "client"),
+  root: path2.resolve(import.meta.dirname, "client"),
   build: {
-    outDir: path.resolve(import.meta.dirname, "dist/public"),
+    outDir: path2.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true
   },
   server: {
@@ -2807,13 +5473,13 @@ async function setupVite(app2, server) {
   app2.use("*", async (req, res, next) => {
     const url = req.originalUrl;
     try {
-      const clientTemplate = path2.resolve(
+      const clientTemplate = path3.resolve(
         import.meta.dirname,
         "..",
         "client",
         "index.html"
       );
-      let template = await fs.promises.readFile(clientTemplate, "utf-8");
+      let template = await fs2.promises.readFile(clientTemplate, "utf-8");
       template = template.replace(
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid()}"`
@@ -2827,37 +5493,174 @@ async function setupVite(app2, server) {
   });
 }
 function serveStatic(app2) {
-  const distPath = path2.resolve(import.meta.dirname, "public");
-  if (!fs.existsSync(distPath)) {
+  const distPath = path3.resolve(import.meta.dirname, "public");
+  if (!fs2.existsSync(distPath)) {
     throw new Error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`
     );
   }
   app2.use(express.static(distPath));
   app2.use("*", (_req, res) => {
-    res.sendFile(path2.resolve(distPath, "index.html"));
+    res.sendFile(path3.resolve(distPath, "index.html"));
   });
+}
+
+// server/middleware/security.ts
+import { rateLimit } from "express-rate-limit";
+import helmet from "helmet";
+function configureSecurity(app2) {
+  app2.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+        fontSrc: ["'self'", "https://fonts.gstatic.com"],
+        imgSrc: ["'self'", "data:", "https:"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"]
+        // Required for Vite dev
+      }
+    },
+    crossOriginEmbedderPolicy: false
+  }));
+  const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1e3,
+    // 15 minutes
+    max: 5,
+    // Limit each IP to 5 requests per windowMs
+    message: {
+      error: "Too many authentication attempts. Please try again later."
+    },
+    standardHeaders: true,
+    legacyHeaders: false
+  });
+  app2.use("/api/auth/login", authLimiter);
+  app2.use("/api/auth/register", authLimiter);
+  const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1e3,
+    // 15 minutes
+    max: 100,
+    // Limit each IP to 100 requests per windowMs
+    message: {
+      error: "Too many API requests. Please try again later."
+    },
+    standardHeaders: true,
+    legacyHeaders: false
+  });
+  app2.use("/api", apiLimiter);
+}
+function sanitizeInput(req, res, next) {
+  if (req.body && typeof req.body === "object") {
+    req.body = sanitizeObject(req.body);
+  }
+  next();
+}
+function sanitizeObject(obj) {
+  if (typeof obj !== "object" || obj === null) {
+    return obj;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(sanitizeObject);
+  }
+  const sanitized = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (typeof value === "string") {
+      sanitized[key] = value.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "").replace(/javascript:/gi, "").replace(/on\w+\s*=/gi, "");
+    } else if (typeof value === "object") {
+      sanitized[key] = sanitizeObject(value);
+    } else {
+      sanitized[key] = value;
+    }
+  }
+  return sanitized;
+}
+function getSessionConfig() {
+  return {
+    secret: process.env.SESSION_SECRET || "intrasphere-dev-secret-change-in-production",
+    resave: false,
+    saveUninitialized: false,
+    rolling: true,
+    cookie: {
+      secure: process.env.NODE_ENV === "production",
+      httpOnly: true,
+      maxAge: 1e3 * 60 * 60 * 24,
+      // 24 hours
+      sameSite: "strict"
+    }
+  };
+}
+
+// server/migrations.ts
+init_auth();
+async function migratePasswordsToHash() {
+  console.log("Starting password migration...");
+  try {
+    const users2 = await storage.getUsers();
+    for (const user of users2) {
+      if (!user.password.startsWith("$2b$")) {
+        console.log(`Migrating password for user: ${user.username}`);
+        const hashedPassword = await AuthService.hashPassword(user.password);
+        await storage.updateUser(user.id, { password: hashedPassword });
+        console.log(`\u2705 Password migrated for user: ${user.username}`);
+      } else {
+        console.log(`\u23ED\uFE0F  Password already hashed for user: ${user.username}`);
+      }
+    }
+    console.log("\u2705 Password migration completed successfully");
+  } catch (error) {
+    console.error("\u274C Password migration failed:", error);
+    throw error;
+  }
+}
+async function ensureDefaultAdmin() {
+  try {
+    const users2 = await storage.getUsers();
+    const adminExists = users2.some((user) => user.role === "admin");
+    if (!adminExists) {
+      console.log("Creating default admin user...");
+      const hashedPassword = await AuthService.hashPassword("admin123!");
+      const adminUser = {
+        username: "admin",
+        password: hashedPassword,
+        name: "Administrateur",
+        role: "admin",
+        email: "admin@intrasphere.com",
+        isActive: true,
+        employeeId: "ADMIN001",
+        department: "Direction",
+        position: "Administrateur syst\xE8me"
+      };
+      await storage.createUser(adminUser);
+      console.log("\u2705 Default admin user created");
+      console.log("   Username: admin");
+      console.log("   Password: admin123!");
+      console.log("   \u26A0\uFE0F  Please change the default password after first login");
+    }
+  } catch (error) {
+    console.error("\u274C Failed to create default admin:", error);
+  }
+}
+async function runMigrations() {
+  console.log("\u{1F504} Running database migrations...");
+  await migratePasswordsToHash();
+  await ensureDefaultAdmin();
+  console.log("\u2705 All migrations completed");
 }
 
 // server/index.ts
 var app = express2();
+if (process.env.NODE_ENV === "development" && process.env.REPL_ID) {
+  app.set("trust proxy", 1);
+} else {
+  app.set("trust proxy", false);
+}
+configureSecurity(app);
 app.use(express2.json({ limit: "50mb" }));
 app.use(express2.urlencoded({ extended: false, limit: "50mb" }));
-app.use(session({
-  secret: "intrasphere-secret-key-change-in-production",
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: false,
-    // Set to true in production with HTTPS
-    httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1e3
-    // 24 hours
-  }
-}));
+app.use(sanitizeInput);
+app.use(session(getSessionConfig()));
 app.use((req, res, next) => {
   const start = Date.now();
-  const path3 = req.path;
+  const path4 = req.path;
   let capturedJsonResponse = void 0;
   const originalResJson = res.json;
   res.json = function(bodyJson, ...args) {
@@ -2866,8 +5669,8 @@ app.use((req, res, next) => {
   };
   res.on("finish", () => {
     const duration = Date.now() - start;
-    if (path3.startsWith("/api")) {
-      let logLine = `${req.method} ${path3} ${res.statusCode} in ${duration}ms`;
+    if (path4.startsWith("/api")) {
+      let logLine = `${req.method} ${path4} ${res.statusCode} in ${duration}ms`;
       if (capturedJsonResponse) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
@@ -2880,7 +5683,9 @@ app.use((req, res, next) => {
   next();
 });
 (async () => {
+  await runMigrations();
   const server = await registerRoutes(app);
+  initializeWebSocket(server);
   app.use((err, _req, res, _next) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
