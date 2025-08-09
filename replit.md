@@ -1,7 +1,7 @@
 # Replit.md
 
 ## Overview
-IntraSphere is a React-based enterprise intranet portal for corporate communication, offering features like announcements, document management, employee directory, internal messaging, and complaints/reclamations management. The platform aims to provide a comprehensive, modern, and user-friendly experience for internal communication and management within an organization, with a focus on a polished UI/UX using advanced design principles like glass morphism. Its vision is to be a comprehensive internal communication and management solution, enhancing corporate efficiency and employee engagement.
+IntraSphere is an enterprise intranet portal for corporate communication and internal management. Built with React and PHP versions, it provides comprehensive features for announcements, document management, employee directory, internal messaging, and complaints/reclamations management. The platform focuses on enhancing internal communication and operational efficiency within organizations through a modern, polished interface using glass morphism design principles.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.

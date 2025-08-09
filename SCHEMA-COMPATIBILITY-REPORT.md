@@ -89,11 +89,11 @@ FOREIGN KEY (training_id) REFERENCES trainings(id) ON DELETE CASCADE
 
 ## 📊 Fonctionnalités Avancées Supportées
 
-### E-Learning Complet
-- **Cours** : Création, gestion, inscription
-- **Leçons** : Progression, vidéos, ressources
-- **Quiz** : Questions, tentatives, scores
-- **Certificats** : Génération automatique
+### Formation d'Entreprise
+- **Sessions** : Organisation formations internes
+- **Participants** : Inscription et suivi employés
+- **Ressources** : Documents et supports formation
+- **Évaluations** : Feedback et scores participants
 
 ### Forum Communautaire
 - **Catégories** : Organisation, modération
@@ -153,6 +153,6 @@ Les schemas de base de données sont **parfaitement implémentés** pour :
 - ✅ **3 types de base** (PostgreSQL + MySQL + Universel)
 - ✅ **Tous hébergements** (Mutualisé + VPS + Cloud)
 - ✅ **Migration bidirectionnelle** (PHP ↔ React)
-- ✅ **100% fonctionnalités** (E-learning + Forum + Permissions)
+- ✅ **100% fonctionnalités** (Formations + Forum + Permissions)
 
 Le projet est **prêt pour déploiement production** sur toute infrastructure !
