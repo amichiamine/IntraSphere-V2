@@ -8,12 +8,15 @@ class Database {
     private $connection;
     
     private function __construct() {
+        // Charger les variables d'environnement depuis .env
+        $this->loadEnvFile();
+        
         try {
             // Configuration par défaut (à adapter selon l'hébergement)
             $host = $_ENV['DB_HOST'] ?? 'localhost';
-            $port = $_ENV['DB_PORT'] ?? '5432';
+            $port = $_ENV['DB_PORT'] ?? '3306';
             $dbname = $_ENV['DB_NAME'] ?? 'intrasphere';
-            $username = $_ENV['DB_USER'] ?? 'postgres';
+            $username = $_ENV['DB_USER'] ?? 'root';
             $password = $_ENV['DB_PASSWORD'] ?? '';
             
             // Support MySQL et PostgreSQL
@@ -68,6 +71,28 @@ class Database {
     
     public function lastInsertId(): string {
         return $this->connection->lastInsertId();
+    }
+    
+    /**
+     * Charger le fichier .env
+     */
+    private function loadEnvFile() {
+        $envFile = __DIR__ . '/../.env';
+        
+        if (file_exists($envFile)) {
+            $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+            
+            foreach ($lines as $line) {
+                // Ignorer les commentaires
+                if (strpos(trim($line), '#') === 0) continue;
+                
+                // Séparer clé=valeur
+                if (strpos($line, '=') !== false) {
+                    list($key, $value) = explode('=', $line, 2);
+                    $_ENV[trim($key)] = trim($value);
+                }
+            }
+        }
     }
 }
 
