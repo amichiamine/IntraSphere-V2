@@ -1,7 +1,7 @@
 # Guide d'Installation - IntraSphere PHP
 
 ## 📋 Prérequis
-- PHP 8.0+ avec extensions PDO, PDO_MySQL ou PDO_PostgreSQL
+- PHP 8.1+ avec extensions PDO, PDO_MySQL ou PDO_PostgreSQL
 - Base de données MySQL 8.0+ ou PostgreSQL 12+
 - Serveur web (Apache/Nginx) avec mod_rewrite activé
 
