@@ -51,12 +51,14 @@ if (is_dir('php-migration')) {
 
 // Ajouter les scripts d'installation et de diagnostic
 $rootFiles = [
+    'index.php' => 'Index principal (redirection)',
     'install_fixed.php' => 'Installation corrigée',
     'reset_installation.php' => 'Reset de l\'installation',
-    'debug_index.php' => 'Diagnostic système',
-    'simple_index.php' => 'Version simplifiée',
+    'debug_index.php' => 'Diagnostic système complet',
+    'simple_index.php' => 'Version simplifiée fonctionnelle',
     'test_intrasphere.php' => 'Script de test final',
-    'index_fixed.php' => 'Index corrigé de référence'
+    'index_fixed.php' => 'Index corrigé de référence',
+    'generate_package.php' => 'Générateur de package'
 ];
 
 foreach ($rootFiles as $file => $description) {
@@ -77,14 +79,16 @@ $readmeContent = "# IntraSphere PHP - Package Complet
 - **intrasphere/index.php** : Point d'entrée principal (CORRIGÉ)
 
 ### 🔧 Scripts d'Installation
+- **index.php** : Point d'entrée avec redirection automatique
 - **install_fixed.php** : Installation automatique corrigée
 - **reset_installation.php** : Reset complet de l'installation
 
-### 🧪 Scripts de Diagnostic
+### 🧪 Scripts de Diagnostic et Test
 - **debug_index.php** : Diagnostic complet du système
 - **simple_index.php** : Version simplifiée fonctionnelle
 - **test_intrasphere.php** : Tests finaux et vérifications
 - **index_fixed.php** : Version de référence corrigée
+- **generate_package.php** : Générateur de package de déploiement
 
 ## 🛠️ Installation
 
@@ -124,17 +128,22 @@ $readmeContent = "# IntraSphere PHP - Package Complet
 
 ```
 intrasphere-php-package/
-├── intrasphere/               # Application principale
-│   ├── config/               # Configuration
-│   ├── src/                  # Code source
-│   ├── views/                # Templates
+├── intrasphere/               # Application principale corrigée
+│   ├── config/               # Configuration système
+│   ├── src/                  # Code source MVC
+│   ├── views/                # Templates HTML
 │   ├── public/               # Assets publics
 │   ├── .env                  # Configuration DB
-│   └── index.php            # Point d'entrée
-├── install_fixed.php         # Installation
-├── debug_index.php          # Diagnostic
-├── simple_index.php         # Version test
-└── README.md               # Ce fichier
+│   └── index.php            # Point d'entrée (CORRIGÉ)
+├── index.php                # Redirection automatique
+├── install_fixed.php         # Installation automatique
+├── reset_installation.php    # Reset complet
+├── debug_index.php          # Diagnostic système
+├── simple_index.php         # Version test simple
+├── test_intrasphere.php     # Tests finaux
+├── index_fixed.php          # Référence corrigée
+├── generate_package.php     # Générateur package
+└── README.md               # Documentation
 ```
 
 ## 🌟 Fonctionnalités
