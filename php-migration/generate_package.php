@@ -49,11 +49,15 @@ if (is_dir('php-migration')) {
     echo "<p>✅ Dossier php-migration ajouté</p>";
 }
 
-// Ajouter les scripts d'installation et de diagnostic
+// Ajouter l'index principal de redirection
 $rootFiles = [
-    'index.php' => 'Index principal (redirection)',
-    'install_fixed.php' => 'Installation corrigée',
-    'reset_installation.php' => 'Reset de l\'installation',
+    '../index.php' => 'Index principal (redirection vers php-migration)'
+];
+
+// Ajouter les scripts PHP du dossier php-migration
+$phpMigrationFiles = [
+    'install_fixed.php' => 'Installation automatique corrigée',
+    'reset_installation.php' => 'Reset complet de l\'installation', 
     'debug_index.php' => 'Diagnostic système complet',
     'simple_index.php' => 'Version simplifiée fonctionnelle',
     'test_intrasphere.php' => 'Script de test final',
@@ -61,9 +65,18 @@ $rootFiles = [
     'generate_package.php' => 'Générateur de package'
 ];
 
+// Ajouter l'index principal
 foreach ($rootFiles as $file => $description) {
     if (file_exists($file)) {
-        $zip->addFile($file, $file);
+        $zip->addFile($file, basename($file));
+        echo "✅ $description (" . basename($file) . ")<br>";
+    }
+}
+
+// Ajouter les scripts PHP du dossier php-migration  
+foreach ($phpMigrationFiles as $file => $description) {
+    if (file_exists($file)) {
+        $zip->addFile($file, 'php-scripts/' . $file);
         echo "✅ $description ($file)<br>";
     }
 }
@@ -78,12 +91,12 @@ $readmeContent = "# IntraSphere PHP - Package Complet
 - **intrasphere/.env** : Configuration de base de données
 - **intrasphere/index.php** : Point d'entrée principal (CORRIGÉ)
 
-### 🔧 Scripts d'Installation
-- **index.php** : Point d'entrée avec redirection automatique
+### 🔧 Fichiers de Base
+- **index.php** : Point d'entrée avec redirection automatique vers php-scripts/
+
+### 📂 Dossier php-scripts/
 - **install_fixed.php** : Installation automatique corrigée
 - **reset_installation.php** : Reset complet de l'installation
-
-### 🧪 Scripts de Diagnostic et Test
 - **debug_index.php** : Diagnostic complet du système
 - **simple_index.php** : Version simplifiée fonctionnelle
 - **test_intrasphere.php** : Tests finaux et vérifications
@@ -136,13 +149,14 @@ intrasphere-php-package/
 │   ├── .env                  # Configuration DB
 │   └── index.php            # Point d'entrée (CORRIGÉ)
 ├── index.php                # Redirection automatique
-├── install_fixed.php         # Installation automatique
-├── reset_installation.php    # Reset complet
-├── debug_index.php          # Diagnostic système
-├── simple_index.php         # Version test simple
-├── test_intrasphere.php     # Tests finaux
-├── index_fixed.php          # Référence corrigée
-├── generate_package.php     # Générateur package
+├── php-scripts/             # Scripts de maintenance PHP
+│   ├── install_fixed.php     # Installation automatique
+│   ├── reset_installation.php # Reset complet
+│   ├── debug_index.php      # Diagnostic système
+│   ├── simple_index.php     # Version test simple
+│   ├── test_intrasphere.php # Tests finaux
+│   ├── index_fixed.php      # Référence corrigée
+│   └── generate_package.php # Générateur package
 └── README.md               # Documentation
 ```
 

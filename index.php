@@ -38,13 +38,18 @@ if (file_exists(__DIR__ . '/php-migration/index.php')) {
             
             <div class="steps">
                 <h3>Étapes d'installation :</h3>
-                <div class="step">1. <a href="install_fixed.php" class="btn">Installer IntraSphere</a></div>
-                <div class="step">2. <a href="test_intrasphere.php" class="btn">Tester l'installation</a></div>
-                <div class="step">3. <a href="debug_index.php" class="btn">Diagnostic système</a></div>
+                <div class="step">1. <a href="php-migration/install_fixed.php" class="btn">Installer IntraSphere</a></div>
+                <div class="step">2. <a href="php-migration/test_intrasphere.php" class="btn">Tester l'installation</a></div>
+                <div class="step">3. <a href="php-migration/debug_index.php" class="btn">Diagnostic système</a></div>
             </div>
             
             <p><strong>Ou utilisez la version simplifiée :</strong></p>
-            <a href="simple_index.php" class="btn">Version Simplifiée</a>
+            <a href="php-migration/simple_index.php" class="btn">Version Simplifiée</a>
+            
+            <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                <h3>📂 Scripts organisés dans php-migration/</h3>
+                <p>Tous les scripts PHP ont été regroupés dans le dossier <strong>php-migration</strong> pour une meilleure organisation.</p>
+            </div>
         </div>
     </body>
     </html>
