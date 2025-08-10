@@ -30,12 +30,13 @@ function addFolderToZip($zip, $folder, $baseFolder = '') {
     foreach ($files as $file) {
         if (!$file->isDir()) {
             $filePath = $file->getRealPath();
-            $relativePath = $baseFolder . substr($filePath, strlen($folder) + 1);
+            $relativePath = $baseFolder . substr($filePath, strlen(realpath($folder)) + 1);
             
-            // Exclure certains fichiers
+            // Exclure certains fichiers et nettoyer les chemins
             if (strpos($relativePath, '.git') === false && 
                 strpos($relativePath, 'node_modules') === false &&
-                strpos($relativePath, '.zip') === false) {
+                strpos($relativePath, '.zip') === false &&
+                !empty(trim($relativePath))) {
                 $zip->addFile($filePath, $relativePath);
                 echo "✅ " . $relativePath . "<br>";
             }
@@ -43,10 +44,10 @@ function addFolderToZip($zip, $folder, $baseFolder = '') {
     }
 }
 
-// Ajouter le dossier php-migration complet
-if (is_dir('php-migration')) {
-    addFolderToZip($zip, 'php-migration', 'intrasphere/');
-    echo "<p>✅ Dossier php-migration ajouté</p>";
+// Ajouter le dossier php-migration comme application principale
+if (is_dir('.')) {
+    addFolderToZip($zip, '.', 'intrasphere/');
+    echo "<p>✅ Application IntraSphere ajoutée</p>";
 }
 
 // Ajouter l'index principal de redirection
@@ -73,10 +74,10 @@ foreach ($rootFiles as $file => $description) {
     }
 }
 
-// Ajouter les scripts PHP du dossier php-migration  
+// Ajouter les scripts PHP à la racine du package  
 foreach ($phpMigrationFiles as $file => $description) {
     if (file_exists($file)) {
-        $zip->addFile($file, 'php-scripts/' . $file);
+        $zip->addFile($file, $file);
         echo "✅ $description ($file)<br>";
     }
 }
@@ -91,10 +92,8 @@ $readmeContent = "# IntraSphere PHP - Package Complet
 - **intrasphere/.env** : Configuration de base de données
 - **intrasphere/index.php** : Point d'entrée principal (CORRIGÉ)
 
-### 🔧 Fichiers de Base
-- **index.php** : Point d'entrée avec redirection automatique vers php-scripts/
-
-### 📂 Dossier php-scripts/
+### 🔧 Scripts d'Installation et Maintenance
+- **index.php** : Point d'entrée avec redirection automatique
 - **install_fixed.php** : Installation automatique corrigée
 - **reset_installation.php** : Reset complet de l'installation
 - **debug_index.php** : Diagnostic complet du système
@@ -112,11 +111,12 @@ $readmeContent = "# IntraSphere PHP - Package Complet
 ### Étape 2 : Installation Automatique
 1. Accédez à **install_fixed.php** dans votre navigateur
 2. Suivez l'assistant d'installation
-3. Configurez votre base de données
+3. Configurez votre base de données MySQL
 
-### Étape 3 : Tests
+### Étape 3 : Tests et Vérification
 1. Utilisez **test_intrasphere.php** pour vérifier l'installation
-2. Testez la connexion avec **simple_index.php**
+2. Testez la connexion avec **simple_index.php** 
+3. Accédez à l'application via **intrasphere/index.php**
 3. Accédez à l'application via **intrasphere/index.php**
 
 ## 👥 Comptes de Test
@@ -149,14 +149,13 @@ intrasphere-php-package/
 │   ├── .env                  # Configuration DB
 │   └── index.php            # Point d'entrée (CORRIGÉ)
 ├── index.php                # Redirection automatique
-├── php-scripts/             # Scripts de maintenance PHP
-│   ├── install_fixed.php     # Installation automatique
-│   ├── reset_installation.php # Reset complet
-│   ├── debug_index.php      # Diagnostic système
-│   ├── simple_index.php     # Version test simple
-│   ├── test_intrasphere.php # Tests finaux
-│   ├── index_fixed.php      # Référence corrigée
-│   └── generate_package.php # Générateur package
+├── install_fixed.php         # Installation automatique
+├── reset_installation.php    # Reset complet
+├── debug_index.php          # Diagnostic système
+├── simple_index.php         # Version test simple
+├── test_intrasphere.php     # Tests finaux
+├── index_fixed.php          # Référence corrigée
+├── generate_package.php     # Générateur package
 └── README.md               # Documentation
 ```
 
