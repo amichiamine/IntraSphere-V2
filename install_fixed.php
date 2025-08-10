@@ -1,19 +1,37 @@
 <?php
 /**
- * Script d'installation automatisé IntraSphere PHP
- * Version : 1.0.0
+ * Script d'installation automatisé IntraSphere PHP - Version Corrigée
+ * Version : 1.0.1
  * Compatibilité : Hébergement web mutualisé (cPanel, OVH, Ionos, etc.)
  */
 
 // Démarrage du buffer de sortie pour éviter les erreurs de headers
 ob_start();
 
-// Configuration des erreurs pour le debug
+// Configuration des erreurs
 error_reporting(E_ALL);
-ini_set('display_errors', 0); // Désactiver l'affichage direct des erreurs
+ini_set('display_errors', 0);
 
 // Démarrage de la session pour suivre l'installation
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Fonction de redirection sécurisée
+function safeRedirect($url) {
+    // Nettoyer le buffer
+    if (ob_get_level()) {
+        ob_end_clean();
+    }
+    header('Location: ' . $url);
+    exit;
+}
+
+// Fonction de gestion des erreurs
+function handleError($message, $details = []) {
+    error_log("IntraSphere Install Error: " . $message . " " . json_encode($details));
+    return $message;
+}
 
 ?>
 <!DOCTYPE html>
@@ -303,16 +321,6 @@ session_start();
                 <p>Installation automatisée de votre plateforme intranet d'entreprise</p>
             </div>
             
-            <!-- Progress Bar -->
-            <div class="progress-bar">
-                <div class="progress-fill" id="progressFill"></div>
-            </div>
-            
-            <!-- Navigation Steps -->
-            <div style="display: flex; justify-content: center; margin-bottom: 30px;">
-                <span id="stepIndicator">Étape 1 sur 5 - Configuration</span>
-            </div>
-            
             <?php
             
             class IntraSphereInstaller {
@@ -392,19 +400,23 @@ session_start();
                 }
                 
                 public function processStep() {
-                    switch ($this->currentStep) {
-                        case 1:
-                            return $this->showConfigurationForm();
-                        case 2:
-                            return $this->testDatabaseConnection();
-                        case 3:
-                            return $this->installFiles();
-                        case 4:
-                            return $this->createDatabase();
-                        case 5:
-                            return $this->finalize();
-                        default:
-                            return $this->showError('Étape inconnue');
+                    try {
+                        switch ($this->currentStep) {
+                            case 1:
+                                return $this->showConfigurationForm();
+                            case 2:
+                                return $this->testDatabaseConnection();
+                            case 3:
+                                return $this->installFiles();
+                            case 4:
+                                return $this->createDatabase();
+                            case 5:
+                                return $this->finalize();
+                            default:
+                                return $this->showError('Étape inconnue');
+                        }
+                    } catch (Exception $e) {
+                        return $this->showError('Erreur: ' . $e->getMessage());
                     }
                 }
                 
@@ -417,6 +429,16 @@ session_start();
                     $config = $_SESSION['db_config'] ?? [];
                     
                     ?>
+                    <!-- Progress Bar -->
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 20%"></div>
+                    </div>
+                    
+                    <!-- Navigation Steps -->
+                    <div style="display: flex; justify-content: center; margin-bottom: 30px;">
+                        <span>Étape 1 sur 5 - Configuration</span>
+                    </div>
+                    
                     <div class="step active">
                         <div class="step-header">
                             <div class="step-number">1</div>
@@ -545,10 +567,8 @@ session_start();
                     $_SESSION['db_config'] = $config;
                     $_SESSION['install_step'] = 2;
                     
-                    // Nettoyage du buffer et redirection
-                    ob_end_clean();
-                    header('Location: ' . $_SERVER['PHP_SELF']);
-                    exit;
+                    // Redirection sécurisée
+                    safeRedirect($_SERVER['PHP_SELF']);
                 }
                 
                 private function testDatabaseConnection() {
@@ -556,9 +576,7 @@ session_start();
                     
                     if (empty($config)) {
                         $_SESSION['install_step'] = 1;
-                        ob_end_clean();
-                        header('Location: ' . $_SERVER['PHP_SELF']);
-                        exit;
+                        safeRedirect($_SERVER['PHP_SELF']);
                     }
                     
                     if ($_POST && isset($_POST['action'])) {
@@ -566,13 +584,21 @@ session_start();
                             return $this->performConnectionTest();
                         } elseif ($_POST['action'] === 'continue') {
                             $_SESSION['install_step'] = 3;
-                            ob_end_clean();
-                            header('Location: ' . $_SERVER['PHP_SELF']);
-                            exit;
+                            safeRedirect($_SERVER['PHP_SELF']);
                         }
                     }
                     
                     ?>
+                    <!-- Progress Bar -->
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 40%"></div>
+                    </div>
+                    
+                    <!-- Navigation Steps -->
+                    <div style="display: flex; justify-content: center; margin-bottom: 30px;">
+                        <span>Étape 2 sur 5 - Test de connexion base de données</span>
+                    </div>
+                    
                     <div class="step completed">
                         <div class="step-header">
                             <div class="step-number">✓</div>
@@ -658,6 +684,16 @@ session_start();
                     }
                     
                     ?>
+                    <!-- Progress Bar -->
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 60%"></div>
+                    </div>
+                    
+                    <!-- Navigation Steps -->
+                    <div style="display: flex; justify-content: center; margin-bottom: 30px;">
+                        <span>Étape 3 sur 5 - Installation des fichiers</span>
+                    </div>
+                    
                     <div class="step completed">
                         <div class="step-header">
                             <div class="step-number">✓</div>
@@ -764,18 +800,10 @@ session_start();
                         </div>
                         
                         <form method="POST" action="<?= $_SERVER['PHP_SELF'] ?>">
-                            <input type="hidden" name="step" value="4">
-                            <button type="submit" class="btn btn-success">
+                            <button type="submit" class="btn btn-success" onclick="setTimeout(() => window.location.href='<?= $_SERVER['PHP_SELF'] ?>?step=4', 1000)">
                                 Suivant - Créer la base de données
                             </button>
                         </form>
-                        
-                        <script>
-                            setTimeout(function() {
-                                // Redirection automatique
-                                window.location.href = '<?= $_SERVER['PHP_SELF'] ?>?auto_next=1';
-                            }, 3000);
-                        </script>
                     <?php else: ?>
                         <div class="alert alert-error">
                             <strong>❌ Erreurs lors de l'installation</strong><br>
@@ -796,6 +824,16 @@ session_start();
                     }
                     
                     ?>
+                    <!-- Progress Bar -->
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 80%"></div>
+                    </div>
+                    
+                    <!-- Navigation Steps -->
+                    <div style="display: flex; justify-content: center; margin-bottom: 30px;">
+                        <span>Étape 4 sur 5 - Création de la base de données</span>
+                    </div>
+                    
                     <div class="step completed">
                         <div class="step-header">
                             <div class="step-number">✓</div>
@@ -877,17 +915,10 @@ session_start();
                         </div>
                         
                         <form method="POST" action="<?= $_SERVER['PHP_SELF'] ?>">
-                            <input type="hidden" name="step" value="5">
-                            <button type="submit" class="btn btn-success">
+                            <button type="submit" class="btn btn-success" onclick="setTimeout(() => window.location.href='<?= $_SERVER['PHP_SELF'] ?>?step=5', 1000)">
                                 Finaliser l'installation
                             </button>
                         </form>
-                        
-                        <script>
-                            setTimeout(function() {
-                                window.location.href = '<?= $_SERVER['PHP_SELF'] ?>?auto_final=1';
-                            }, 2000);
-                        </script>
                         <?php
                         
                         $_SESSION['install_step'] = 5;
@@ -904,6 +935,16 @@ session_start();
                 
                 private function finalize() {
                     ?>
+                    <!-- Progress Bar -->
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 100%"></div>
+                    </div>
+                    
+                    <!-- Navigation Steps -->
+                    <div style="display: flex; justify-content: center; margin-bottom: 30px;">
+                        <span>Étape 5 sur 5 - Installation terminée !</span>
+                    </div>
+                    
                     <div class="step completed">
                         <div class="step-header">
                             <div class="step-number">✓</div>
@@ -1230,7 +1271,7 @@ CREATE INDEX idx_trainings_start_date ON trainings(start_date)";
                     $demoPassword = password_hash('password123', PASSWORD_DEFAULT);
                     
                     // Insérer les utilisateurs
-                    $stmt = $pdo->prepare("INSERT INTO users (id, username, password, name, role, employee_id, department, position, email, phone) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                    $stmt = $pdo->prepare("INSERT IGNORE INTO users (id, username, password, name, role, employee_id, department, position, email, phone) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                     
                     $users = [
                         ['admin', 'admin', $adminPassword, 'Administrateur Système', 'admin', 'EMP-001', 'IT', 'Administrateur Système', 'admin@intrasphere.com', '+33 1 23 45 67 89'],
@@ -1243,7 +1284,7 @@ CREATE INDEX idx_trainings_start_date ON trainings(start_date)";
                     }
                     
                     // Insérer des annonces de démonstration
-                    $stmt = $pdo->prepare("INSERT INTO announcements (id, title, content, type, author_id, author_name, icon, is_important) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                    $stmt = $pdo->prepare("INSERT IGNORE INTO announcements (id, title, content, type, author_id, author_name, icon, is_important) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
                     
                     $announcements = [
                         ['ann-1', 'Bienvenue sur IntraSphere', 'Bienvenue sur votre nouvelle plateforme intranet ! Découvrez toutes les fonctionnalités disponibles.', 'important', 'admin', 'Administrateur Système', '🎉', true],
@@ -1269,28 +1310,9 @@ CREATE INDEX idx_trainings_start_date ON trainings(start_date)";
                 $_SESSION['install_step'] = (int)$_GET['step'];
             }
             
-            if (isset($_GET['auto_next'])) {
-                $_SESSION['install_step'] = 4;
-            }
-            
-            if (isset($_GET['auto_final'])) {
-                $_SESSION['install_step'] = 5;
-            }
-            
             // Instancier l'installateur
             $installer = new IntraSphereInstaller();
-            $currentStep = $installer->getCurrentStep();
             
-            // Mettre à jour la barre de progression
-            $progress = ($currentStep / 5) * 100;
-            ?>
-            
-            <script>
-                document.getElementById('progressFill').style.width = '<?= $progress ?>%';
-                document.getElementById('stepIndicator').textContent = 'Étape <?= $currentStep ?> sur 5 - <?= $installer->getStepTitle($currentStep) ?>';
-            </script>
-            
-            <?php
             // Traiter l'étape actuelle
             $installer->processStep();
             ?>
