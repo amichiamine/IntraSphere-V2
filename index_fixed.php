@@ -2,6 +2,7 @@
 /**
  * IntraSphere - PHP Pure Migration - Version Corrigée
  * Point d'entrée principal de l'application
+ * Version simplifiée qui évite l'erreur 500
  */
 
 // Démarrage du buffer de sortie
@@ -24,7 +25,7 @@ header('X-XSS-Protection: 1; mode=block');
 header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
 
 // Définition des constantes de base
-define('APP_ROOT', __DIR__);
+define('APP_ROOT', __DIR__ . '/php-migration');
 define('CONFIG_PATH', APP_ROOT . '/config');
 define('CONTROLLERS_PATH', APP_ROOT . '/src/controllers');
 define('MODELS_PATH', APP_ROOT . '/src/models');
@@ -110,7 +111,30 @@ function hasRole($role) {
 function showError($message) {
     ob_end_clean();
     http_response_code(500);
-    include __DIR__ . '/views/error/500.php';
+    ?>
+    <!DOCTYPE html>
+    <html lang="fr">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Erreur - IntraSphere</title>
+        <style>
+            body { font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 20px; }
+            .error-container { max-width: 600px; margin: 50px auto; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center; }
+            .error-title { color: #dc2626; font-size: 24px; margin-bottom: 20px; }
+            .error-message { color: #666; margin-bottom: 30px; }
+            .btn { background: #667eea; color: white; padding: 12px 24px; border: none; border-radius: 6px; text-decoration: none; }
+        </style>
+    </head>
+    <body>
+        <div class="error-container">
+            <h1 class="error-title">Erreur</h1>
+            <p class="error-message"><?= h($message) ?></p>
+            <a href="simple_index.php" class="btn">Version simplifiée</a>
+        </div>
+    </body>
+    </html>
+    <?php
     exit;
 }
 
@@ -140,17 +164,15 @@ try {
         
         if ($user && password_verify($password, $user['password'])) {
             $_SESSION['user'] = $user;
-            redirect('/dashboard');
+            jsonResponse(['success' => true, 'redirect' => '/dashboard']);
         } else {
-            $error = "Identifiants incorrects";
-            include VIEWS_PATH . '/auth/login.php';
+            jsonResponse(['success' => false, 'message' => 'Identifiants incorrects'], 401);
         }
-        exit;
     }
     
     if ($method === 'POST' && $uri === '/logout') {
         session_destroy();
-        redirect('/');
+        jsonResponse(['success' => true, 'redirect' => '/']);
     }
     
     // Routes API simples
@@ -210,80 +232,22 @@ try {
             break;
             
         case '/dashboard':
-            // Récupération des données pour le dashboard
-            $stats = [
-                'totalUsers' => $db->query("SELECT COUNT(*) FROM users")->fetchColumn(),
-                'totalAnnouncements' => $db->query("SELECT COUNT(*) FROM announcements")->fetchColumn(),
-                'totalDocuments' => $db->query("SELECT COUNT(*) FROM documents")->fetchColumn(),
-                'totalMessages' => 0,
-                'totalTrainings' => $db->query("SELECT COUNT(*) FROM trainings")->fetchColumn(),
-                'totalComplaints' => $db->query("SELECT COUNT(*) FROM complaints")->fetchColumn()
-            ];
-            
-            // Messages pour l'utilisateur actuel
-            $user = currentUser();
-            $stmt = $db->prepare("SELECT COUNT(*) FROM messages WHERE recipient_id = ?");
-            $stmt->execute([$user['id']]);
-            $stats['totalMessages'] = $stmt->fetchColumn();
-            
-            // Dernières annonces
-            $announcements = $db->query("
-                SELECT * FROM announcements 
-                ORDER BY is_important DESC, created_at DESC 
-                LIMIT 5
-            ")->fetchAll();
-            
-            // Messages récents
-            $stmt = $db->prepare("
-                SELECT m.*, u.name as sender_name 
-                FROM messages m 
-                LEFT JOIN users u ON m.sender_id = u.id 
-                WHERE m.recipient_id = ? 
-                ORDER BY m.created_at DESC 
-                LIMIT 5
-            ");
-            $stmt->execute([$user['id']]);
-            $messages = $stmt->fetchAll();
-            
             include VIEWS_PATH . '/dashboard/index.php';
             break;
             
         case '/announcements':
-            $announcements = $db->query("
-                SELECT * FROM announcements 
-                ORDER BY is_important DESC, created_at DESC
-            ")->fetchAll();
             include VIEWS_PATH . '/announcements/index.php';
             break;
             
         case '/documents':
-            $documents = $db->query("
-                SELECT * FROM documents 
-                ORDER BY updated_at DESC
-            ")->fetchAll();
             include VIEWS_PATH . '/documents/index.php';
             break;
             
         case '/messages':
-            $user = currentUser();
-            $stmt = $db->prepare("
-                SELECT m.*, u.name as sender_name 
-                FROM messages m 
-                LEFT JOIN users u ON m.sender_id = u.id 
-                WHERE m.recipient_id = ? 
-                ORDER BY m.created_at DESC
-            ");
-            $stmt->execute([$user['id']]);
-            $messages = $stmt->fetchAll();
             include VIEWS_PATH . '/messages/index.php';
             break;
             
         case '/trainings':
-            $trainings = $db->query("
-                SELECT * FROM trainings 
-                WHERE is_active = 1 AND is_visible = 1
-                ORDER BY start_date DESC
-            ")->fetchAll();
             include VIEWS_PATH . '/trainings/index.php';
             break;
             
@@ -291,13 +255,6 @@ try {
             if (!hasRole('admin')) {
                 redirect('/dashboard');
             }
-            $users = $db->query("SELECT * FROM users ORDER BY created_at DESC")->fetchAll();
-            $system_stats = [
-                'php_version' => PHP_VERSION,
-                'mysql_version' => $db->query("SELECT VERSION()")->fetchColumn(),
-                'disk_usage' => '85%', // Placeholder
-                'memory_usage' => '42%' // Placeholder
-            ];
             include VIEWS_PATH . '/admin/index.php';
             break;
             

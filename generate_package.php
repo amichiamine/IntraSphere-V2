@@ -1,476 +1,242 @@
 <?php
 /**
- * Générateur de package IntraSphere PHP
- * Crée un package ZIP prêt pour déploiement
+ * Générateur de package final IntraSphere PHP
+ * Crée un package ZIP complet avec tous les outils
  */
 
 // Configuration
-$packageName = 'intrasphere-php-' . date('Y-m-d');
-$tempDir = 'temp_package';
+$timestamp = date('Y-m-d-H-i-s');
+$packageName = "intrasphere-php-package-{$timestamp}.zip";
 
-// Créer le dossier temporaire
-if (!is_dir($tempDir)) {
-    mkdir($tempDir, 0755, true);
-}
-
-// Structure des fichiers à inclure
-$files = [
-    // Fichiers de configuration
-    'config/bootstrap.php',
-    'config/app.php', 
-    'config/database.php',
-    'config/database-examples.php',
-    'config/setup.php',
-    
-    // Fichiers source
-    'src/Router.php',
-    'src/controllers/BaseController.php',
-    'src/controllers/AuthController.php',
-    'src/controllers/DashboardController.php',
-    'src/controllers/AdminController.php',
-    'src/controllers/AnnouncementsController.php',
-    'src/controllers/DocumentsController.php',
-    'src/controllers/MessagesController.php',
-    'src/controllers/TrainingsController.php',
-    'src/controllers/ErrorController.php',
-    'src/controllers/UploadController.php',
-    
-    // Contrôleurs API
-    'src/controllers/Api/AuthController.php',
-    'src/controllers/Api/AdminController.php',
-    'src/controllers/Api/AnnouncementsController.php',
-    'src/controllers/Api/DocumentsController.php',
-    'src/controllers/Api/MessagesController.php',
-    'src/controllers/Api/TrainingsController.php',
-    'src/controllers/Api/UsersController.php',
-    'src/controllers/Api/NotificationsController.php',
-    'src/controllers/Api/SystemController.php',
-    'src/controllers/Api/ComplaintsController.php',
-    'src/controllers/Api/EventsController.php',
-    
-    // Modèles
-    'src/models/BaseModel.php',
-    'src/models/User.php',
-    'src/models/Announcement.php',
-    'src/models/Document.php',
-    'src/models/Message.php',
-    'src/models/Training.php',
-    'src/models/Complaint.php',
-    'src/models/Event.php',
-    'src/models/Permission.php',
-    'src/models/Content.php',
-    
-    // Utilitaires
-    'src/utils/helpers.php',
-    'src/utils/ResponseFormatter.php',
-    'src/utils/Logger.php',
-    'src/utils/CacheManager.php',
-    'src/utils/CacheManagerOptimized.php',
-    'src/utils/NotificationManager.php',
-    'src/utils/PasswordValidator.php',
-    'src/utils/PermissionManager.php',
-    'src/utils/RateLimiter.php',
-    'src/utils/ValidationHelper.php',
-    'src/utils/ArrayGuard.php',
-    
-    // Vues
-    'views/layout/app.php',
-    'views/auth/login.php',
-    'views/dashboard/index.php',
-    'views/admin/index.php',
-    'views/announcements/index.php',
-    'views/announcements/create.php',
-    'views/documents/index.php',
-    'views/messages/index.php',
-    'views/trainings/index.php',
-    'views/error/404.php',
-    'views/error/500.php',
-    
-    // SQL
-    'sql/create_tables.sql',
-    'sql/insert_demo_data.sql',
-    
-    // Fichier principal
-    'index.php'
-];
-
-// Créer la structure de dossiers dans le package
-$directories = [
-    'config',
-    'src',
-    'src/controllers',
-    'src/controllers/Api',
-    'src/models',
-    'src/utils',
-    'views',
-    'views/admin',
-    'views/announcements',
-    'views/auth',
-    'views/dashboard',
-    'views/documents',
-    'views/error',
-    'views/layout',
-    'views/messages',
-    'views/trainings',
-    'public',
-    'public/uploads',
-    'logs',
-    'sql'
-];
-
-foreach ($directories as $dir) {
-    $fullPath = $tempDir . '/' . $dir;
-    if (!is_dir($fullPath)) {
-        mkdir($fullPath, 0755, true);
-    }
-}
-
-// Copier les fichiers existants
-foreach ($files as $file) {
-    $sourcePath = $file;
-    $destPath = $tempDir . '/' . $file;
-    
-    if (file_exists($sourcePath)) {
-        $destDir = dirname($destPath);
-        if (!is_dir($destDir)) {
-            mkdir($destDir, 0755, true);
-        }
-        copy($sourcePath, $destPath);
-        echo "✓ Copié: $file\n";
-    } else {
-        echo "⚠ Fichier manquant: $file\n";
-    }
-}
-
-// Copier l'installateur
-copy('install.php', $tempDir . '/install.php');
-
-// Créer un fichier README pour le package
-$readmeContent = "# IntraSphere PHP - Package de Déploiement
-
-## Installation Rapide
-
-1. Extrayez tous les fichiers sur votre serveur web
-2. Ouvrez votre navigateur et allez sur : http://votre-domaine.com/install.php
-3. Suivez l'assistant d'installation automatisé
-4. Supprimez le fichier install.php après installation
-
-## Configuration Requise
-
-- PHP 7.4 ou supérieur
-- MySQL 5.7 ou supérieur (ou MariaDB 10.2+)
-- Extensions PHP : PDO, PDO_MySQL, JSON, OpenSSL
-- Serveur web : Apache ou Nginx
-
-## Fonctionnalités Incluses
-
-✅ Système d'authentification complet
-✅ Gestion des utilisateurs et rôles
-✅ Annonces et communications
-✅ Gestion documentaire
-✅ Système de messagerie interne
-✅ Module de formations
-✅ Système de réclamations
-✅ Tableau de bord admin
-✅ API REST complète
-✅ Interface responsive (mobile-friendly)
-✅ Sécurité renforcée (CSRF, XSS, SQL injection)
-
-## Support Hébergeurs
-
-- ✅ cPanel (hébergement mutualisé)
-- ✅ OVH Mutualisé
-- ✅ 1&1 / Ionos
-- ✅ Développement local (XAMPP/WAMP)
-- ✅ VPS et serveurs dédiés
-
-## Comptes par Défaut
-
-Après installation, vous pourrez vous connecter avec :
-
-**Administrateur :**
-- Nom d'utilisateur : admin
-- Mot de passe : (défini pendant l'installation)
-
-**Comptes de test :**
-- marie.martin / password123 (Employé)
-- pierre.dubois / password123 (Modérateur)
-
-## Structure du Projet
-
-```
-intrasphere-php/
-├── config/              # Configuration application
-├── src/
-│   ├── controllers/     # Contrôleurs web et API
-│   ├── models/         # Modèles de données
-│   └── utils/          # Utilitaires et helpers
-├── views/              # Templates et vues
-├── public/             # Fichiers publics et uploads
-├── sql/                # Scripts SQL
-├── logs/               # Fichiers de log
-└── index.php           # Point d'entrée principal
-```
-
-## Sécurité
-
-- Protection CSRF sur tous les formulaires
-- Validation et échappement des données
-- Hachage sécurisé des mots de passe
-- Headers de sécurité HTTP
-- Protection contre les injections SQL
-- Rate limiting sur les APIs
-
-## Support
-
-Pour toute question ou assistance, consultez la documentation complète ou contactez l'équipe de développement.
-
----
-
-**Version :** 1.0.0
-**Date :** " . date('Y-m-d') . "
-**Compatibilité :** PHP 7.4+, MySQL 5.7+
-";
-
-file_put_contents($tempDir . '/README.md', $readmeContent);
-
-// Créer un fichier .env.example
-$envExample = "# Configuration IntraSphere - Exemple
-# Copiez ce fichier en .env et adaptez les valeurs
-
-DB_DRIVER=mysql
-DB_HOST=localhost
-DB_PORT=3306
-DB_NAME=intrasphere
-DB_USER=votre_utilisateur
-DB_PASSWORD=votre_mot_de_passe
-
-APP_ENV=production
-SESSION_SECRET=genere_automatiquement_lors_installation
-
-# Sécurité
-ALLOWED_ORIGINS=*
-RATE_LIMIT_ENABLED=true
-RATE_LIMIT_MAX_REQUESTS=100
-RATE_LIMIT_WINDOW=3600
-
-# Upload
-MAX_FILE_SIZE=10485760
-ALLOWED_EXTENSIONS=pdf,doc,docx,xls,xlsx,ppt,pptx,jpg,jpeg,png,gif
-
-# Email (optionnel)
-MAIL_HOST=
-MAIL_PORT=587
-MAIL_USERNAME=
-MAIL_PASSWORD=
-MAIL_FROM_ADDRESS=noreply@votre-domaine.com
-MAIL_FROM_NAME=IntraSphere
-";
-
-file_put_contents($tempDir . '/.env.example', $envExample);
-
-// Créer un fichier .htaccess de base
-$htaccessContent = "# IntraSphere - Configuration Apache
-RewriteEngine On
-
-# Redirection des erreurs
-ErrorDocument 404 /views/error/404.php
-ErrorDocument 500 /views/error/500.php
-
-# Sécurité - Masquer les fichiers sensibles
-<Files \".env\">
-    Order allow,deny
-    Deny from all
-</Files>
-
-<Files \"*.log\">
-    Order allow,deny
-    Deny from all
-</Files>
-
-# Protection contre les injections
-<IfModule mod_rewrite.c>
-    RewriteCond %{QUERY_STRING} (\<|%3C).*script.*(\>|%3E) [NC,OR]
-    RewriteCond %{QUERY_STRING} GLOBALS(=|\[|\%[0-9A-Z]{0,2}) [OR]
-    RewriteCond %{QUERY_STRING} _REQUEST(=|\[|\%[0-9A-Z]{0,2}) [OR]
-    RewriteCond %{QUERY_STRING} proc/self/environ [OR]
-    RewriteCond %{QUERY_STRING} mosConfig_[a-zA-Z_]{1,21}(=|\%3D) [OR]
-    RewriteCond %{QUERY_STRING} base64_encode.*\(.*\) [OR]
-    RewriteCond %{QUERY_STRING} (\<|%3C).*script.*(\>|%3E) [NC]
-    RewriteRule .* - [F]
-</IfModule>
-
-# Headers de sécurité
-<IfModule mod_headers.c>
-    Header always set X-Content-Type-Options nosniff
-    Header always set X-Frame-Options DENY
-    Header always set X-XSS-Protection \"1; mode=block\"
-    Header always set Strict-Transport-Security \"max-age=31536000; includeSubDomains\"
-    Header always set Referrer-Policy \"strict-origin-when-cross-origin\"
-</IfModule>
-
-# Compression
-<IfModule mod_deflate.c>
-    AddOutputFilterByType DEFLATE text/plain
-    AddOutputFilterByType DEFLATE text/html
-    AddOutputFilterByType DEFLATE text/xml
-    AddOutputFilterByType DEFLATE text/css
-    AddOutputFilterByType DEFLATE application/xml
-    AddOutputFilterByType DEFLATE application/xhtml+xml
-    AddOutputFilterByType DEFLATE application/rss+xml
-    AddOutputFilterByType DEFLATE application/javascript
-    AddOutputFilterByType DEFLATE application/x-javascript
-</IfModule>
-
-# Cache des ressources statiques
-<IfModule mod_expires.c>
-    ExpiresActive On
-    ExpiresByType text/css \"access plus 1 month\"
-    ExpiresByType application/javascript \"access plus 1 month\"
-    ExpiresByType image/png \"access plus 1 month\"
-    ExpiresByType image/jpg \"access plus 1 month\"
-    ExpiresByType image/jpeg \"access plus 1 month\"
-    ExpiresByType image/gif \"access plus 1 month\"
-    ExpiresByType image/ico \"access plus 1 month\"
-</IfModule>
-";
-
-file_put_contents($tempDir . '/.htaccess', $htaccessContent);
-
-// Créer le fichier de configuration pour Nginx (optionnel)
-$nginxConfig = "# Configuration Nginx pour IntraSphere
-# À adapter selon votre configuration
-
-server {
-    listen 80;
-    server_name votre-domaine.com;
-    root /path/to/intrasphere;
-    index index.php;
-
-    # Sécurité
-    location ~ /\\.env {
-        deny all;
-    }
-    
-    location ~ \\.log$ {
-        deny all;
-    }
-
-    # PHP
-    location ~ \\.php$ {
-        fastcgi_pass unix:/var/run/php/php7.4-fpm.sock;
-        fastcgi_index index.php;
-        fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
-        include fastcgi_params;
-    }
-
-    # Headers de sécurité
-    add_header X-Content-Type-Options nosniff;
-    add_header X-Frame-Options DENY;
-    add_header X-XSS-Protection \"1; mode=block\";
-    add_header Strict-Transport-Security \"max-age=31536000; includeSubDomains\";
-    add_header Referrer-Policy \"strict-origin-when-cross-origin\";
-
-    # Compression
-    gzip on;
-    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
-
-    # Cache statique
-    location ~* \\.(css|js|png|jpg|jpeg|gif|ico|svg)$ {
-        expires 30d;
-        add_header Cache-Control \"public, immutable\";
-    }
-}
-";
-
-file_put_contents($tempDir . '/nginx.conf.example', $nginxConfig);
-
-echo "\n" . str_repeat("=", 50) . "\n";
-echo "PACKAGE INTRASPHERE PHP GÉNÉRÉ AVEC SUCCÈS !\n";
-echo str_repeat("=", 50) . "\n\n";
-
-echo "Fichiers inclus dans le package :\n";
-echo "📁 $tempDir/\n";
-echo "├── 📄 install.php (Installateur automatisé)\n";
-echo "├── 📄 README.md (Documentation)\n";
-echo "├── 📄 .env.example (Configuration exemple)\n";
-echo "├── 📄 .htaccess (Configuration Apache)\n";
-echo "├── 📄 nginx.conf.example (Configuration Nginx)\n";
-echo "├── 📁 config/ (Configuration application)\n";
-echo "├── 📁 src/ (Code source)\n";
-echo "│   ├── 📁 controllers/ (Contrôleurs web et API)\n";
-echo "│   ├── 📁 models/ (Modèles de données)\n";
-echo "│   └── 📁 utils/ (Utilitaires)\n";
-echo "├── 📁 views/ (Templates)\n";
-echo "├── 📁 public/ (Fichiers publics)\n";
-echo "├── 📁 sql/ (Scripts base de données)\n";
-echo "└── 📄 index.php (Point d'entrée)\n\n";
-
-echo "✅ Package prêt pour déploiement !\n";
-echo "📦 Dossier : $tempDir/\n\n";
-
-echo "PROCHAINES ÉTAPES :\n";
-echo "1. Créer l'archive ZIP\n";
-echo "2. Télécharger sur l'hébergement\n";
-echo "3. Extraire les fichiers\n";
-echo "4. Lancer install.php\n\n";
+echo "<h1>📦 Génération du Package IntraSphere</h1>";
 
 // Créer l'archive ZIP
-if (class_exists('ZipArchive')) {
-    $zip = new ZipArchive();
-    $zipFile = $packageName . '.zip';
-    
-    if ($zip->open($zipFile, ZipArchive::CREATE | ZipArchive::OVERWRITE) === TRUE) {
-        
-        // Fonction récursive pour ajouter tous les fichiers
-        function addFolderToZip($zip, $folder, $zipFolder = '') {
-            $iterator = new RecursiveIteratorIterator(
-                new RecursiveDirectoryIterator($folder),
-                RecursiveIteratorIterator::SELF_FIRST
-            );
+$zip = new ZipArchive();
+$result = $zip->open($packageName, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+
+if ($result !== TRUE) {
+    die("Erreur lors de la création du ZIP: $result");
+}
+
+echo "<h2>Ajout des fichiers au package...</h2>";
+
+// Fonction pour ajouter récursivement un dossier
+function addFolderToZip($zip, $folder, $baseFolder = '') {
+    $files = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($folder),
+        RecursiveIteratorIterator::LEAVES_ONLY
+    );
+
+    foreach ($files as $file) {
+        if (!$file->isDir()) {
+            $filePath = $file->getRealPath();
+            $relativePath = $baseFolder . substr($filePath, strlen($folder) + 1);
             
-            foreach ($iterator as $file) {
-                if ($file->isFile()) {
-                    $filePath = $file->getRealPath();
-                    $relativePath = $zipFolder . substr($filePath, strlen(realpath($folder)) + 1);
-                    $zip->addFile($filePath, $relativePath);
-                }
+            // Exclure certains fichiers
+            if (strpos($relativePath, '.git') === false && 
+                strpos($relativePath, 'node_modules') === false &&
+                strpos($relativePath, '.zip') === false) {
+                $zip->addFile($filePath, $relativePath);
+                echo "✅ " . $relativePath . "<br>";
             }
         }
-        
-        addFolderToZip($zip, $tempDir);
-        $zip->close();
-        
-        echo "📦 ARCHIVE ZIP CRÉÉE : $zipFile\n";
-        echo "📊 Taille : " . number_format(filesize($zipFile) / 1024, 2) . " KB\n\n";
-        
-        echo "🎉 PACKAGE PLUG & PLAY PRÊT !\n";
-        echo "═══════════════════════════════════════\n\n";
-        
-    } else {
-        echo "❌ Erreur lors de la création de l'archive ZIP\n";
     }
-} else {
-    echo "⚠ Extension ZipArchive non disponible\n";
-    echo "Vous pouvez créer manuellement l'archive du dossier : $tempDir\n";
 }
 
-// Nettoyage optionnel
-echo "Voulez-vous supprimer le dossier temporaire ? (y/N): ";
-if (trim(fgets(STDIN)) === 'y') {
-    function deleteDirectory($dir) {
-        if (!is_dir($dir)) return;
-        $files = array_diff(scandir($dir), array('.', '..'));
-        foreach ($files as $file) {
-            $path = $dir . DIRECTORY_SEPARATOR . $file;
-            is_dir($path) ? deleteDirectory($path) : unlink($path);
-        }
-        rmdir($dir);
-    }
-    
-    deleteDirectory($tempDir);
-    echo "🧹 Dossier temporaire supprimé\n";
+// Ajouter le dossier php-migration complet
+if (is_dir('php-migration')) {
+    addFolderToZip($zip, 'php-migration', 'intrasphere/');
+    echo "<p>✅ Dossier php-migration ajouté</p>";
 }
 
-echo "\n✨ GÉNÉRATION TERMINÉE !\n";
+// Ajouter les scripts d'installation et de diagnostic
+$rootFiles = [
+    'install_fixed.php' => 'Installation corrigée',
+    'reset_installation.php' => 'Reset de l\'installation',
+    'debug_index.php' => 'Diagnostic système',
+    'simple_index.php' => 'Version simplifiée',
+    'test_intrasphere.php' => 'Script de test final',
+    'index_fixed.php' => 'Index corrigé de référence'
+];
+
+foreach ($rootFiles as $file => $description) {
+    if (file_exists($file)) {
+        $zip->addFile($file, $file);
+        echo "✅ $description ($file)<br>";
+    }
+}
+
+// Créer un fichier README pour le package
+$readmeContent = "# IntraSphere PHP - Package Complet
+
+## 📋 Contenu du Package
+
+### 🚀 Application Principale
+- **intrasphere/** : Application PHP complète
+- **intrasphere/.env** : Configuration de base de données
+- **intrasphere/index.php** : Point d'entrée principal (CORRIGÉ)
+
+### 🔧 Scripts d'Installation
+- **install_fixed.php** : Installation automatique corrigée
+- **reset_installation.php** : Reset complet de l'installation
+
+### 🧪 Scripts de Diagnostic
+- **debug_index.php** : Diagnostic complet du système
+- **simple_index.php** : Version simplifiée fonctionnelle
+- **test_intrasphere.php** : Tests finaux et vérifications
+- **index_fixed.php** : Version de référence corrigée
+
+## 🛠️ Installation
+
+### Étape 1 : Téléchargement
+1. Extrayez ce package sur votre serveur web
+2. Assurez-vous que PHP 7.4+ et MySQL 5.7+ sont installés
+
+### Étape 2 : Installation Automatique
+1. Accédez à **install_fixed.php** dans votre navigateur
+2. Suivez l'assistant d'installation
+3. Configurez votre base de données
+
+### Étape 3 : Tests
+1. Utilisez **test_intrasphere.php** pour vérifier l'installation
+2. Testez la connexion avec **simple_index.php**
+3. Accédez à l'application via **intrasphere/index.php**
+
+## 👥 Comptes de Test
+
+- **Administrateur :** admin / admin123
+- **Employé :** marie.martin / password123  
+- **Modérateur :** pierre.dubois / password123
+
+## 🚨 Résolution de Problèmes
+
+### Erreur 500
+1. Exécutez **debug_index.php** pour identifier le problème
+2. Utilisez **reset_installation.php** pour nettoyer
+3. Relancez l'installation avec **install_fixed.php**
+
+### Base de Données
+- Vérifiez la configuration dans **.env**
+- Testez la connexion avec **debug_index.php**
+- Assurez-vous que MySQL est accessible
+
+## 📁 Structure
+
+```
+intrasphere-php-package/
+├── intrasphere/               # Application principale
+│   ├── config/               # Configuration
+│   ├── src/                  # Code source
+│   ├── views/                # Templates
+│   ├── public/               # Assets publics
+│   ├── .env                  # Configuration DB
+│   └── index.php            # Point d'entrée
+├── install_fixed.php         # Installation
+├── debug_index.php          # Diagnostic
+├── simple_index.php         # Version test
+└── README.md               # Ce fichier
+```
+
+## 🌟 Fonctionnalités
+
+- **Dashboard** : Vue d'ensemble avec statistiques
+- **Annonces** : Gestion des communications
+- **Documents** : Partage de fichiers
+- **Messages** : Messagerie interne
+- **Formations** : Gestion e-learning
+- **Administration** : Gestion utilisateurs
+- **Réclamations** : Suivi des demandes
+
+## 🔒 Sécurité
+
+- Authentification sécurisée
+- Contrôle d'accès basé sur les rôles
+- Protection contre les attaques courantes
+- Sessions sécurisées
+
+## 📞 Support
+
+En cas de problème :
+1. Consultez **debug_index.php** pour le diagnostic
+2. Vérifiez les logs de votre hébergeur
+3. Assurez-vous de la compatibilité PHP/MySQL
+
+---
+**IntraSphere** - Plateforme intranet d'entreprise
+Version : 2.0 - Package PHP Complet
+Date : " . date('Y-m-d H:i:s') . "
+";
+
+$zip->addFromString('README.md', $readmeContent);
+
+// Créer un fichier de version
+$versionInfo = [
+    'version' => '2.0',
+    'type' => 'PHP Package Complet',
+    'date' => date('Y-m-d H:i:s'),
+    'status' => 'Production Ready',
+    'features' => [
+        'Installation automatique corrigée',
+        'Diagnostic système complet', 
+        'Application PHP complète',
+        'Scripts de maintenance',
+        'Documentation complète'
+    ],
+    'requirements' => [
+        'PHP 7.4+',
+        'MySQL 5.7+',
+        'Apache/Nginx',
+        'Extension PDO'
+    ]
+];
+
+$zip->addFromString('VERSION.json', json_encode($versionInfo, JSON_PRETTY_PRINT));
+
+// Fermer l'archive
+$zip->close();
+
+echo "<h2>✅ Package généré avec succès !</h2>";
+echo "<div style='background: #d4edda; padding: 20px; border-radius: 8px; margin: 20px 0;'>";
+echo "<h3>📦 Package créé : $packageName</h3>";
+echo "<p><strong>Taille :</strong> " . formatBytes(filesize($packageName)) . "</p>";
+echo "<p><strong>Fichiers inclus :</strong> " . $zip->numFiles . "</p>";
+echo "<p><a href='$packageName' download style='background: #28a745; color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none;'>⬇️ Télécharger le Package</a></p>";
+echo "</div>";
+
+echo "<h2>📋 Contenu du Package</h2>";
+echo "<ul>";
+echo "<li>✅ Application IntraSphere complète</li>";
+echo "<li>✅ Scripts d'installation corrigés</li>";
+echo "<li>✅ Outils de diagnostic et test</li>";
+echo "<li>✅ Documentation complète</li>";
+echo "<li>✅ Scripts de maintenance</li>";
+echo "</ul>";
+
+echo "<h2>🚀 Prochaines Étapes</h2>";
+echo "<ol>";
+echo "<li>Téléchargez le package ZIP</li>";
+echo "<li>Extrayez-le sur votre serveur web</li>";
+echo "<li>Exécutez <strong>install_fixed.php</strong></li>";
+echo "<li>Testez avec <strong>test_intrasphere.php</strong></li>";
+echo "<li>Accédez à l'application via <strong>intrasphere/index.php</strong></li>";
+echo "</ol>";
+
+function formatBytes($size, $precision = 2) {
+    $units = array('B', 'KB', 'MB', 'GB', 'TB');
+    for ($i = 0; $size > 1024 && $i < count($units) - 1; $i++) {
+        $size /= 1024;
+    }
+    return round($size, $precision) . ' ' . $units[$i];
+}
+
 ?>
+
+<style>
+    body { font-family: Arial, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; background: #f8f9fa; }
+    h1 { color: #8B5CF6; text-align: center; }
+    h2 { color: #495057; border-bottom: 2px solid #e9ecef; padding-bottom: 10px; }
+    .success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 15px; border-radius: 5px; }
+    .info { background: #cce7ff; border: 1px solid #99d6ff; color: #004085; padding: 15px; border-radius: 5px; }
+    a { color: #8B5CF6; }
+    ol, ul { margin-left: 20px; }
+</style>

@@ -1,138 +1,46 @@
 <?php
 /**
- * Fonctions utilitaires globales
+ * Configuration de l'application IntraSphere
  */
 
-/**
- * Échapper les caractères HTML
- */
-function h(string $string): string {
-    return htmlspecialchars($string, ENT_QUOTES, 'UTF-8');
+// Configuration générale
+define('APP_NAME', 'IntraSphere');
+define('APP_ENV', $_ENV['APP_ENV'] ?? 'production');
+define('APP_DEBUG', APP_ENV === 'development');
+
+// Configuration des erreurs
+if (APP_DEBUG) {
+    error_reporting(E_ALL);
+    ini_set('display_errors', 1);
+} else {
+    error_reporting(0);
+    ini_set('display_errors', 0);
 }
 
-/**
- * Générer un token CSRF
- */
-function csrfToken(): string {
-    if (!isset($_SESSION['_token'])) {
-        $_SESSION['_token'] = bin2hex(random_bytes(32));
-    }
-    return $_SESSION['_token'];
-}
+// Configuration des sessions
+ini_set('session.cookie_httponly', 1);
+ini_set('session.cookie_secure', isset($_SERVER['HTTPS']));
+ini_set('session.use_strict_mode', 1);
+ini_set('session.gc_maxlifetime', SESSION_LIFETIME);
 
-/**
- * Vérifier un token CSRF
- */
-function verifyCsrfToken(string $token): bool {
-    return isset($_SESSION['_token']) && hash_equals($_SESSION['_token'], $token);
-}
+// Timezone
+date_default_timezone_set('Europe/Paris');
 
-/**
- * Redirection sécurisée
- */
-function redirect(string $url, int $status = 302): void {
-    header('Location: ' . $url, true, $status);
-    exit;
-}
+// Configuration de l'upload
+define('MAX_FILE_SIZE', 10 * 1024 * 1024); // 10MB
+define('ALLOWED_EXTENSIONS', ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'jpg', 'jpeg', 'png', 'gif']);
 
-/**
- * Retourner une réponse JSON
- */
-function jsonResponse(array $data, int $status = 200): void {
-    http_response_code($status);
-    header('Content-Type: application/json');
-    echo json_encode($data);
-    exit;
-}
+// Configuration de sécurité
+define('BCRYPT_COST', 12);
+define('SESSION_REGENERATE_INTERVAL', 300); // 5 minutes
 
-/**
- * Log d'erreur simple
- */
-function logError(string $message, array $context = []): void {
-    $logFile = LOGS_PATH . '/error.log';
-    $timestamp = date('Y-m-d H:i:s');
-    $contextStr = !empty($context) ? json_encode($context) : '';
-    $logLine = "[{$timestamp}] ERROR: {$message} {$contextStr}" . PHP_EOL;
-    file_put_contents($logFile, $logLine, FILE_APPEND | LOCK_EX);
-}
+// Headers de sécurité par défaut
+header('X-Content-Type-Options: nosniff');
+header('X-Frame-Options: DENY'); 
+header('X-XSS-Protection: 1; mode=block');
+header('Referrer-Policy: strict-origin-when-cross-origin');
 
-/**
- * Générer un ID unique
- */
-function generateId(string $prefix = ''): string {
-    return $prefix . uniqid('', true);
-}
-
-/**
- * Vérifier si l'utilisateur est connecté
- */
-function isLoggedIn(): bool {
-    return isset($_SESSION['user']) && !empty($_SESSION['user']);
-}
-
-/**
- * Récupérer l'utilisateur connecté
- */
-function currentUser(): ?array {
-    return $_SESSION['user'] ?? null;
-}
-
-/**
- * Vérifier le rôle de l'utilisateur
- */
-function hasRole(string $role): bool {
-    $user = currentUser();
-    return $user && $user['role'] === $role;
-}
-
-/**
- * Vérifier si l'utilisateur est admin
- */
-function isAdmin(): bool {
-    return hasRole('admin');
-}
-
-/**
- * Formater une date
- */
-function formatDate(string $date, string $format = 'd/m/Y H:i'): string {
-    return date($format, strtotime($date));
-}
-
-/**
- * Tronquer un texte
- */
-function truncate(string $text, int $length = 100, string $suffix = '...'): string {
-    if (strlen($text) <= $length) {
-        return $text;
-    }
-    return substr($text, 0, $length) . $suffix;
-}
-
-/**
- * Nettoyer une chaîne pour URL
- */
-function slugify(string $text): string {
-    $text = preg_replace('~[^\pL\d]+~u', '-', $text);
-    $text = iconv('utf-8', 'us-ascii//TRANSLIT', $text);
-    $text = preg_replace('~[^-\w]+~', '', $text);
-    $text = trim($text, '-');
-    $text = preg_replace('~-+~', '-', $text);
-    return strtolower($text);
-}
-
-/**
- * Vérifier une adresse email
- */
-function isValidEmail(string $email): bool {
-    return filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
-}
-
-/**
- * Générer un mot de passe aléatoire
- */
-function generatePassword(int $length = 12): string {
-    $characters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
-    return substr(str_shuffle($characters), 0, $length);
+if (isset($_SERVER['HTTPS'])) {
+    header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
 }
 ?>
