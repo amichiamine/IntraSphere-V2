@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS announcements (
     author_id VARCHAR(50),
     author_name VARCHAR(255) NOT NULL,
     image_url TEXT,
-    icon VARCHAR(10) DEFAULT '📢',
+    icon VARCHAR(10) DEFAULT 'info',
     is_important BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE SET NULL
@@ -440,4 +440,3 @@ INSERT INTO permissions (id, user_id, permission, granted_by) VALUES
 ('perm-4', 'admin-1', 'manage_users', 'admin-1'),
 ('perm-5', 'admin-1', 'manage_trainings', 'admin-1')
 ON DUPLICATE KEY UPDATE permission=VALUES(permission);
-?>

@@ -72,7 +72,7 @@ function createTables($pdo) {
             author_id VARCHAR(50),
             author_name VARCHAR(255) NOT NULL,
             image_url TEXT,
-            icon VARCHAR(10) DEFAULT '📢',
+            icon VARCHAR(10) DEFAULT 'info',
             is_important BOOLEAN DEFAULT FALSE,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE SET NULL
