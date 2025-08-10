@@ -3,6 +3,8 @@
  * Contrôleur de base pour tous les contrôleurs
  */
 
+require_once __DIR__ . '/../utils/ResponseFormatter.php';
+
 abstract class BaseController {
     
     /**

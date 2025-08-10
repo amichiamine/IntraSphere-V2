@@ -11,6 +11,11 @@ define('CONTROLLERS_PATH', APP_ROOT . '/src/controllers');
 define('MODELS_PATH', APP_ROOT . '/src/models');
 define('VIEWS_PATH', APP_ROOT . '/views');
 define('UPLOADS_PATH', APP_ROOT . '/public/uploads');
+define('LOGS_PATH', APP_ROOT . '/logs');
+
+// Constants
+define('APP_VERSION', '1.0.0');
+define('SESSION_LIFETIME', 3600); // 1 hour
 
 // Autoloader simple
 spl_autoload_register(function ($className) {

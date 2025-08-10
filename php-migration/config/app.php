@@ -1,113 +1,138 @@
 <?php
 /**
- * Configuration générale de l'application
+ * Fonctions utilitaires globales
  */
 
-// Configuration générale
-define('APP_NAME', 'IntraSphere');
-define('APP_VERSION', '2.0.0-PHP');
-define('APP_ENV', $_ENV['APP_ENV'] ?? 'production');
-define('APP_DEBUG', APP_ENV === 'development');
+/**
+ * Échapper les caractères HTML
+ */
+function h(string $string): string {
+    return htmlspecialchars($string, ENT_QUOTES, 'UTF-8');
+}
 
-// URLs et chemins
-define('BASE_URL', $_ENV['BASE_URL'] ?? 'http://localhost');
-define('ASSETS_URL', BASE_URL . '/assets');
-define('UPLOADS_URL', BASE_URL . '/uploads');
+/**
+ * Générer un token CSRF
+ */
+function csrfToken(): string {
+    if (!isset($_SESSION['_token'])) {
+        $_SESSION['_token'] = bin2hex(random_bytes(32));
+    }
+    return $_SESSION['_token'];
+}
 
-// Sécurité
-define('SECRET_KEY', $_ENV['SECRET_KEY'] ?? 'changeme-in-production');
-define('PASSWORD_HASH_ALGO', PASSWORD_DEFAULT);
+/**
+ * Vérifier un token CSRF
+ */
+function verifyCsrfToken(string $token): bool {
+    return isset($_SESSION['_token']) && hash_equals($_SESSION['_token'], $token);
+}
 
-// Pagination
-define('DEFAULT_PAGE_SIZE', 20);
-define('MAX_PAGE_SIZE', 100);
+/**
+ * Redirection sécurisée
+ */
+function redirect(string $url, int $status = 302): void {
+    header('Location: ' . $url, true, $status);
+    exit;
+}
 
-// Upload de fichiers
-define('MAX_FILE_SIZE', 50 * 1024 * 1024); // 50MB
-define('ALLOWED_FILE_TYPES', [
-    'jpg', 'jpeg', 'png', 'gif', 'webp', // Images
-    'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', // Documents
-    'mp4', 'avi', 'mov', 'wmv', // Vidéos
-    'mp3', 'wav', 'ogg', // Audio
-    'zip', 'rar', '7z', 'tar', 'gz' // Archives
-]);
+/**
+ * Retourner une réponse JSON
+ */
+function jsonResponse(array $data, int $status = 200): void {
+    http_response_code($status);
+    header('Content-Type: application/json');
+    echo json_encode($data);
+    exit;
+}
 
-// Emails
-define('MAIL_FROM', $_ENV['MAIL_FROM'] ?? 'noreply@intrasphere.local');
-define('MAIL_FROM_NAME', $_ENV['MAIL_FROM_NAME'] ?? APP_NAME);
+/**
+ * Log d'erreur simple
+ */
+function logError(string $message, array $context = []): void {
+    $logFile = LOGS_PATH . '/error.log';
+    $timestamp = date('Y-m-d H:i:s');
+    $contextStr = !empty($context) ? json_encode($context) : '';
+    $logLine = "[{$timestamp}] ERROR: {$message} {$contextStr}" . PHP_EOL;
+    file_put_contents($logFile, $logLine, FILE_APPEND | LOCK_EX);
+}
 
-// Sessions
-define('SESSION_LIFETIME', 3600); // 1 heure
-define('SESSION_NAME', 'INTRASPHERE_SESSION');
+/**
+ * Générer un ID unique
+ */
+function generateId(string $prefix = ''): string {
+    return $prefix . uniqid('', true);
+}
 
-// Cache
-define('CACHE_ENABLED', true);
-define('CACHE_TTL', 300); // 5 minutes
+/**
+ * Vérifier si l'utilisateur est connecté
+ */
+function isLoggedIn(): bool {
+    return isset($_SESSION['user']) && !empty($_SESSION['user']);
+}
 
-// Logs
-define('LOG_ENABLED', true);
-define('LOG_LEVEL', APP_DEBUG ? 'DEBUG' : 'ERROR');
+/**
+ * Récupérer l'utilisateur connecté
+ */
+function currentUser(): ?array {
+    return $_SESSION['user'] ?? null;
+}
 
-// Rôles utilisateurs
-define('USER_ROLES', [
-    'employee' => 'Employé',
-    'moderator' => 'Modérateur', 
-    'admin' => 'Administrateur'
-]);
+/**
+ * Vérifier le rôle de l'utilisateur
+ */
+function hasRole(string $role): bool {
+    $user = currentUser();
+    return $user && $user['role'] === $role;
+}
 
-// Permissions système
-define('PERMISSIONS', [
-    'manage_announcements' => 'Gérer les annonces',
-    'manage_documents' => 'Gérer les documents',
-    'manage_events' => 'Gérer les événements',
-    'manage_users' => 'Gérer les utilisateurs',
-    'manage_trainings' => 'Gérer les formations',
-    'validate_topics' => 'Valider les sujets',
-    'validate_posts' => 'Valider les posts',
-    'manage_employee_categories' => 'Gérer les catégories d\'employés'
-]);
+/**
+ * Vérifier si l'utilisateur est admin
+ */
+function isAdmin(): bool {
+    return hasRole('admin');
+}
 
-// Types de contenu
-define('CONTENT_TYPES', [
-    'video' => 'Vidéo',
-    'image' => 'Image',
-    'document' => 'Document',
-    'audio' => 'Audio'
-]);
+/**
+ * Formater une date
+ */
+function formatDate(string $date, string $format = 'd/m/Y H:i'): string {
+    return date($format, strtotime($date));
+}
 
-// Catégories d'annonces
-define('ANNOUNCEMENT_TYPES', [
-    'info' => 'Information',
-    'important' => 'Important',
-    'event' => 'Événement',
-    'formation' => 'Formation'
-]);
+/**
+ * Tronquer un texte
+ */
+function truncate(string $text, int $length = 100, string $suffix = '...'): string {
+    if (strlen($text) <= $length) {
+        return $text;
+    }
+    return substr($text, 0, $length) . $suffix;
+}
 
-// Priorités des réclamations
-define('COMPLAINT_PRIORITIES', [
-    'low' => 'Faible',
-    'medium' => 'Moyenne',
-    'high' => 'Élevée',
-    'urgent' => 'Urgente'
-]);
+/**
+ * Nettoyer une chaîne pour URL
+ */
+function slugify(string $text): string {
+    $text = preg_replace('~[^\pL\d]+~u', '-', $text);
+    $text = iconv('utf-8', 'us-ascii//TRANSLIT', $text);
+    $text = preg_replace('~[^-\w]+~', '', $text);
+    $text = trim($text, '-');
+    $text = preg_replace('~-+~', '-', $text);
+    return strtolower($text);
+}
 
-// Statuts des réclamations
-define('COMPLAINT_STATUSES', [
-    'open' => 'Ouverte',
-    'in_progress' => 'En cours',
-    'resolved' => 'Résolue',
-    'closed' => 'Fermée'
-]);
+/**
+ * Vérifier une adresse email
+ */
+function isValidEmail(string $email): bool {
+    return filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
+}
 
-// Chemin racine du projet
-define('ROOT_PATH', dirname(__DIR__));
-
-// Types de fichiers autorisés pour l'upload
-define('ALLOWED_FILE_TYPES', [
-    'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
-    'jpg', 'jpeg', 'png', 'gif', 'webp',
-    'mp4', 'avi', 'mov', 'wmv',
-    'mp3', 'wav', 'flac',
-    'txt', 'rtf', 'zip', 'rar'
-]);
+/**
+ * Générer un mot de passe aléatoire
+ */
+function generatePassword(int $length = 12): string {
+    $characters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+    return substr(str_shuffle($characters), 0, $length);
+}
 ?>
