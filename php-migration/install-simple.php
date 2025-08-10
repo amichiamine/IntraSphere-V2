@@ -40,46 +40,87 @@ function testDatabase($host, $dbname, $user, $pass) {
 }
 
 function createTables($pdo) {
-    $sql = "
-    CREATE TABLE IF NOT EXISTS users (
-        id VARCHAR(50) PRIMARY KEY,
-        username VARCHAR(100) UNIQUE NOT NULL,
-        password TEXT NOT NULL,
-        name VARCHAR(255) NOT NULL,
-        role ENUM('admin', 'moderator', 'employee') DEFAULT 'employee',
-        is_active BOOLEAN DEFAULT TRUE,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-    );
+    // Lire le fichier SQL complet s'il existe
+    $sqlFile = __DIR__ . '/sql/create_tables.sql';
+    if (file_exists($sqlFile)) {
+        $sql = file_get_contents($sqlFile);
+    } else {
+        // Structure de base si le fichier SQL n'existe pas
+        $sql = "
+        CREATE TABLE IF NOT EXISTS users (
+            id VARCHAR(50) PRIMARY KEY,
+            username VARCHAR(100) UNIQUE NOT NULL,
+            password VARCHAR(255) NOT NULL,
+            name VARCHAR(255) NOT NULL,
+            role ENUM('employee', 'moderator', 'admin') DEFAULT 'employee',
+            avatar TEXT,
+            employee_id VARCHAR(50) UNIQUE,
+            department VARCHAR(255),
+            position VARCHAR(255),
+            is_active BOOLEAN DEFAULT TRUE,
+            phone VARCHAR(50),
+            email VARCHAR(255),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        );
 
-    CREATE TABLE IF NOT EXISTS announcements (
-        id VARCHAR(50) PRIMARY KEY,
-        title TEXT NOT NULL,
-        content TEXT NOT NULL,
-        type ENUM('info', 'important', 'event') DEFAULT 'info',
-        author_id VARCHAR(50),
-        author_name VARCHAR(255) NOT NULL,
-        is_important BOOLEAN DEFAULT FALSE,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
+        CREATE TABLE IF NOT EXISTS announcements (
+            id VARCHAR(50) PRIMARY KEY,
+            title VARCHAR(255) NOT NULL,
+            content TEXT NOT NULL,
+            type ENUM('info', 'important', 'event', 'formation') DEFAULT 'info',
+            author_id VARCHAR(50),
+            author_name VARCHAR(255) NOT NULL,
+            image_url TEXT,
+            icon VARCHAR(10) DEFAULT '📢',
+            is_important BOOLEAN DEFAULT FALSE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE SET NULL
+        );
 
-    CREATE TABLE IF NOT EXISTS documents (
-        id VARCHAR(50) PRIMARY KEY,
-        title TEXT NOT NULL,
-        description TEXT,
-        category ENUM('regulation', 'policy', 'guide', 'procedure') NOT NULL,
-        file_name TEXT NOT NULL,
-        file_url TEXT NOT NULL,
-        version VARCHAR(20) DEFAULT '1.0',
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-    );
-    ";
+        CREATE TABLE IF NOT EXISTS documents (
+            id VARCHAR(50) PRIMARY KEY,
+            title VARCHAR(255) NOT NULL,
+            description TEXT,
+            category ENUM('regulation', 'policy', 'guide', 'procedure') NOT NULL,
+            file_name VARCHAR(255) NOT NULL,
+            file_url TEXT NOT NULL,
+            version VARCHAR(20) DEFAULT '1.0',
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS system_settings (
+            id VARCHAR(50) PRIMARY KEY DEFAULT 'main',
+            show_announcements BOOLEAN DEFAULT TRUE,
+            show_content BOOLEAN DEFAULT TRUE,
+            show_documents BOOLEAN DEFAULT TRUE,
+            show_forum BOOLEAN DEFAULT TRUE,
+            show_messages BOOLEAN DEFAULT TRUE,
+            show_complaints BOOLEAN DEFAULT TRUE,
+            show_training BOOLEAN DEFAULT TRUE,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        );
+        ";
+    }
     
-    $statements = array_filter(explode(';', $sql));
+    // Supprimer les commentaires SQL
+    $sql = preg_replace('/--.*$/m', '', $sql);
+    
+    // Séparer les instructions
+    $statements = array_filter(array_map('trim', explode(';', $sql)));
+    
     foreach ($statements as $stmt) {
-        $stmt = trim($stmt);
         if (!empty($stmt)) {
-            $pdo->exec($stmt);
+            try {
+                $pdo->exec($stmt);
+            } catch (PDOException $e) {
+                // Ignorer les erreurs "table exists" et "duplicate key"
+                if (strpos($e->getMessage(), 'already exists') === false && 
+                    strpos($e->getMessage(), 'Duplicate entry') === false &&
+                    strpos($e->getMessage(), 'Duplicate key') === false) {
+                    throw $e;
+                }
+            }
         }
     }
 }
@@ -108,7 +149,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Création admin
             $adminId = uniqid('admin_');
             $hashedPassword = password_hash($_POST['admin_password'], PASSWORD_BCRYPT);
-            $stmt = $dbTest['pdo']->prepare("INSERT INTO users (id, username, password, name, role) VALUES (?, ?, ?, ?, 'admin')");
+            $stmt = $dbTest['pdo']->prepare("
+                INSERT INTO users (id, username, password, name, role, is_active) 
+                VALUES (?, ?, ?, ?, 'admin', 1)
+                ON DUPLICATE KEY UPDATE 
+                    password = VALUES(password),
+                    name = VALUES(name),
+                    updated_at = NOW()
+            ");
             $stmt->execute([$adminId, $_POST['admin_username'], $hashedPassword, $_POST['admin_name'] ?? 'Administrateur']);
             
             // Création fichier .env
