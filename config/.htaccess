@@ -1,0 +1,3 @@
+# Protéger les fichiers de configuration
+Order deny,allow
+Deny from all
