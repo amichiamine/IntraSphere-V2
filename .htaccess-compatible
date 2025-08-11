@@ -1,7 +1,7 @@
 # IntraSphere - Configuration Apache Compatible
-# Version corrigée pour hébergement mutualisé standard
+# Version pour hébergeurs avec restrictions strictes
 
-# Protection des fichiers sensibles (syntaxe universelle)
+# Protection basique des fichiers sensibles
 <Files ".env">
     Order deny,allow
     Deny from all
@@ -12,18 +12,7 @@
     Deny from all
 </Files>
 
-# Permettre l'accès aux fichiers d'installation
-<Files "install.php">
-    Order allow,deny
-    Allow from all
-</Files>
-
-<Files "reset_installation.php">
-    Order allow,deny
-    Allow from all
-</Files>
-
-# Protection basique des dossiers système
+# Sécurité des dossiers
 <Files "config/*">
     Order deny,allow
     Deny from all

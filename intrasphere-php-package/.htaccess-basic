@@ -1,0 +1,11 @@
+# IntraSphere - Configuration Apache de Base
+# Version ultra-compatible sans fonctionnalités avancées
+
+# Protection minimale des fichiers critiques
+<Files ".env">
+    deny from all
+</Files>
+
+<Files "*.sql">
+    deny from all  
+</Files>
